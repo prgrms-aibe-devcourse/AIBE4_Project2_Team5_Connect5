@@ -109,9 +109,13 @@ public class Auction extends CreatedAtEntity {
         auction.startPrice = startPrice;
         auction.currentPrice = startPrice;
         auction.bidIncrement = bidIncrement;
+        auction.bidCount = 0;
+        auction.viewCount = 0;
+        auction.favoriteCount = 0;
         auction.durationHours = durationHours;
         auction.startAt = startAt;
         auction.endAt = endAt;
+        auction.extendCount = 0;
 
         return auction;
     }

@@ -20,6 +20,7 @@ public class SecurityConfig {
         http
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/", "/home", "/css/**", "/js/**", "/images/**").permitAll()
+                .requestMatchers("/api/**").permitAll()  // API는 인증 없이 접근 가능 (개발용)
                 .anyRequest().authenticated()
             )
             .formLogin(form -> form
