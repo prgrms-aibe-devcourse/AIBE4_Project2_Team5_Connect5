@@ -2,7 +2,7 @@ package kr.eolmago.controller.api.auction;
 
 import kr.eolmago.dto.api.auction.response.AuctionListResponse;
 import kr.eolmago.global.common.PageResponse;
-import kr.eolmago.service.AuctionService;
+import kr.eolmago.service.auction.AuctionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;

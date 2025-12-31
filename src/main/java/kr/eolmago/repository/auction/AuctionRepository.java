@@ -1,4 +1,4 @@
-package kr.eolmago.repository;
+package kr.eolmago.repository.auction;
 
 import kr.eolmago.domain.entity.auction.Auction;
 import kr.eolmago.domain.entity.auction.enums.AuctionStatus;
