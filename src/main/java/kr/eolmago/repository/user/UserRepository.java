@@ -1,4 +1,4 @@
-package kr.eolmago.repository;
+package kr.eolmago.repository.user;
 
 import kr.eolmago.domain.entity.user.User;
 import kr.eolmago.domain.entity.user.enums.UserRole;

@@ -1,13 +1,12 @@
 package kr.eolmago.domain.entity.user;
 
+import jakarta.persistence.*;
 import kr.eolmago.domain.entity.common.AuditableEntity;
 import kr.eolmago.domain.entity.user.enums.UserRole;
 import kr.eolmago.domain.entity.user.enums.UserStatus;
-import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 import java.util.UUID;
 
@@ -22,12 +21,10 @@ public class User extends AuditableEntity {
     @Column(nullable = false, updatable = false)
     private UUID userId;
 
-    @Setter
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private UserRole role;
 
-    @Setter
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private UserStatus status;
@@ -39,5 +36,13 @@ public class User extends AuditableEntity {
         user.role = role;
         user.status = UserStatus.ACTIVE;
         return user;
+    }
+
+    public void updateRole(UserRole newRole) {
+        this.role = newRole;
+    }
+
+    public void updateStatus(UserStatus newStatus) {
+        this.status = newStatus;
     }
 }

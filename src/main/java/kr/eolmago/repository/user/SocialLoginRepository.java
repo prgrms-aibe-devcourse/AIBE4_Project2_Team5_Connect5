@@ -1,4 +1,4 @@
-package kr.eolmago.repository;
+package kr.eolmago.repository.user;
 
 import kr.eolmago.domain.entity.user.SocialLogin;
 import kr.eolmago.domain.entity.user.User;

@@ -1,3 +1,25 @@
+## 기술 스택
+### Backend
+
+- Spring Boot / Spring Data JPA / Spring Security
+- PostgreSQL
+- Redis
+- Elasticsearch
+- Swagger UI
+
+### Frontend
+
+- Thymeleaf
+- Tailwind CSS
+
+### Infra
+
+- Docker
+- AWS
+- GitHub Actions (CI/CD)
+
+<br>
+
 ## 팀 협업 방식
 
 ### 커밋 컨벤션
@@ -32,29 +54,9 @@
 - 작업 내용 3
 ```
 
-### PR 템플릿
-**제목:**
-```
-[YYMMDD] type : PR메시지
-```
-**내용:**
-```markdown
-## 이슈 번호
-#이슈번호
-
-## 작업 내용
-- 작업 내용 1
-- 작업 내용 2
-- 작업 내용 3
-```
-
 <br>
 
 ## 로컬 실행 방법
-
-### 사전 준비
-- Docker Desktop 설치
-
 ### 
 ```bash
 # 1. 저장소 클론 (GitHub Desktop 사용 또는 CLI)
@@ -71,4 +73,29 @@ docker ps
 
 # 5. 애플리케이션 실행
 ./gradlew bootRun
+```
+
+<br>
+
+## 파일 구조
+```text
+kr.eolmago
+├── controller
+│   ├── api
+│   └── view
+├── dto
+│   ├── api
+│   │   ├── request
+│   │   └── response
+│   └── view
+├── domain
+│   └── entity
+├── repository
+├── service
+└── global
+    ├── config
+    ├── exception
+    ├── handler
+    ├── common
+    └── util
 ```

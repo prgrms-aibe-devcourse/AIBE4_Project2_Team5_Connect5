@@ -1,11 +1,11 @@
-package kr.eolmago.service;
+package kr.eolmago.service.user;
 
 import kr.eolmago.domain.entity.user.SocialLogin;
 import kr.eolmago.domain.entity.user.User;
 import kr.eolmago.domain.entity.user.enums.SocialProvider;
 import kr.eolmago.domain.entity.user.enums.UserRole;
-import kr.eolmago.repository.SocialLoginRepository;
-import kr.eolmago.repository.UserRepository;
+import kr.eolmago.repository.user.SocialLoginRepository;
+import kr.eolmago.repository.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
