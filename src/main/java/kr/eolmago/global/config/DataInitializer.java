@@ -1,4 +1,4 @@
-package kr.eolmago.config;
+package kr.eolmago.global.config;
 
 import kr.eolmago.domain.entity.auction.Auction;
 import kr.eolmago.domain.entity.auction.AuctionItem;
@@ -7,9 +7,9 @@ import kr.eolmago.domain.entity.auction.enums.ItemCategory;
 import kr.eolmago.domain.entity.auction.enums.ItemCondition;
 import kr.eolmago.domain.entity.user.User;
 import kr.eolmago.domain.entity.user.enums.UserRole;
-import kr.eolmago.repository.AuctionItemRepository;
-import kr.eolmago.repository.AuctionRepository;
-import kr.eolmago.repository.UserRepository;
+import kr.eolmago.repository.auction.AuctionItemRepository;
+import kr.eolmago.repository.auction.AuctionRepository;
+import kr.eolmago.repository.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;

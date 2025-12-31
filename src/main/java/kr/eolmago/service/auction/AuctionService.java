@@ -1,10 +1,10 @@
-package kr.eolmago.service;
+package kr.eolmago.service.auction;
 
 import kr.eolmago.domain.entity.auction.Auction;
 import kr.eolmago.domain.entity.auction.enums.AuctionStatus;
 import kr.eolmago.dto.api.auction.response.AuctionListResponse;
 import kr.eolmago.global.common.PageResponse;
-import kr.eolmago.repository.AuctionRepository;
+import kr.eolmago.repository.auction.AuctionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;

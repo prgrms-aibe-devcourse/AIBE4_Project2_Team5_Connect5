@@ -1,4 +1,4 @@
-package kr.eolmago.repository;
+package kr.eolmago.repository.auction;
 
 import kr.eolmago.domain.entity.auction.AuctionItem;
 import org.springframework.data.jpa.repository.JpaRepository;
