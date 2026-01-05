@@ -14,6 +14,7 @@ import org.springframework.security.web.SecurityFilterChain;
 public class SecurityConfig {
 
     private final SocialLoginService socialLoginService;
+    private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
 
     // swagger 관련 요청은 인증/인가 로직 자체를 타지 않게 분리
     @Bean
@@ -44,6 +45,7 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/",
                                 "/home",
+                                "/login",
                                 "/css/**",
                                 "/js/**",
                                 "/images/**"
@@ -52,14 +54,15 @@ public class SecurityConfig {
                 )
                 .formLogin(AbstractHttpConfigurer::disable)
                 .oauth2Login(oauth2 -> oauth2
+                        .loginPage("/login")
                         .userInfoEndpoint(userInfo -> userInfo.userService(socialLoginService))
-                        // 개발 중에는 아래를 강제(true)로 두면 SavedRequest 복귀가 깨질 수 있어 비추천
-                        // .defaultSuccessUrl("/", true)
-                        // 필요하면 false로 두거나 아예 제거 권장
-                        .defaultSuccessUrl("/", false)
+                        .successHandler(oAuth2AuthenticationSuccessHandler)
                 )
                 .logout(logout -> logout
+                        .logoutUrl("/logout")
                         .logoutSuccessUrl("/")
+                        .invalidateHttpSession(true)
+                        .deleteCookies("JSESSIONID")
                         .permitAll()
                 );
 

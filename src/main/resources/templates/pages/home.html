@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/base}">
+<head>
+    <title layout:fragment="title">홈</title>
+</head>
+
+<body>
+<div layout:fragment="content" class="bg-gray-50">
+    <div class="mx-auto max-w-7xl px-6 py-10 space-y-12">
+
+        <!-- 배너 섹션 -->
+        <section class="relative overflow-hidden rounded-2xl border border-gray-200 shadow-sm">
+            <!-- 배너 이미지(포토샵 결과물 그대로) -->
+            <img
+                    th:src="@{/images/profile/banner1.png}"
+                    alt="중고 물품 플랫폼 배너"
+                    class="absolute inset-0 h-full w-full object-cover object-right"
+            />
+
+            <!-- 텍스트 영역 -->
+            <div class="relative z-10 p-8 sm:p-10 min-h-[240px] sm:min-h-[280px] flex items-center">
+                <div class="max-w-2xl">
+            <span class="inline-flex items-center rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-slate-800 ring-1 ring-inset ring-slate-300">
+                안전하고 투명한 중고 거래
+            </span>
+
+                    <h1 class="mt-5 text-3xl sm:text-4xl font-extrabold tracking-tight text-gray-900 leading-tight">
+                        믿을 수 있는<br>
+                        <span class="text-slate-900">중고 경매 플랫폼</span>
+                    </h1>
+
+                    <p class="mt-3 text-sm sm:text-base font-medium text-slate-700 leading-relaxed">
+                        검증된 거래, 합리적인 낙찰
+                    </p>
+
+                    <div class="mt-7 flex flex-wrap gap-3">
+                        <a th:href="@{/auctions}"
+                           class="inline-flex items-center justify-center rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 transition">
+                            경매 둘러보기
+                        </a>
+
+                        <a th:href="@{/seller/auctions}"
+                           class="inline-flex items-center justify-center rounded-lg border border-gray-400 bg-white/90 px-5 py-2.5 text-sm font-semibold text-gray-900 hover:bg-white transition">
+                            물품 등록
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 카테고리 컴포넌트 -->
+        <div th:replace="~{components/category :: category}"></div>
+
+        <!-- ===== BEST ITEM / 인기 경매 ===== -->
+        <section class="space-y-6">
+            <div class="flex items-end justify-between gap-4">
+                <div>
+                    <span class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-800">
+                        BEST ITEM
+                    </span>
+                    <h2 class="mt-2 text-2xl font-extrabold tracking-tight text-gray-900">지금 가장 인기 있는 경매</h2>
+                    <p class="mt-2 text-sm text-gray-600">많은 이용자들이 관심을 보이는 경매를 만나보세요.</p>
+                </div>
+                <a th:href="@{/auctions(sort='popular')}"
+                   class="text-sm font-semibold text-gray-700 hover:text-gray-900">
+                    전체보기
+                </a>
+            </div>
+
+            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                <article class="group overflow-hidden rounded-2xl border border-gray-200 bg-white hover:shadow-md transition">
+                    <div class="relative aspect-square bg-gray-100"></div>
+                    <div class="p-4">
+                        <div class="text-sm font-semibold text-gray-900 line-clamp-2">인기 상품 1</div>
+                        <div class="mt-3 flex items-center justify-between text-xs text-gray-500">
+                            <span>입찰 45회</span>
+                            <span class="flex items-center gap-1 font-semibold text-slate-900">
+                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2"/>
+                                    <circle cx="12" cy="12" r="9"/>
+                                </svg>
+                                2일 5시간
+                            </span>
+                        </div>
+                        <div class="mt-1 text-base font-extrabold text-gray-900">450,000원</div>
+                    </div>
+                </article>
+
+                <article class="group overflow-hidden rounded-2xl border border-gray-200 bg-white hover:shadow-md transition">
+                    <div class="relative aspect-square bg-gray-100"></div>
+                    <div class="p-4">
+                        <div class="text-sm font-semibold text-gray-900 line-clamp-2">인기 상품 2</div>
+                        <div class="mt-3 flex items-center justify-between text-xs text-gray-500">
+                            <span>입찰 38회</span>
+                            <span class="flex items-center gap-1 font-semibold text-slate-900">
+                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2"/>
+                                    <circle cx="12" cy="12" r="9"/>
+                                </svg>
+                                1일 12시간
+                            </span>
+                        </div>
+                        <div class="mt-1 text-base font-extrabold text-gray-900">320,000원</div>
+                    </div>
+                </article>
+
+                <article class="group overflow-hidden rounded-2xl border border-gray-200 bg-white hover:shadow-md transition">
+                    <div class="relative aspect-square bg-gray-100"></div>
+                    <div class="p-4">
+                        <div class="text-sm font-semibold text-gray-900 line-clamp-2">인기 상품 3</div>
+                        <div class="mt-3 flex items-center justify-between text-xs text-gray-500">
+                            <span>입찰 32회</span>
+                            <span class="flex items-center gap-1 font-semibold text-slate-900">
+                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2"/>
+                                    <circle cx="12" cy="12" r="9"/>
+                                </svg>
+                                3일 8시간
+                            </span>
+                        </div>
+                        <div class="mt-1 text-base font-extrabold text-gray-900">180,000원</div>
+                    </div>
+                </article>
+
+                <article class="group overflow-hidden rounded-2xl border border-gray-200 bg-white hover:shadow-md transition">
+                    <div class="relative aspect-square bg-gray-100"></div>
+                    <div class="p-4">
+                        <div class="text-sm font-semibold text-gray-900 line-clamp-2">인기 상품 4</div>
+                        <div class="mt-3 flex items-center justify-between text-xs text-gray-500">
+                            <span>입찰 28회</span>
+                            <span class="flex items-center gap-1 font-semibold text-slate-900">
+                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2"/>
+                                    <circle cx="12" cy="12" r="9"/>
+                                </svg>
+                                5시간
+                            </span>
+                        </div>
+                        <div class="mt-1 text-base font-extrabold text-gray-900">275,000원</div>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <!-- ===== CLOSING SOON / 마감 임박 ===== -->
+        <section class="space-y-6">
+            <div class="flex items-end justify-between gap-4">
+                <div>
+                    <span class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-800">
+                        CLOSING SOON
+                    </span>
+                    <h2 class="mt-2 text-2xl font-extrabold tracking-tight text-gray-900">곧 마감되는 경매</h2>
+                    <p class="mt-2 text-sm text-gray-600">마감 임박 상품을 빠르게 확인하세요.</p>
+                </div>
+                <a th:href="@{/auctions(sort='ending')}"
+                   class="text-sm font-semibold text-gray-700 hover:text-gray-900">
+                    전체보기
+                </a>
+            </div>
+
+            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                <article class="group overflow-hidden rounded-2xl border border-gray-200 bg-white hover:shadow-md transition">
+                    <div class="relative aspect-square bg-gray-100"></div>
+                    <div class="p-4">
+                        <div class="text-sm font-semibold text-gray-900 line-clamp-2">마감 임박 상품 1</div>
+                        <div class="mt-3 flex items-center justify-between text-xs text-gray-500">
+                            <span>입찰 12회</span>
+                            <span class="flex items-center gap-1 font-semibold text-slate-900">
+                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2"/>
+                                    <circle cx="12" cy="12" r="9"/>
+                                </svg>
+                                15분
+                            </span>
+                        </div>
+                        <div class="mt-1 text-base font-extrabold text-gray-900">73,000원</div>
+                    </div>
+                </article>
+
+                <article class="group overflow-hidden rounded-2xl border border-gray-200 bg-white hover:shadow-md transition">
+                    <div class="relative aspect-square bg-gray-100"></div>
+                    <div class="p-4">
+                        <div class="text-sm font-semibold text-gray-900 line-clamp-2">마감 임박 상품 2</div>
+                        <div class="mt-3 flex items-center justify-between text-xs text-gray-500">
+                            <span>입찰 8회</span>
+                            <span class="flex items-center gap-1 font-semibold text-slate-900">
+                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2"/>
+                                    <circle cx="12" cy="12" r="9"/>
+                                </svg>
+                                35분
+                            </span>
+                        </div>
+                        <div class="mt-1 text-base font-extrabold text-gray-900">205,000원</div>
+                    </div>
+                </article>
+
+                <article class="group overflow-hidden rounded-2xl border border-gray-200 bg-white hover:shadow-md transition">
+                    <div class="relative aspect-square bg-gray-100"></div>
+                    <div class="p-4">
+                        <div class="text-sm font-semibold text-gray-900 line-clamp-2">마감 임박 상품 3</div>
+                        <div class="mt-3 flex items-center justify-between text-xs text-gray-500">
+                            <span>입찰 25회</span>
+                            <span class="flex items-center gap-1 font-semibold text-slate-900">
+                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2"/>
+                                    <circle cx="12" cy="12" r="9"/>
+                                </svg>
+                                48분
+                            </span>
+                        </div>
+                        <div class="mt-1 text-base font-extrabold text-gray-900">132,000원</div>
+                    </div>
+                </article>
+
+                <article class="group overflow-hidden rounded-2xl border border-gray-200 bg-white hover:shadow-md transition">
+                    <div class="relative aspect-square bg-gray-100"></div>
+                    <div class="p-4">
+                        <div class="text-sm font-semibold text-gray-900 line-clamp-2">마감 임박 상품 4</div>
+                        <div class="mt-3 flex items-center justify-between text-xs text-gray-500">
+                            <span>입찰 5회</span>
+                            <span class="flex items-center gap-1 font-semibold text-slate-900">
+                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2"/>
+                                    <circle cx="12" cy="12" r="9"/>
+                                </svg>
+                                52분
+                            </span>
+                        </div>
+                        <div class="mt-1 text-base font-extrabold text-gray-900">253,000원</div>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+    </div>
+</div>
+</body>
+</html>

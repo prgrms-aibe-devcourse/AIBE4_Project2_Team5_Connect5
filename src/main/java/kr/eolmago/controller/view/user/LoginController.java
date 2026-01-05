@@ -1,4 +1,4 @@
-package kr.eolmago.controller.view;
+package kr.eolmago.controller.view.user;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
@@ -6,10 +6,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 
 @Slf4j
 @Controller
-public class HomeController {
+public class LoginController {
 
-    @GetMapping("/")
-    public String home() {
-        return "pages/home";
+    @GetMapping("/login")
+    public String login() {
+        return "pages/user/login";
     }
 }

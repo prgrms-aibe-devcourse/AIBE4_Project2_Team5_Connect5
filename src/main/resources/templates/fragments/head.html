@@ -1,11 +1,82 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
-<head th:fragment="head(title)">
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout">
+<head th:fragment="head(layoutTitle)"
+      th:with="brandLogo=@{/images/brand/logo.png}">
+
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title th:text="${title} + ' - Eolmago'">Eolmago</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!-- Title: (CONTENT_TITLE - LAYOUT_TITLE) 패턴 -->
+    <title layout:title-pattern="${'$CONTENT_TITLE - $LAYOUT_TITLE'}"
+           th:text="${layoutTitle}">얼마고</title>
+
+    <!-- Favicon / App Icon -->
+    <link rel="icon" type="image/png" th:href="${brandLogo}" />
+    <link rel="apple-touch-icon" th:href="${brandLogo}" />
+
+    <!-- Open Graph (공유 썸네일) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="얼마고" />
+    <meta property="og:title" th:content="${layoutTitle}" content="얼마고" />
+    <meta property="og:image" th:content="${brandLogo}" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" th:content="${brandLogo}" />
 
     <!-- Tailwind CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Google Fonts: Noto Sans KR 유지 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap"
+          rel="stylesheet">
+
+    <!-- Global Styles (기존 유지) -->
+    <style>
+        * {
+            font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        /* Custom animations */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-10px); }
+            to   { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50%      { opacity: 0.5; }
+        }
+
+        .fade-in-up { animation: fadeInUp 0.6s ease-out; }
+        .slide-in   { animation: slideIn 0.4s ease-out; }
+
+        .hover-lift {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .hover-lift:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+        }
+
+        /* Smooth transitions */
+        * {
+            transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 10px; height: 10px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 5px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+
+    <!-- 공통 JS (필요한 것만 유지) -->
+    <script defer th:src="@{/js/nav.js}"></script>
+    <script defer th:src="@{/js/auction.js}"></script>
 </head>
 </html>
