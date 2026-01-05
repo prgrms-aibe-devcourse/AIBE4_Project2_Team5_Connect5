@@ -1,4 +1,4 @@
-package kr.eolmago.util;
+package kr.eolmago.global.util;
 
 import java.time.Duration;
 import java.time.OffsetDateTime;

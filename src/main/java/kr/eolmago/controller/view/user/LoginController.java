@@ -1,4 +1,4 @@
-package kr.eolmago.controller.view.auth;
+package kr.eolmago.controller.view.user;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
