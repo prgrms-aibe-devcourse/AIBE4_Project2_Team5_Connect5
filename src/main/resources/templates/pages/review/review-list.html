@@ -52,23 +52,20 @@
             text-align: left;
         }
         th {
-            background-color: #28a745;
+            background-color: #007bff;
             color: white;
         }
         tr:nth-child(even) {
             background-color: #f2f2f2;
         }
         .rating {
-            color: #ffc107;
-            font-weight: bold;
-        }
-        .star {
-            color: #ffc107;
+            color: #FFD700;
+            font-size: 18px;
         }
     </style>
 </head>
 <body>
-    <h1>⭐ Review 테스트 페이지</h1>
+    <h1>📝 Review 테스트 페이지</h1>
 
     <!-- 메시지 표시 -->
     <div th:if="${message}" class="message" th:text="${message}"></div>
@@ -76,16 +73,16 @@
 
     <!-- 액션 버튼 -->
     <div>
-        <a href="/test/review/create" class="button">➕ 새 후기 작성</a>
+        <a href="/test/review/create" class="button">➕ 새 리뷰 생성</a>
         <a href="/test/review" class="button">🔄 새로고침</a>
         <a href="/test/deal" class="button">🛒 Deal 테스트로 이동</a>
     </div>
 
     <!-- Review 목록 -->
-    <h2>전체 후기 목록 (<span th:text="${reviews.size()}">0</span>건)</h2>
+    <h2>전체 리뷰 목록 (<span th:text="${reviews.size()}">0</span>건)</h2>
     
     <div th:if="${reviews.isEmpty()}">
-        <p>작성된 후기가 없습니다.</p>
+        <p>등록된 리뷰가 없습니다.</p>
     </div>
 
     <table th:if="${!reviews.isEmpty()}">
@@ -93,37 +90,25 @@
             <tr>
                 <th>ID</th>
                 <th>거래</th>
-                <th>판매자</th>
-                <th>구매자</th>
+                <th>판매자 ID</th>
+                <th>구매자 ID</th>
                 <th>평점</th>
                 <th>내용</th>
-                <th>작성일</th>
+                <th>생성일</th>
                 <th>액션</th>
             </tr>
         </thead>
         <tbody>
             <tr th:each="review : ${reviews}">
                 <td th:text="${review.reviewId}">1</td>
-                <td>
-                    <a th:href="@{/test/deal/{id}(id=${review.dealId})}" 
-                       th:text="${review.dealTitle}">
-                        거래
-                    </a>
-                </td>
-                <td th:text="${review.seller.nickname}">판매자</td>
-                <td th:text="${review.buyer.nickname}">구매자</td>
+                <td th:text="${review.dealTitle}">거래 제목</td>
+                <td th:text="${review.sellerId}">판매자 ID</td>
+                <td th:text="${review.buyerId}">구매자 ID</td>
                 <td class="rating">
-                    <span th:each="i : ${#numbers.sequence(1, review.rating)}" class="star">★</span>
-                    <span th:each="i : ${#numbers.sequence(review.rating + 1, 5)}" style="color: #ddd;">★</span>
-                    <span th:text="'(' + ${review.rating} + '/5)'">(5/5)</span>
+                    <span th:text="${'⭐'.repeat(review.rating)}">⭐⭐⭐⭐⭐</span>
+                    (<span th:text="${review.rating}">5</span>)
                 </td>
-                <td>
-                    <span th:text="${#strings.length(review.content) > 30 ? 
-                                   #strings.substring(review.content, 0, 30) + '...' : 
-                                   review.content}">
-                        후기 내용
-                    </span>
-                </td>
+                <td th:text="${review.content}">리뷰 내용</td>
                 <td th:text="${#temporals.format(review.createdAt.plusHours(9), 'yyyy-MM-dd HH:mm')}">2024-01-01 12:00</td>
                 <td>
                     <a th:href="@{/test/review/{id}(id=${review.reviewId})}" class="button" style="font-size: 12px;">상세</a>
@@ -131,13 +116,5 @@
             </tr>
         </tbody>
     </table>
-
-    <hr style="margin-top: 40px;">
-    
-    <!-- 평점별 필터 -->
-    <h3>평점별 조회</h3>
-    <div>
-        <span style="color: #666;">평점별 필터 기능은 추후 추가 예정</span>
-    </div>
 </body>
 </html>

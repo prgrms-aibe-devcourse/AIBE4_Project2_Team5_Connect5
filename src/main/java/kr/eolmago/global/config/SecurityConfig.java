@@ -65,7 +65,8 @@ public class SecurityConfig {
                                 "/css/**",
                                 "/js/**",
                                 "/images/**",
-                                "/api/auth/**"
+                                "/api/auth/**",
+                                "/test/**" //deal, review 페이지 동작을 위한 임시 주소 -> 추후 변경
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
