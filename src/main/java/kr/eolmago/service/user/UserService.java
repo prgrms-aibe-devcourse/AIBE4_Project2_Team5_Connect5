@@ -1,12 +1,15 @@
 package kr.eolmago.service.user;
 
+import kr.eolmago.domain.entity.user.SocialLogin;
 import kr.eolmago.domain.entity.user.User;
 import kr.eolmago.domain.entity.user.enums.UserRole;
 import kr.eolmago.domain.entity.user.enums.UserStatus;
+import kr.eolmago.global.security.CustomUserDetails;
 import kr.eolmago.repository.user.SocialLoginRepository;
 import kr.eolmago.repository.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +28,15 @@ public class UserService {
     public User getUserById(UUID userId) {
         return userRepository.findByUserId(userId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다. : " + userId));
+    }
+
+    @Transactional(readOnly = true)
+    public UserDetails getUserDetailsById(UUID userId) {
+        User user = getUserById(userId);
+        SocialLogin socialLogin = socialLoginRepository.findByUser(user).stream().findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("소셜 로그인 정보를 찾을 수 없습니다."));
+
+        return CustomUserDetails.from(user, socialLogin);
     }
 
     private void validateAdminRole(User admin) {

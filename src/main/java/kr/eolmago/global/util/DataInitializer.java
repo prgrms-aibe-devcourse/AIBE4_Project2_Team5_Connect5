@@ -15,10 +15,8 @@ import kr.eolmago.repository.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
-import org.springframework.boot.ApplicationRunner;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
-import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
@@ -34,9 +32,9 @@ import java.util.Map;
  *  - 개발 환경에서만 사용 (프로덕션에선 비활성화)
  */
 @Slf4j
-@Component
+//@Component
 @RequiredArgsConstructor
-public class DataInitializer implements ApplicationRunner {
+public class DataInitializer /*implements ApplicationRunner*/ {
 
     private final UserRepository userRepository;
     private final AuctionItemRepository auctionItemRepository;
@@ -46,7 +44,7 @@ public class DataInitializer implements ApplicationRunner {
 
     private static final String AUTOCOMPLETE_KEY = "autocomplete:all";
 
-    @Override
+//    @Override
     @Transactional
     public void run(ApplicationArguments args) {
         log.info("========== 더미 데이터 생성 시작 ==========");
@@ -83,26 +81,26 @@ public class DataInitializer implements ApplicationRunner {
 
         // 휴대폰 더미 데이터
         String[] phoneNames = {
-            "아이폰 15 Pro Max", "갤럭시 S24 Ultra", "아이폰 14 Pro", "갤럭시 Z Flip5",
-            "아이폰 13", "갤럭시 S23", "아이폰 15", "갤럭시 A54",
-            "아이폰 14", "갤럭시 S23 FE", "아이폰 SE 3세대", "갤럭시 Z Fold5"
+                "아이폰 15 Pro Max", "갤럭시 S24 Ultra", "아이폰 14 Pro", "갤럭시 Z Flip5",
+                "아이폰 13", "갤럭시 S23", "아이폰 15", "갤럭시 A54",
+                "아이폰 14", "갤럭시 S23 FE", "아이폰 SE 3세대", "갤럭시 Z Fold5"
         };
 
         String[] phoneBrands = {
-            "Apple", "Samsung", "Apple", "Samsung",
-            "Apple", "Samsung", "Apple", "Samsung",
-            "Apple", "Samsung", "Apple", "Samsung"
+                "Apple", "Samsung", "Apple", "Samsung",
+                "Apple", "Samsung", "Apple", "Samsung",
+                "Apple", "Samsung", "Apple", "Samsung"
         };
 
         // 태블릿 더미 데이터
         String[] tabletNames = {
-            "아이패드 Pro 12.9", "갤럭시 탭 S9 Ultra", "아이패드 Air 5세대", "갤럭시 탭 S9",
-            "아이패드 10세대", "갤럭시 탭 A9+", "아이패드 mini 6", "갤럭시 탭 S8"
+                "아이패드 Pro 12.9", "갤럭시 탭 S9 Ultra", "아이패드 Air 5세대", "갤럭시 탭 S9",
+                "아이패드 10세대", "갤럭시 탭 A9+", "아이패드 mini 6", "갤럭시 탭 S8"
         };
 
         String[] tabletBrands = {
-            "Apple", "Samsung", "Apple", "Samsung",
-            "Apple", "Samsung", "Apple", "Samsung"
+                "Apple", "Samsung", "Apple", "Samsung",
+                "Apple", "Samsung", "Apple", "Samsung"
         };
 
         OffsetDateTime now = OffsetDateTime.now();
@@ -122,16 +120,17 @@ public class DataInitializer implements ApplicationRunner {
             specs.put("color", i % 2 == 0 ? "블랙" : "화이트");
 
             AuctionItem item = AuctionItem.create(
-                phoneNames[phoneIndex],
-                ItemCategory.PHONE,
-                ItemCondition.values()[i % 4], // S, A, B, C 순환
-                specs
+                    phoneNames[phoneIndex],
+                    ItemCategory.PHONE,
+                    ItemCondition.values()[i % 4], // S, A, B, C 순환
+                    specs
             );
             auctionItemRepository.save(item);
 
             // Auction 생성
             int basePrice = 300000 + (i * 50000);
             int durationHours = 24 + (i % 3) * 24; // 24, 48, 72시간
+            int bidIncrement = 5000;               // 원하는 값(최소단위)
 
             // 상태 분산: LIVE(60%), ENDED_SOLD(20%), ENDED_UNSOLD(10%), DRAFT(10%)
             AuctionStatus status;
@@ -156,22 +155,20 @@ public class DataInitializer implements ApplicationRunner {
                 endAt = null;
             }
 
-            int bidIncrement = 5000;               // 원하는 값(최소단위)
-
             Auction auction = Auction.create(
-                item,
-                seller,
-                phoneNames[phoneIndex] + " - " + specs.get("storageGb") + "GB " + specs.get("color"),
-                String.format("%s %s 판매합니다. 상태: %s급, 용량: %dGB",
-                    specs.get("brand"), specs.get("model"),
-                    ItemCondition.values()[i % 4].name(),
-                    specs.get("storageGb")),
-                status,
-                basePrice,
-                bidIncrement,
-                durationHours,
-                startAt,
-                endAt
+                    item,
+                    seller,
+                    phoneNames[phoneIndex] + " - " + specs.get("storageGb") + "GB " + specs.get("color"),
+                    String.format("%s %s 판매합니다. 상태: %s급, 용량: %dGB",
+                            specs.get("brand"), specs.get("model"),
+                            ItemCondition.values()[i % 4].name(),
+                            specs.get("storageGb")),
+                    status,
+                    basePrice,
+                    bidIncrement,
+                    durationHours,
+                    startAt,
+                    endAt
             );
 
 
@@ -193,16 +190,17 @@ public class DataInitializer implements ApplicationRunner {
             specs.put("cellular", i % 3 == 0 ? "Wi-Fi + Cellular" : "Wi-Fi");
 
             AuctionItem item = AuctionItem.create(
-                tabletNames[tabletIndex],
-                ItemCategory.TABLET,
-                ItemCondition.values()[i % 4],
-                specs
+                    tabletNames[tabletIndex],
+                    ItemCategory.TABLET,
+                    ItemCondition.values()[i % 4],
+                    specs
             );
             auctionItemRepository.save(item);
 
             // Auction 생성
             int basePrice = 500000 + (i * 70000);
             int durationHours = 48 + (i % 2) * 24;
+            int bidIncrement = 10000;
 
             AuctionStatus status;
             OffsetDateTime startAt;
@@ -226,22 +224,20 @@ public class DataInitializer implements ApplicationRunner {
                 endAt = null;
             }
 
-            int bidIncrement = 10000;
-
             Auction auction = Auction.create(
-                item,
-                seller,
-                tabletNames[tabletIndex] + " - " + specs.get("storageGb") + "GB",
-                String.format("%s %s 판매합니다. 화면: %s, 상태: %s급",
-                    specs.get("brand"), specs.get("model"),
-                    specs.get("screenSize"),
-                    ItemCondition.values()[i % 4].name()),
-                status,
-                basePrice,
-                bidIncrement,
-                durationHours,
-                startAt,
-                endAt
+                    item,
+                    seller,
+                    tabletNames[tabletIndex] + " - " + specs.get("storageGb") + "GB",
+                    String.format("%s %s 판매합니다. 화면: %s, 상태: %s급",
+                            specs.get("brand"), specs.get("model"),
+                            specs.get("screenSize"),
+                            ItemCondition.values()[i % 4].name()),
+                    status,
+                    basePrice,
+                    bidIncrement,
+                    durationHours,
+                    startAt,
+                    endAt
             );
 
             auctions.add(auctionRepository.save(auction));
@@ -318,7 +314,7 @@ public class DataInitializer implements ApplicationRunner {
             zSetOps.add(AUTOCOMPLETE_KEY, keyword, score);
 
             log.debug("검색 키워드 생성: keyword={}, count={}, type={}, redis_score={}",
-                keyword, searchKeyword.getSearchCount(), searchKeyword.getKeywordType(), score);
+                    keyword, searchKeyword.getSearchCount(), searchKeyword.getKeywordType(), score);
         }
 
         log.info("Redis 자동완성 데이터 {} 개 저장 완료", keywords.size());

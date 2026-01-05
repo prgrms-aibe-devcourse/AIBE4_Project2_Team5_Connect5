@@ -45,7 +45,7 @@
                 </form>
 
                 <!-- 로그인 전 -->
-                <div th:if="${session.user == null}">
+                <div th:if="${!isAuthenticated}" id="nav-before-login">
                     <a th:href="@{/login}"
                        class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-900
                               hover:bg-gray-50">
@@ -54,7 +54,7 @@
                 </div>
 
                 <!-- 로그인 후: 채팅(아이콘) | 알림(뱃지) | 프로필(드롭다운) -->
-                <div th:if="${session.user != null}" class="flex items-center gap-2">
+                <div th:if="${isAuthenticated}" id="nav-after-login" class="flex items-center gap-2">
 
                     <!-- Chat icon (말풍선) -->
                     <a th:href="@{/chats}"
@@ -88,7 +88,6 @@
                               class="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1
                                      rounded-full bg-red-500 text-white text-[11px] font-bold
                                      flex items-center justify-center">
-                            1
                         </span>
                     </a>
 
@@ -99,7 +98,7 @@
                                        hover:bg-gray-50"
                                 onclick="toggleProfileMenu()">
                             <div class="h-7 w-7 rounded-full bg-gray-900 text-white flex items-center justify-center text-xs font-bold"
-                                 th:text="${#strings.substring((session.user.name != null ? session.user.name : 'U'), 0, 1)}">U</div>
+                                 th:text="${userName != null ? #strings.substring(userName, 0, 1) : 'U'}">U</div>
                             <svg class="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" stroke-width="2"
                                  viewBox="0 0 24 24">
                                 <path d="M19 9l-7 7-7-7"/>
@@ -130,6 +129,7 @@
             if (!menu) return;
             menu.classList.toggle('hidden');
         }
+
         document.addEventListener('click', (e) => {
             const btn = document.getElementById('profileButton');
             const menu = document.getElementById('profileMenu');
