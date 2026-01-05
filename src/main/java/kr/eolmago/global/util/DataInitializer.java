@@ -156,6 +156,8 @@ public class DataInitializer implements ApplicationRunner {
                 endAt = null;
             }
 
+            int bidIncrement = 5000;               // 원하는 값(최소단위)
+
             Auction auction = Auction.create(
                 item,
                 seller,
@@ -166,10 +168,12 @@ public class DataInitializer implements ApplicationRunner {
                     specs.get("storageGb")),
                 status,
                 basePrice,
+                bidIncrement,
                 durationHours,
                 startAt,
                 endAt
             );
+
 
             auctions.add(auctionRepository.save(auction));
         }
@@ -222,6 +226,8 @@ public class DataInitializer implements ApplicationRunner {
                 endAt = null;
             }
 
+            int bidIncrement = 10000;
+
             Auction auction = Auction.create(
                 item,
                 seller,
@@ -232,6 +238,7 @@ public class DataInitializer implements ApplicationRunner {
                     ItemCondition.values()[i % 4].name()),
                 status,
                 basePrice,
+                bidIncrement,
                 durationHours,
                 startAt,
                 endAt
@@ -311,7 +318,7 @@ public class DataInitializer implements ApplicationRunner {
             zSetOps.add(AUTOCOMPLETE_KEY, keyword, score);
 
             log.debug("검색 키워드 생성: keyword={}, count={}, type={}, redis_score={}",
-                    keyword, searchKeyword.getSearchCount(), searchKeyword.getKeywordType(), score);
+                keyword, searchKeyword.getSearchCount(), searchKeyword.getKeywordType(), score);
         }
 
         log.info("Redis 자동완성 데이터 {} 개 저장 완료", keywords.size());
