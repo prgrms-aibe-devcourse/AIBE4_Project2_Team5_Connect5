@@ -53,5 +53,9 @@ public class ChatRoom extends AuditableEntity {
         room.buyer = buyer;
         return room;
     }
+
+    public void updateLastMessageId(Long messageId) {
+        this.lastMessageId = messageId;
+    }
 }
 
