@@ -96,16 +96,14 @@
     <div class="card">
         <h2>참여자 정보</h2>
         <div class="info-grid">
-            <div class="label">판매자:</div>
+            <div class="label">판매자 ID:</div>
             <div class="value">
-                <span th:text="${review.seller.nickname}">판매자</span>
-                (<span th:text="${review.seller.email}">email</span>)
+                <span th:text="${review.sellerId}">판매자 ID</span>
             </div>
 
-            <div class="label">구매자:</div>
+            <div class="label">구매자 ID:</div>
             <div class="value">
-                <span th:text="${review.buyer.nickname}">구매자</span>
-                (<span th:text="${review.buyer.email}">email</span>)
+                <span th:text="${review.buyerId}">구매자 ID</span>
             </div>
         </div>
     </div>

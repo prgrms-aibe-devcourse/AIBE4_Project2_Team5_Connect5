@@ -46,7 +46,7 @@ public class DataInitializer implements ApplicationRunner {
 
     private static final String AUTOCOMPLETE_KEY = "autocomplete:all";
 
-//    @Override
+    @Override
     @Transactional
     public void run(ApplicationArguments args) {
         log.info("========== 더미 데이터 생성 시작 ==========");
@@ -132,7 +132,6 @@ public class DataInitializer implements ApplicationRunner {
             // Auction 생성
             int basePrice = 300000 + (i * 50000);
             int durationHours = 24 + (i % 3) * 24; // 24, 48, 72시간
-            int bidIncrement = 5000;               // 원하는 값(최소단위)
 
             // 상태 분산: LIVE(60%), ENDED_SOLD(20%), ENDED_UNSOLD(10%), DRAFT(10%)
             AuctionStatus status;
@@ -202,7 +201,6 @@ public class DataInitializer implements ApplicationRunner {
             // Auction 생성
             int basePrice = 500000 + (i * 70000);
             int durationHours = 48 + (i % 2) * 24;
-            int bidIncrement = 10000;
 
             AuctionStatus status;
             OffsetDateTime startAt;
