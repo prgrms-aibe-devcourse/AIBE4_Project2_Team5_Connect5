@@ -29,6 +29,9 @@ public class User extends AuditableEntity {
     @Column(nullable = false, length = 20)
     private UserStatus status;
 
+    @OneToOne(mappedBy = "user", fetch = FetchType.LAZY)
+    private UserProfile userProfile;
+
     public static User create(
             UserRole role
     ) {

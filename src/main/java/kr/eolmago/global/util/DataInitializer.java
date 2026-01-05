@@ -166,7 +166,6 @@ public class DataInitializer implements ApplicationRunner {
                     specs.get("storageGb")),
                 status,
                 basePrice,
-                10000,
                 durationHours,
                 startAt,
                 endAt
@@ -233,7 +232,6 @@ public class DataInitializer implements ApplicationRunner {
                     ItemCondition.values()[i % 4].name()),
                 status,
                 basePrice,
-                20000,
                 durationHours,
                 startAt,
                 endAt

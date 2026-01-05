@@ -30,6 +30,7 @@ public class SecurityConfig {
     private final CustomAuthenticationEntryPoint authenticationEntryPoint;
     private final CustomAccessDeniedHandler accessDeniedHandler;
 
+
     // swagger 관련 요청은 인증/인가 로직 자체를 타지 않게 분리
     @Bean
     @Order(0)
@@ -60,6 +61,7 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/",
                                 "/home",
+                                "/login",
                                 "/css/**",
                                 "/js/**",
                                 "/images/**",
@@ -69,6 +71,7 @@ public class SecurityConfig {
                 )
                 .formLogin(AbstractHttpConfigurer::disable)
                 .oauth2Login(oauth2 -> oauth2
+                        .loginPage("/login")
                         .userInfoEndpoint(userInfo -> userInfo.userService(socialLoginService))
                         .successHandler(oAuth2SuccessHandler)
                 )
