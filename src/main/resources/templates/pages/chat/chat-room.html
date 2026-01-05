@@ -10,44 +10,42 @@
 <div layout:fragment="content">
     <div id="chatRoot"
          th:attr="data-room-id=${roomId}, data-user-id=${userId}"
-         class="mx-auto max-w-5xl px-6 py-10">
+         class="mx-auto max-w-4xl px-6 py-10">
 
         <div class="mb-5 flex items-center justify-between">
             <div class="flex items-center gap-3">
-                <div class="h-10 w-10 rounded-2xl bg-slate-900 text-white flex items-center justify-center font-black">
+                <div class="h-10 w-10 rounded-xl bg-slate-900 text-white flex items-center justify-center font-black">
                     C
                 </div>
                 <div>
-                    <div class="text-lg font-extrabold text-gray-900 leading-tight">채팅</div>
+                    <div class="text-[17px] font-extrabold text-gray-900 leading-tight">채팅</div>
                     <div class="text-xs text-gray-500">거래 관련 대화를 나눠요</div>
                 </div>
             </div>
 
             <a href="/chats"
-               class="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
+               class="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
                 목록으로
                 <span class="text-gray-400">›</span>
             </a>
         </div>
 
-        <section class="rounded-3xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-            <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 bg-gradient-to-b from-white to-gray-50">
+        <section class="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 bg-white">
                 <button id="loadMore"
-                        class="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                        class="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
                     이전 메시지
                 </button>
 
-                <div class="text-xs text-gray-500">
-                    실시간 채팅
-                </div>
+                <div class="text-xs text-gray-500">실시간 채팅</div>
             </div>
 
             <div class="relative">
                 <div class="pointer-events-none absolute inset-x-0 top-0 h-10 bg-gradient-to-b from-white to-transparent"></div>
-                <div class="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-white to-transparent"></div>
+                <div class="pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-white to-transparent"></div>
 
                 <div id="messages"
-                     class="h-[62vh] overflow-y-auto bg-white px-5 py-6 space-y-3">
+                     class="h-[62vh] overflow-y-auto bg-slate-50 px-5 py-6 space-y-2">
                     <div class="text-sm text-gray-500">불러오는 중...</div>
                 </div>
             </div>
@@ -55,19 +53,22 @@
             <div class="border-t border-gray-100 bg-white px-5 py-4">
                 <div class="flex items-end gap-3">
                     <div class="flex-1">
-                        <div class="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 focus-within:ring-2 focus-within:ring-gray-200">
+                        <div class="rounded-xl border border-gray-200 bg-white px-4 py-3 focus-within:ring-2 focus-within:ring-slate-200">
                             <textarea id="messageInput"
                                       rows="1"
-                                      class="w-full resize-none bg-transparent text-sm outline-none placeholder:text-gray-400"
+                                      class="w-full resize-none bg-transparent text-[13px] leading-5 outline-none placeholder:text-gray-400"
                                       placeholder="메시지를 입력하세요..."></textarea>
                         </div>
-                        <div class="mt-1 text-[11px] text-gray-400">Enter 전송 · Shift+Enter 줄바꿈</div>
                     </div>
 
                     <button id="sendBtn"
-                            class="h-11 shrink-0 rounded-2xl bg-slate-900 px-5 text-sm font-semibold text-white hover:bg-slate-800 active:scale-[0.99]">
+                            class="self-end h-11 w-20 shrink-0 rounded-xl bg-slate-900 text-[13px] font-semibold text-white hover:bg-slate-800 active:scale-[0.99]">
                         전송
                     </button>
+                </div>
+
+                <div class="mt-2 px-1 text-[11px] text-gray-400">
+                    Enter 전송 · Shift+Enter 줄바꿈
                 </div>
             </div>
         </section>
@@ -81,7 +82,7 @@
             if (!root) return;
 
             const roomId = root.dataset.roomId;
-            const myUserId = root.dataset.userId;
+            const myUserId = String(root.dataset.userId ?? '');
 
             const messagesEl = document.getElementById('messages');
             const loadMoreBtn = document.getElementById('loadMore');
@@ -92,11 +93,10 @@
             let loading = false;
             let stompClient = null;
 
-            // ✅ 한글 IME(조합) 이슈 방지용
             let composing = false;
-
-            // ✅ 아주 짧은 시간 중복 전송 방지 (더블 이벤트/모바일 등)
             let lastSendAt = 0;
+
+            const seenIds = new Set();
 
             function getAccessToken() {
                 return localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
@@ -113,11 +113,10 @@
 
             function normalizeMessage(m) {
                 return {
-                    id: m.messageId ?? m.chatMessageId ?? m.id ?? null,
-                    roomId: m.roomId ?? m.chatRoomId ?? null,
-                    senderId: String(m.senderId ?? m.sender ?? m.userId ?? ''),
-                    content: String(m.content ?? m.message ?? ''),
-                    at: m.createdAt ?? m.sentAt ?? m.at ?? null
+                    id: m?.messageId ?? m?.chatMessageId ?? m?.id ?? null,
+                    senderId: String(m?.senderId ?? m?.sender ?? m?.userId ?? ''),
+                    content: String(m?.content ?? m?.message ?? ''),
+                    at: m?.createdAt ?? m?.sentAt ?? m?.at ?? null
                 };
             }
 
@@ -128,7 +127,7 @@
                 return d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
             }
 
-            function isNearBottom(el, threshold = 120) {
+            function isNearBottom(el, threshold = 140) {
                 return el.scrollHeight - (el.scrollTop + el.clientHeight) <= threshold;
             }
 
@@ -141,24 +140,36 @@
 
             function renderMessage(raw) {
                 const m = normalizeMessage(raw);
-                const mine = m.senderId === String(myUserId);
+                const mine = m.senderId === myUserId;
                 const content = escapeHtml(m.content);
                 const time = formatTime(m.at);
 
                 const bubbleClass = mine
-                    ? 'bg-slate-900 text-white rounded-2xl rounded-br-md'
-                    : 'bg-white text-gray-900 border border-gray-200 rounded-2xl rounded-bl-md';
+                    ? 'bg-slate-900 text-white rounded-xl rounded-br-md'
+                    : 'bg-white text-gray-900 border border-gray-200 rounded-xl rounded-bl-md';
+
+                const idAttr = m.id ? `data-msg-id="${escapeHtml(m.id)}"` : '';
 
                 return `
-          <div class="flex ${mine ? 'justify-end' : 'justify-start'}">
-            <div class="max-w-[74%]">
-              <div class="${bubbleClass} px-4 py-2.5 text-sm shadow-sm whitespace-pre-wrap break-words">
-                ${content}
-              </div>
-              ${time ? `<div class="mt-1 text-[11px] text-gray-400 ${mine ? 'text-right' : 'text-left'}">${time}</div>` : ``}
-            </div>
-          </div>
-        `;
+                  <div class="flex ${mine ? 'justify-end' : 'justify-start'}" ${idAttr}>
+                    <div class="max-w-[78%] sm:max-w-[65%] lg:max-w-[56%]">
+                      <div class="${bubbleClass} px-3 py-2 text-[13px] leading-5 shadow-sm whitespace-pre-wrap break-words">
+                        ${content}
+                      </div>
+                      ${time ? `<div class="mt-1 text-[11px] text-gray-400 ${mine ? 'text-right' : 'text-left'}">${time}</div>` : ``}
+                    </div>
+                  </div>
+                `;
+            }
+
+            function appendMessage(raw) {
+                const m = normalizeMessage(raw);
+                if (m.id && seenIds.has(String(m.id))) return;
+                if (m.id) seenIds.add(String(m.id));
+
+                const stick = isNearBottom(messagesEl);
+                messagesEl.insertAdjacentHTML('beforeend', renderMessage(raw));
+                if (stick) messagesEl.scrollTop = messagesEl.scrollHeight;
             }
 
             async function loadMessages(nextCursor) {
@@ -182,27 +193,33 @@
                     if (!res.ok) {
                         const txt = await res.text().catch(() => '');
                         messagesEl.innerHTML = `
-              <div class="rounded-2xl border border-red-200 bg-red-50 p-4">
-                <div class="text-sm font-semibold text-red-700">메시지 조회 실패 (${res.status})</div>
-                <div class="mt-2 text-xs whitespace-pre-wrap text-red-700/90">${escapeHtml(txt)}</div>
-              </div>
-            `;
+                          <div class="rounded-xl border border-red-200 bg-red-50 p-4">
+                            <div class="text-sm font-semibold text-red-700">메시지 조회 실패 (${res.status})</div>
+                            <div class="mt-2 text-xs whitespace-pre-wrap text-red-700/90">${escapeHtml(txt)}</div>
+                          </div>
+                        `;
                         setLoadMore(false, '이전 메시지');
                         return;
                     }
 
                     const list = await res.json();
+
                     if (!Array.isArray(list) || list.length === 0) {
                         if (!nextCursor) {
                             messagesEl.innerHTML = `<div class="text-sm text-gray-500">메시지가 아직 없어요.</div>`;
                         }
                         setLoadMore(false, '이전 메시지 없음');
+                        cursor = null;
                         return;
                     }
 
-                    // 서버가 DESC(최신→과거)로 준다고 가정 → 화면은 ASC로
                     const asc = [...list].reverse();
                     const html = asc.map(renderMessage).join('');
+
+                    asc.forEach((x) => {
+                        const n = normalizeMessage(x);
+                        if (n.id) seenIds.add(String(n.id));
+                    });
 
                     if (!nextCursor) {
                         messagesEl.innerHTML = html;
@@ -213,43 +230,35 @@
                         messagesEl.scrollTop = messagesEl.scrollHeight - prevHeight;
                     }
 
-                    // 다음 커서: 이번 응답에서 "가장 과거" 메시지 id
                     const last = normalizeMessage(list[list.length - 1]);
                     cursor = last.id;
 
-                    setLoadMore(Boolean(cursor), '이전 메시지');
+                    setLoadMore(Boolean(cursor), Boolean(cursor) ? '이전 메시지' : '이전 메시지 없음');
                 } finally {
                     loading = false;
                 }
             }
 
             function connectStomp() {
-                // 혹시 모를 중복 연결 정리
                 try { stompClient?.disconnect?.(() => {}); } catch (_) {}
 
                 const sock = new SockJS('/ws');
                 stompClient = Stomp.over(sock);
                 stompClient.debug = null;
 
-                // 필요하면 헤더에 토큰 넣기 (서버 설정에 따라)
-                // const token = getAccessToken();
-                // const headers = token ? { Authorization: `Bearer ${token}` } : {};
                 const headers = {};
 
                 stompClient.connect(headers, () => {
                     stompClient.subscribe(`/topic/chat.rooms.${roomId}`, (frame) => {
                         const msg = JSON.parse(frame.body);
-
-                        const shouldStick = isNearBottom(messagesEl);
-                        messagesEl.insertAdjacentHTML('beforeend', renderMessage(msg));
-                        if (shouldStick) messagesEl.scrollTop = messagesEl.scrollHeight;
+                        appendMessage(msg);
                     });
                 }, () => {});
             }
 
             function sendMessage() {
                 const now = Date.now();
-                if (now - lastSendAt < 150) return;
+                if (now - lastSendAt < 180) return;
                 lastSendAt = now;
 
                 const content = (inputEl.value || '').trim();
@@ -257,13 +266,12 @@
 
                 if (!stompClient || !stompClient.connected) return;
 
-                const payload = {
+                stompClient.send('/app/chat.send', {}, JSON.stringify({
                     roomId: Number(roomId),
                     senderId: myUserId,
                     content
-                };
+                }));
 
-                stompClient.send('/app/chat.send', {}, JSON.stringify(payload));
                 inputEl.value = '';
                 autosize();
                 inputEl.focus();
@@ -274,7 +282,6 @@
                 inputEl.style.height = Math.min(inputEl.scrollHeight, 160) + 'px';
             }
 
-            // 이벤트
             loadMoreBtn.addEventListener('click', () => {
                 if (!cursor) return;
                 loadMessages(cursor);
@@ -282,24 +289,19 @@
 
             sendBtn.addEventListener('click', sendMessage);
 
-            // ✅ IME 조합 상태 추적
             inputEl.addEventListener('compositionstart', () => { composing = true; });
             inputEl.addEventListener('compositionend', () => { composing = false; });
 
-            // ✅ “안녕하세요요” 같은 현상 방지 포인트
             inputEl.addEventListener('keydown', (e) => {
                 if (e.key !== 'Enter') return;
-                if (e.shiftKey) return; // 줄바꿈
-                // 조합 중 Enter는 "조합 확정"일 수 있어서 전송하면 글자 중복/깨짐 발생
+                if (e.shiftKey) return;
                 if (e.isComposing || composing || e.keyCode === 229) return;
-
                 e.preventDefault();
                 sendMessage();
             });
 
             inputEl.addEventListener('input', autosize);
 
-            // 페이지 이탈 시 연결 정리(뒤로가기 캐시/재진입 중복 subscribe 방지)
             window.addEventListener('beforeunload', () => {
                 try { stompClient?.disconnect?.(() => {}); } catch (_) {}
             });
