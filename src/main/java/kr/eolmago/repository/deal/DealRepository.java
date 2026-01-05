@@ -9,10 +9,6 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Deal Repository
- * Spring Data JPA 메서드 네이밍 사용 (팀 스타일)
- */
 @Repository
 public interface DealRepository extends JpaRepository<Deal, Long> {
     
