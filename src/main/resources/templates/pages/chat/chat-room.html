@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/base}">
+<head>
+    <title layout:fragment="title">채팅방</title>
+</head>
+
+<body>
+<div layout:fragment="content" class="bg-gradient-to-b from-slate-50 to-white">
+    <div id="chatRoot"
+         th:attr="data-room-id=${roomId}, data-user-id=${userId}"
+         class="mx-auto max-w-3xl px-6 py-10">
+
+        <div class="mb-5 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="h-10 w-10 rounded-xl bg-slate-900 text-white flex items-center justify-center font-black">
+                    C
+                </div>
+                <div>
+                    <div class="text-[17px] font-extrabold text-slate-900 leading-tight">채팅</div>
+                    <div class="text-xs text-slate-500">거래 관련 대화를 나눠요</div>
+                </div>
+            </div>
+
+            <a href="/chats"
+               class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 shadow-sm">
+                <span class="text-slate-500">목록</span>
+                <span class="text-slate-300">›</span>
+            </a>
+        </div>
+
+        <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_18px_40px_-28px_rgba(15,23,42,0.45)]">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-white/80 backdrop-blur">
+                <button id="loadMore"
+                        class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 shadow-sm">
+                    이전 메시지
+                </button>
+
+                <div class="flex items-center gap-2 text-xs text-slate-500">
+                    <span class="inline-block h-2 w-2 rounded-full bg-emerald-500"></span>
+                    실시간 연결
+                </div>
+            </div>
+
+            <div class="relative">
+                <div class="pointer-events-none absolute inset-x-0 top-0 h-10 bg-gradient-to-b from-white to-transparent"></div>
+                <div class="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-white to-transparent"></div>
+
+                <div id="messages"
+                     class="h-[64vh] overflow-y-auto px-5 py-6 bg-gradient-to-b from-slate-50 to-white space-y-2">
+                    <div class="text-sm text-slate-500">불러오는 중...</div>
+                </div>
+            </div>
+
+            <div class="border-t border-slate-100 bg-white/80 backdrop-blur px-5 py-4">
+                <div class="flex items-end gap-3">
+                    <div class="flex-1">
+                        <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 shadow-sm focus-within:ring-2 focus-within:ring-slate-200">
+        <textarea id="messageInput"
+                  rows="1"
+                  class="w-full resize-none bg-transparent text-sm leading-5 outline-none placeholder:text-slate-400"
+                  placeholder="메시지를 입력하세요..."></textarea>
+                        </div>
+                    </div>
+
+                    <button id="sendBtn"
+                            class="h-11 w-11 shrink-0 rounded-2xl bg-slate-900 text-white shadow-sm hover:bg-slate-800 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                            aria-label="전송">
+                        <span class="text-base">➤</span>
+                    </button>
+                </div>
+
+                <div class="mt-2 px-1 text-[11px] text-slate-400">
+                    Enter 전송 · Shift+Enter 줄바꿈
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+
+<th:block layout:fragment="scripts">
+    <script>
+        (() => {
+            const root = document.getElementById('chatRoot');
+            if (!root) return;
+
+            const roomId = root.dataset.roomId;
+            const myUserId = String(root.dataset.userId ?? '');
+
+            const messagesEl = document.getElementById('messages');
+            const loadMoreBtn = document.getElementById('loadMore');
+            const inputEl = document.getElementById('messageInput');
+            const sendBtn = document.getElementById('sendBtn');
+
+            let cursor = null;
+            let loading = false;
+            let stompClient = null;
+
+            let composing = false;
+            let lastSendAt = 0;
+
+            const seenIds = new Set();
+
+            function getAccessToken() {
+                return localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
+            }
+
+            function escapeHtml(str) {
+                return String(str ?? '')
+                    .replaceAll('&', '&amp;')
+                    .replaceAll('<', '&lt;')
+                    .replaceAll('>', '&gt;')
+                    .replaceAll('"', '&quot;')
+                    .replaceAll("'", '&#39;');
+            }
+
+            function normalizeMessage(m) {
+                return {
+                    id: m?.messageId ?? m?.chatMessageId ?? m?.id ?? null,
+                    senderId: String(m?.senderId ?? m?.sender ?? m?.userId ?? ''),
+                    content: String(m?.content ?? m?.message ?? ''),
+                    at: m?.createdAt ?? m?.sentAt ?? m?.at ?? null
+                };
+            }
+
+            function formatTime(v) {
+                if (!v) return '';
+                const d = new Date(v);
+                if (Number.isNaN(d.getTime())) return '';
+                return d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+            }
+
+            function isNearBottom(el, threshold = 140) {
+                return el.scrollHeight - (el.scrollTop + el.clientHeight) <= threshold;
+            }
+
+            function setLoadMore(enabled, label) {
+                loadMoreBtn.disabled = !enabled;
+                loadMoreBtn.classList.toggle('opacity-50', !enabled);
+                loadMoreBtn.classList.toggle('cursor-not-allowed', !enabled);
+                if (label) loadMoreBtn.textContent = label;
+            }
+
+            function setSendEnabled(enabled) {
+                sendBtn.disabled = !enabled;
+            }
+
+            function renderMessage(raw) {
+                const m = normalizeMessage(raw);
+                const mine = m.senderId === myUserId;
+
+                const content = escapeHtml(m.content);
+                const time = formatTime(m.at);
+
+                const bubble = mine
+                    ? 'bg-slate-900 text-white'
+                    : 'bg-white text-slate-900 border border-slate-200';
+
+                const idAttr = m.id ? `data-msg-id="${escapeHtml(m.id)}"` : '';
+
+                return `<div class="flex ${mine ? 'justify-end' : 'justify-start'}" ${idAttr}>
+                    <div class="flex flex-col ${mine ? 'items-end' : 'items-start'}">
+                      <div class="${bubble} inline-block w-fit max-w-[70%,22ch] sm:max-w-[26rem] px-5 py-3 text-[17.5px] leading-5 rounded-2xl rounded-br-md shadow-sm whitespace-pre-line break-words">${content}</div>
+                      ${time ? `<div class="mt-0.5 text-[11px] text-slate-400">${time}</div>` : ``}
+                    </div>
+                  </div>`;
+            }
+
+
+
+
+            function appendMessage(raw) {
+                if (messagesEl.dataset.state === 'empty') {
+                    messagesEl.dataset.state = 'ready';
+                    messagesEl.innerHTML = '';
+                }
+
+                const m = normalizeMessage(raw);
+                if (m.id && seenIds.has(String(m.id))) return;
+                if (m.id) seenIds.add(String(m.id));
+
+                const stick = isNearBottom(messagesEl);
+                messagesEl.insertAdjacentHTML('beforeend', renderMessage(raw));
+                if (stick) messagesEl.scrollTop = messagesEl.scrollHeight;
+            }
+
+            async function loadMessages(nextCursor) {
+                if (loading) return;
+                loading = true;
+
+                setLoadMore(false, '불러오는 중...');
+                if (!nextCursor) {
+                    messagesEl.innerHTML = `
+                      <div class="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-500 shadow-sm">
+                        불러오는 중...
+                      </div>
+                    `;
+                }
+
+                try {
+                    const url = new URL(`/api/chat/rooms/${roomId}/messages`, location.origin);
+                    if (nextCursor) url.searchParams.set('cursor', nextCursor);
+
+                    const token = getAccessToken();
+                    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+                    const res = await fetch(url, { method: 'GET', headers, credentials: 'same-origin' });
+
+                    if (!res.ok) {
+                        const txt = await res.text().catch(() => '');
+                        messagesEl.innerHTML = `
+                          <div class="rounded-2xl border border-red-200 bg-red-50 p-4 shadow-sm">
+                            <div class="text-sm font-semibold text-red-700">메시지 조회 실패 (${res.status})</div>
+                            <div class="mt-2 text-xs whitespace-pre-wrap text-red-700/90">${escapeHtml(txt)}</div>
+                          </div>
+                        `;
+                        setLoadMore(false, '이전 메시지');
+                        return;
+                    }
+
+                    const list = await res.json();
+
+                    if (!Array.isArray(list) || list.length === 0) {
+                        if (!nextCursor) {
+                            messagesEl.dataset.state = 'empty';
+                            messagesEl.innerHTML = `
+                              <div id="emptyState" class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm text-center">
+                                <div class="text-sm font-semibold text-slate-800">메시지가 아직 없어요</div>
+                                <div class="mt-1 text-xs text-slate-500">첫 메시지를 보내보세요.</div>
+                              </div>
+                            `;
+                        }
+                        setLoadMore(false, '이전 메시지 없음');
+                        cursor = null;
+                        return;
+                    }
+
+
+                    const asc = [...list].reverse();
+                    const html = asc.map(renderMessage).join('');
+
+                    asc.forEach((x) => {
+                        const n = normalizeMessage(x);
+                        if (n.id) seenIds.add(String(n.id));
+                    });
+
+                    if (!nextCursor) {
+                        messagesEl.innerHTML = html;
+                        messagesEl.scrollTop = messagesEl.scrollHeight;
+                    } else {
+                        const prevHeight = messagesEl.scrollHeight;
+                        messagesEl.insertAdjacentHTML('afterbegin', html);
+                        messagesEl.scrollTop = messagesEl.scrollHeight - prevHeight;
+                    }
+
+                    const last = normalizeMessage(list[list.length - 1]);
+                    cursor = last.id;
+
+                    setLoadMore(Boolean(cursor), Boolean(cursor) ? '이전 메시지' : '이전 메시지 없음');
+                } finally {
+                    loading = false;
+                }
+            }
+
+            function connectStomp() {
+                try { stompClient?.disconnect?.(() => {}); } catch (_) {}
+
+                const sock = new SockJS('/ws');
+                stompClient = Stomp.over(sock);
+                stompClient.debug = null;
+
+                const token = getAccessToken();
+                const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+                stompClient.connect(headers, () => {
+                    setSendEnabled(true);
+                    stompClient.subscribe(`/topic/chat.rooms.${roomId}`, (frame) => {
+                        const msg = JSON.parse(frame.body);
+                        appendMessage(msg);
+                    });
+                }, () => {
+                    setSendEnabled(false);
+                });
+            }
+
+            function sendMessage() {
+                const now = Date.now();
+                if (now - lastSendAt < 180) return;
+                lastSendAt = now;
+
+                const content = (inputEl.value || '').trim();
+                if (!content) return;
+
+                if (!stompClient || !stompClient.connected) return;
+
+                stompClient.send('/app/chat.send', {}, JSON.stringify({
+                    roomId: Number(roomId),
+                    senderId: myUserId,
+                    content
+                }));
+
+                inputEl.value = '';
+                autosize();
+                inputEl.focus();
+            }
+
+            function autosize() {
+                inputEl.style.height = 'auto';
+                inputEl.style.height = Math.min(inputEl.scrollHeight, 160) + 'px';
+            }
+
+            loadMoreBtn.addEventListener('click', () => {
+                if (!cursor) return;
+                loadMessages(cursor);
+            });
+
+            sendBtn.addEventListener('click', sendMessage);
+
+            inputEl.addEventListener('compositionstart', () => { composing = true; });
+            inputEl.addEventListener('compositionend', () => { composing = false; });
+
+            inputEl.addEventListener('keydown', (e) => {
+                if (e.key !== 'Enter') return;
+                if (e.shiftKey) return;
+                if (e.isComposing || composing || e.keyCode === 229) return;
+                e.preventDefault();
+                sendMessage();
+            });
+
+            inputEl.addEventListener('input', autosize);
+
+            window.addEventListener('beforeunload', () => {
+                try { stompClient?.disconnect?.(() => {}); } catch (_) {}
+            });
+
+            setSendEnabled(false);
+            setLoadMore(false, '불러오는 중...');
+            loadMessages(null);
+            connectStomp();
+            autosize();
+        })();
+    </script>
+</th:block>
+
+</body>
+</html>

@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/base}">
+<head>
+    <title layout:fragment="title">채팅</title>
+</head>
+
+<body>
+<div layout:fragment="content">
+    <div class="mx-auto max-w-4xl px-6 py-10 space-y-6">
+
+        <!-- Header -->
+        <div class="flex items-end justify-between gap-4">
+            <div>
+                <h1 class="text-2xl font-extrabold text-gray-900 tracking-tight">채팅</h1>
+                <p class="mt-1 text-sm text-gray-600">참여 중인 채팅방 목록이에요.</p>
+            </div>
+            <div id="meta" class="text-xs text-gray-500"></div>
+        </div>
+
+        <!-- Card -->
+        <section class="rounded-2xl border border-gray-200 bg-white overflow-hidden shadow-sm">
+            <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+                <div class="text-sm font-semibold text-gray-900">채팅방</div>
+                <div class="text-xs text-gray-500">최근 메시지 기준</div>
+            </div>
+
+            <div id="rooms" class="divide-y divide-gray-100">
+                <div class="px-5 py-8 flex items-center gap-3 text-sm text-gray-500">
+                    <span class="inline-block h-4 w-4 rounded-full border-2 border-gray-300 border-t-transparent animate-spin"></span>
+                    불러오는 중...
+                </div>
+            </div>
+        </section>
+
+        <div class="text-xs text-gray-400">
+            * 채팅방을 누르면 대화 화면으로 이동해요.
+        </div>
+    </div>
+</div>
+
+<!-- ✅ layout:decorate 쓰면 script는 scripts fragment로 넣는 게 안전 -->
+<th:block layout:fragment="scripts">
+    <script>
+        const roomsEl = document.getElementById('rooms');
+        const metaEl = document.getElementById('meta');
+
+        function escapeHtml(str) {
+            return String(str ?? '')
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#39;');
+        }
+
+        function pickRoomId(r) { return r.roomId ?? r.chatRoomId ?? r.id; }
+        function pickTitle(r)  { return r.auctionTitle ?? r.title ?? r.itemTitle ?? '채팅방'; }
+        function pickLast(r)   { return r.lastMessage ?? r.lastMessageContent ?? r.lastContent ?? ''; }
+        function pickUnread(r) { return r.unreadCount ?? r.unread ?? 0; }
+        function pickAt(r)     { return r.lastMessageAt ?? r.updatedAt ?? r.lastAt ?? null; }
+
+        function formatTime(v) {
+            if (!v) return '';
+            const d = new Date(v);
+            if (Number.isNaN(d.getTime())) return '';
+            const now = new Date();
+            const sameDay = d.toDateString() === now.toDateString();
+            return sameDay
+                ? d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+                : d.toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' });
+        }
+
+        function renderEmpty() {
+            roomsEl.innerHTML = `
+              <div class="px-5 py-14 text-center">
+                <div class="mx-auto h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center">
+                  <svg class="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                          d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                  </svg>
+                </div>
+                <div class="mt-4 text-sm font-semibold text-gray-900">아직 채팅방이 없어요</div>
+                <div class="mt-1 text-sm text-gray-500">경매에서 낙찰/거래가 성사되면 채팅이 열려요.</div>
+              </div>
+            `;
+            metaEl.textContent = '';
+        }
+
+        function renderError(status, bodyText) {
+            roomsEl.innerHTML = `
+              <div class="px-5 py-8">
+                <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  채팅방 목록을 불러오지 못했어요. (HTTP ${status})
+                  <button id="retryBtn" class="ml-2 underline font-semibold">재시도</button>
+                  ${bodyText ? `<div class="mt-2 text-xs text-red-600 whitespace-pre-wrap">${escapeHtml(bodyText)}</div>` : ``}
+                </div>
+              </div>
+            `;
+            const retryBtn = document.getElementById('retryBtn');
+            if (retryBtn) retryBtn.addEventListener('click', loadRooms);
+            metaEl.textContent = '';
+        }
+
+        function renderRooms(rooms) {
+            rooms.sort((a, b) => {
+                const au = pickUnread(a), bu = pickUnread(b);
+                if (bu !== au) return bu - au;
+                const at = new Date(pickAt(a) ?? 0).getTime();
+                const bt = new Date(pickAt(b) ?? 0).getTime();
+                return bt - at;
+            });
+
+            roomsEl.innerHTML = rooms.map(r => {
+                const roomId = pickRoomId(r);
+                const title = escapeHtml(pickTitle(r));
+                const lastRaw = pickLast(r);
+                const last = escapeHtml(lastRaw || '최근 메시지가 없어요.');
+                const unread = Number(pickUnread(r) || 0);
+                const time = formatTime(pickAt(r));
+
+                return `
+                  <a href="/chats/rooms/${encodeURIComponent(roomId)}"
+                     class="block px-5 py-4 hover:bg-gray-50 transition">
+                    <div class="flex items-start justify-between gap-4">
+                      <div class="min-w-0">
+                        <div class="flex items-center gap-2">
+                          <div class="text-sm font-semibold text-gray-900 truncate">${title}</div>
+                          ${unread > 0 ? `
+                            <span class="inline-flex items-center rounded-full bg-red-500 px-2 py-0.5 text-[11px] font-bold text-white">
+                              ${unread}
+                            </span>` : ``}
+                        </div>
+                        <div class="mt-1 text-xs text-gray-500 truncate">${last}</div>
+                      </div>
+
+                      <div class="flex flex-col items-end gap-1 shrink-0">
+                        ${time ? `<div class="text-[11px] text-gray-400 whitespace-nowrap">${time}</div>` : ``}
+                        <div class="text-xs text-gray-400">›</div>
+                      </div>
+                    </div>
+                  </a>
+                `;
+            }).join('');
+
+            metaEl.textContent = `총 ${rooms.length}개`;
+        }
+
+        function getAccessToken() {
+            return localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
+        }
+
+        async function loadRooms() {
+            roomsEl.innerHTML = `
+              <div class="px-5 py-8 flex items-center gap-3 text-sm text-gray-500">
+                <span class="inline-block h-4 w-4 rounded-full border-2 border-gray-300 border-t-transparent animate-spin"></span>
+                불러오는 중...
+              </div>
+            `;
+            metaEl.textContent = '';
+
+            try {
+                const token = getAccessToken();
+                const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+                const res = await fetch('/api/chat/rooms', {
+                    method: 'GET',
+                    headers,
+                    credentials: 'same-origin',
+                });
+
+                if (!res.ok) {
+                    const text = await res.text().catch(() => '');
+                    renderError(res.status, text);
+                    return;
+                }
+
+                const rooms = await res.json();
+                if (!rooms || rooms.length === 0) {
+                    renderEmpty();
+                    return;
+                }
+
+                renderRooms(rooms);
+            } catch (e) {
+                roomsEl.innerHTML = `
+                  <div class="px-5 py-8">
+                    <div class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
+                      네트워크 오류가 발생했어요.
+                      <button id="retryBtn" class="ml-2 underline font-semibold">재시도</button>
+                    </div>
+                  </div>
+                `;
+                const retryBtn = document.getElementById('retryBtn');
+                if (retryBtn) retryBtn.addEventListener('click', loadRooms);
+            }
+        }
+
+        // ✅ 실행 확인용(브라우저 콘솔)
+        console.log('[chat-list] script loaded');
+        loadRooms();
+    </script>
+</th:block>
+</body>
+</html>

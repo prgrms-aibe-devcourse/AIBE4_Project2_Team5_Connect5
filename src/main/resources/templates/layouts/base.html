@@ -3,21 +3,19 @@
       xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout">
 
-<!-- head는 fragments/head.html로 공통화 -->
 <head th:replace="~{fragments/head :: head('얼마고')}"></head>
 
-<body class="bg-gradient-to-br from-gray-50 via-white to-gray-50 text-gray-900 min-h-screen">
-<!-- Navigation -->
+<body class="bg-gradient-to-br from-gray-50 via-white to-gray-50 text-gray-900 min-h-screen flex flex-col">
 <th:block th:replace="~{fragments/nav :: nav}" />
 
-<!-- Main content -->
-<main class="mx-auto max-w-7xl px-6 py-10">
-    <div layout:fragment="content">
-        <!-- Page content goes here -->
-    </div>
+<main class="mx-auto max-w-7xl px-6 py-10 flex-1 w-full">
+    <div layout:fragment="content"></div>
 </main>
 
-<!-- Footer -->
 <th:block th:replace="~{fragments/footer :: footer}" />
+
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+<th:block layout:fragment="scripts"></th:block>
 </body>
 </html>

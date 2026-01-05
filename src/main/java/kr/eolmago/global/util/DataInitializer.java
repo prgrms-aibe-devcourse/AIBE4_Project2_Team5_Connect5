@@ -15,8 +15,10 @@ import kr.eolmago.repository.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
+import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
@@ -32,9 +34,9 @@ import java.util.Map;
  *  - 개발 환경에서만 사용 (프로덕션에선 비활성화)
  */
 @Slf4j
-//@Component
+@Component
 @RequiredArgsConstructor
-public class DataInitializer /*implements ApplicationRunner*/ {
+public class DataInitializer implements ApplicationRunner {
 
     private final UserRepository userRepository;
     private final AuctionItemRepository auctionItemRepository;
@@ -155,8 +157,6 @@ public class DataInitializer /*implements ApplicationRunner*/ {
                 endAt = null;
             }
 
-            int bidIncrement = 5000;               // 원하는 값(최소단위)
-
             Auction auction = Auction.create(
                     item,
                     seller,
@@ -225,8 +225,6 @@ public class DataInitializer /*implements ApplicationRunner*/ {
                 startAt = null;
                 endAt = null;
             }
-
-            int bidIncrement = 10000;
 
             Auction auction = Auction.create(
                     item,
@@ -326,9 +324,6 @@ public class DataInitializer /*implements ApplicationRunner*/ {
         return keywords;
     }
 
-    /**
-     * 브랜드 키워드 판단 (SearchKeywordService와 동일)
-     */
     private boolean isBrandKeyword(String keyword) {
         String lowerKeyword = keyword.toLowerCase();
         return lowerKeyword.matches(".*(아이폰|갤럭시|픽셀|샤오미|애플|삼성|apple|samsung|google|xiaomi).*");

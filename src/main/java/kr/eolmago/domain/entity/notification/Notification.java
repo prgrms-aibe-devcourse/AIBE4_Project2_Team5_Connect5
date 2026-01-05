@@ -58,6 +58,23 @@ public class Notification extends AuditableEntity {
 
     private OffsetDateTime readAt;
 
+    @Column(name = "is_deleted", nullable = false)
+    private boolean deleted;
+
+    private OffsetDateTime deletedAt;
+
+    public void markRead(OffsetDateTime now) {
+        if (this.read) return;
+        this.read = true;
+        this.readAt = now;
+    }
+
+    public void softDelete(OffsetDateTime now) {
+        if (this.deleted) return;
+        this.deleted = true;
+        this.deletedAt = now;
+    }
+
     public static Notification create(
             User user,
             NotificationType type,

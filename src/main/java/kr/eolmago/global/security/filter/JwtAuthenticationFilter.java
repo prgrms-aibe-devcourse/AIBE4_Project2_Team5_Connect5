@@ -55,13 +55,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     public static final String ACCESS_TOKEN_COOKIE = "accessToken";
 
+    private static final String BEARER_PREFIX = "Bearer ";
+
     private String extractToken(HttpServletRequest request) {
+        String auth = request.getHeader("Authorization");
+        if (auth != null && auth.startsWith(BEARER_PREFIX)) {
+            return auth.substring(BEARER_PREFIX.length()).trim();
+        }
+
         Cookie[] cookies = request.getCookies();
-        if (cookies != null) {
-            for (Cookie cookie : cookies) {
-                if(ACCESS_TOKEN_COOKIE.equals(cookie.getName())) {
-                    return cookie.getValue();
-                }
+        if (cookies == null) return null;
+
+        for (Cookie cookie : cookies) {
+            if (ACCESS_TOKEN_COOKIE.equals(cookie.getName())) {
+                return cookie.getValue();
             }
         }
         return null;
