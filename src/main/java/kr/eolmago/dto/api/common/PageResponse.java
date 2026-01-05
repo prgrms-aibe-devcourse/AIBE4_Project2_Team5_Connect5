@@ -1,4 +1,4 @@
-package kr.eolmago.global.common.dto;
+package kr.eolmago.dto.api.common;
 
 import org.springframework.data.domain.Page;
 

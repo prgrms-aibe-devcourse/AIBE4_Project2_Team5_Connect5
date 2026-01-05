@@ -1,6 +1,6 @@
 package kr.eolmago.global.util;
 
-import kr.eolmago.global.common.dto.PageInfo;
+import kr.eolmago.dto.api.common.PageInfo;
 
 /**
  * 페이지네이션 유틸리티

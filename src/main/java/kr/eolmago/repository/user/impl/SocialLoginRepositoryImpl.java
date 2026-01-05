@@ -1,23 +1,22 @@
 package kr.eolmago.repository.user.impl;
 
 import com.querydsl.jpa.impl.JPAQueryFactory;
-import jakarta.persistence.EntityManager;
 import kr.eolmago.domain.entity.user.SocialLogin;
 import kr.eolmago.domain.entity.user.enums.SocialProvider;
 import kr.eolmago.repository.user.SocialLoginRepositoryCustom;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
 import static kr.eolmago.domain.entity.user.QSocialLogin.socialLogin;
 import static kr.eolmago.domain.entity.user.QUser.user;
 
+@Repository
+@RequiredArgsConstructor
 public class SocialLoginRepositoryImpl implements SocialLoginRepositoryCustom {
 
     private final JPAQueryFactory queryFactory;
-
-    public SocialLoginRepositoryImpl(EntityManager em) {
-        this.queryFactory = new JPAQueryFactory(em);
-    }
 
     @Override
     public Optional<SocialLogin> findByProviderAndProviderId(SocialProvider provider, String providerId) {
