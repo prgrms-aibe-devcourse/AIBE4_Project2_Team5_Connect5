@@ -22,11 +22,22 @@ public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint 
 
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException, ServletException {
-        response.setStatus(HttpStatus.UNAUTHORIZED.value());
-        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        response.setCharacterEncoding("UTF-8");
-        response.getWriter().write(objectMapper.writeValueAsString(
-                ErrorResponse.of(401, "Unauthorized", "로그인이 필요합니다.")
-        ));
+        String requestUri = request.getRequestURI();
+
+        // API 요청인 경우 JSON 응답
+        if (requestUri.startsWith("/api/")) {
+            response.setStatus(HttpStatus.UNAUTHORIZED.value());
+            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            response.setCharacterEncoding("UTF-8");
+            response.getWriter().write(objectMapper.writeValueAsString(
+                    ErrorResponse.of(401, "Unauthorized", "로그인이 필요합니다.")
+            ));
+        } else {
+            // 웹 페이지 요청인 경우 알림창 띄우고 로그인 페이지로 이동
+            response.setContentType("text/html; charset=UTF-8");
+            response.getWriter().write(
+                    "<script>alert('로그인이 필요합니다.'); location.href='/login';</script>"
+            );
+        }
     }
 }

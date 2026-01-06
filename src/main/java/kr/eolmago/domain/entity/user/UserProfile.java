@@ -60,6 +60,7 @@ public class UserProfile extends AuditableEntity {
         profile.nickname = nickname;
         profile.phoneNumber = phoneNumber;
         profile.phoneVerified = phoneVerified;
+        profile.profileImageUrl = "/images/profile/base.png";
         profile.ratingAvg = new BigDecimal("0.00");
         profile.tradeCount = 0;
         profile.reportCount = 0;
@@ -73,5 +74,21 @@ public class UserProfile extends AuditableEntity {
             String nickname
     ) {
         return create(user, name, nickname, null, false);
+    }
+
+    public void updateProfile(
+            String name,
+            String nickname,
+            String phoneNumber,
+            String profileImageUrl
+    ) {
+        this.name = name;
+        this.nickname = nickname;
+        this.phoneNumber = phoneNumber;
+        this.profileImageUrl = profileImageUrl;
+    }
+
+    public void verifyPhoneNumber() {
+        this.phoneVerified = true;
     }
 }

@@ -1,14 +1,12 @@
 package kr.eolmago.service.user;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-
 import kr.eolmago.domain.entity.user.SocialLogin;
 import kr.eolmago.domain.entity.user.User;
+import kr.eolmago.domain.entity.user.UserProfile;
 import kr.eolmago.domain.entity.user.enums.SocialProvider;
 import kr.eolmago.domain.entity.user.enums.UserRole;
 import kr.eolmago.repository.user.SocialLoginRepository;
+import kr.eolmago.repository.user.UserProfileRepository;
 import kr.eolmago.repository.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +19,10 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -29,6 +31,7 @@ public class SocialLoginService extends DefaultOAuth2UserService {
 
     private final UserRepository userRepository;
     private final SocialLoginRepository socialLoginRepository;
+    private final UserProfileRepository userProfileRepository;
 
     @Override
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
@@ -118,9 +121,34 @@ public class SocialLoginService extends DefaultOAuth2UserService {
             providerId,
             email
         );
+        SocialLogin savedSocialLogin = socialLoginRepository.save(socialLogin);
+        log.info("SocialLogin 생성 완료: socialId={}", savedSocialLogin.getSocialId());
 
-        return socialLoginRepository.save(socialLogin);
+        // 3. UserProfile 생성
+        String finalName = validateAndProcessName(name, provider, providerId);
+        UserProfile userProfile = UserProfile.create(
+                savedUser,
+                finalName,
+                finalName
+        );
+        UserProfile savedUserProfile = userProfileRepository.save(userProfile);
+        log.info("UserProfile 생성 완료: profileId={}", savedUserProfile.getProfileId());
+
+        return savedSocialLogin;
     }
 
+    /**
+     * 사용자 이름 검증 및 정제
+     */
+    private String validateAndProcessName(String name, SocialProvider provider, String providerId) {
+        if (name == null || name.trim().isEmpty()) {
+            String generatedName = provider.name().toLowerCase() + "_" + providerId.substring(0, Math.min(8, providerId.length()));
+            log.warn("빈 이름 처리: provider={}, providerId={}, generated={}",
+                    provider, providerId, generatedName);
+            return generatedName;
+        }
+        return name;
+    }
     private record ParsedOAuthUser(String providerId, String name, String email) { }
 }
+
