@@ -5,7 +5,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.UUID;
 import kr.eolmago.dto.api.chat.request.ChatSendMessageRequest;
 import kr.eolmago.global.security.CustomUserDetails;
-import kr.eolmago.service.chat.ChatCommandService;
+import kr.eolmago.service.chat.ChatService;
+import kr.eolmago.service.chat.validation.ChatValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -17,7 +18,8 @@ import org.springframework.util.StringUtils;
 @RequiredArgsConstructor
 public class ChatWebSocketController {
 
-	private final ChatCommandService chatCommandService;
+	private final ChatService chatService;
+	private final ChatValidator chatValidator;
 
 	@Operation(
 		summary = "채팅 메시지 전송(STOMP)",
@@ -27,25 +29,18 @@ public class ChatWebSocketController {
             """
 	)
 	@MessageMapping("/chat.send")
-	public void send(ChatSendMessageRequest request,
-		@AuthenticationPrincipal CustomUserDetails me) {
-
+	public void send(ChatSendMessageRequest request, @AuthenticationPrincipal CustomUserDetails me) {
 		if (request == null || request.roomId() == null || !StringUtils.hasText(request.content())) {
 			return;
 		}
 
-		UUID senderId = null;
-
-		if (me != null && StringUtils.hasText(me.getId())) {
-			senderId = UUID.fromString(me.getId());
-		} else if (request.senderId() != null) {
+		UUID senderId = chatValidator.tryParseUserId(me);
+		if (senderId == null) {
 			senderId = request.senderId();
 		}
 
-		if (senderId == null) {
-			return;
-		}
+		if (senderId == null) return;
 
-		chatCommandService.publishMessage(request.roomId(), senderId, request.content().trim());
+		chatService.publishMessage(request.roomId(), senderId, request.content().trim());
 	}
 }
