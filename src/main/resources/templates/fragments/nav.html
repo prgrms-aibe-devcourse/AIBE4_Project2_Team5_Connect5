@@ -97,8 +97,12 @@
                                 class="flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-2
                                        hover:bg-gray-50"
                                 onclick="toggleProfileMenu()">
-                            <div class="h-7 w-7 rounded-full bg-gray-900 text-white flex items-center justify-center text-xs font-bold"
-                                 th:text="${userName != null ? #strings.substring(userName, 0, 1) : 'U'}">U</div>
+                            <!-- 프로필 이미지 표시 -->
+                            <div class="h-7 w-7 rounded-full overflow-hidden bg-gray-200">
+                                <img th:src="${userProfileImage != null ? userProfileImage : '/images/profile/base.png'}"
+                                     alt="프로필"
+                                     class="h-full w-full object-cover" />
+                            </div>
                             <svg class="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" stroke-width="2"
                                  viewBox="0 0 24 24">
                                 <path d="M19 9l-7 7-7-7"/>
