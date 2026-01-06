@@ -53,6 +53,18 @@ public interface SearchKeywordRepositoryCustom {
     List<SearchKeyword> findTopBySearchCount(int limit);
 
     /**
+     * 초성 prefix 검색 (자동완성 - 초성)
+     *
+     * 예시:
+     * - "ㅇㅍ" 검색 → keyword_chosung LIKE 'ㅇㅍ%'
+     *
+     * @param chosungPrefix 초성 prefix
+     * @param limit 최대 개수
+     * @return 검색 결과 목록
+     */
+    List<SearchKeyword> findByChosungPrefix(String chosungPrefix, int limit);
+
+    /**
      * 오래된 키워드 정리 (배치 작업용)
      *
      * 동작:

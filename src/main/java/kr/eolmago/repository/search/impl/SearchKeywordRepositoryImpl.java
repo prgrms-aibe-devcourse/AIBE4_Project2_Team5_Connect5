@@ -68,6 +68,16 @@ public class SearchKeywordRepositoryImpl implements SearchKeywordRepositoryCusto
                 .fetch();
     }
 
+    @Override
+    public List<SearchKeyword> findByChosungPrefix(String chosungPrefix, int limit) {
+        return queryFactory
+                .selectFrom(searchKeyword)
+                .where(searchKeyword.keywordChosung.startsWith(chosungPrefix))
+                .orderBy(searchKeyword.searchCount.desc())
+                .limit(limit)
+                .fetch();
+    }
+
     /**
      * 오래된 키워드 정리
      *
