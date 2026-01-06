@@ -2,6 +2,8 @@ package kr.eolmago.global.exception;
 
 
 import jakarta.servlet.http.HttpServletRequest;
+import kr.eolmago.service.notification.exception.NotificationErrorCode;
+import kr.eolmago.service.notification.exception.NotificationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -266,9 +268,27 @@ public class GlobalExceptionHandler {
                 errorType, method, uri, userInfo, e.getMessage(), e);
     }
 
+
+
     private String getCurrentUser(HttpServletRequest request) {
         String remoteUser = request.getRemoteUser();
         return remoteUser != null ? remoteUser : "anonymous";
+    }
+
+    @ExceptionHandler(NotificationException.class)
+    public ResponseEntity<ErrorResponse> handleNotificationException(
+        NotificationException e,
+        HttpServletRequest request
+    ) {
+        logWarn(request, e, "NotificationException");
+
+        NotificationErrorCode ec = e.getErrorCode();
+
+        ErrorResponse response = ErrorResponse.of(ec.getCode(), e.getMessage());
+
+        return ResponseEntity
+            .status(ec.getStatus())
+            .body(response);
     }
 
     private String getFullRequestPath(HttpServletRequest request) {

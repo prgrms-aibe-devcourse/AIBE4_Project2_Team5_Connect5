@@ -1,5 +1,7 @@
 package kr.eolmago.service.chat;
 
+import static kr.eolmago.service.chat.ChatConstants.*;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -12,26 +14,14 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class ChatStreamPublisher {
 
-	public static final String STREAM_KEY = "chat:messages";
-	public static final String GROUP = "chat-group";
-
 	private final StringRedisTemplate redisTemplate;
 
 	public RecordId publish(Long roomId, UUID senderId, String content) {
 		Map<String, String> fields = new HashMap<>();
-		fields.put("roomId", String.valueOf(roomId));
-		fields.put("senderId", senderId.toString());
-		fields.put("content", content);
+		fields.put(FIELD_ROOM_ID, String.valueOf(roomId));
+		fields.put(FIELD_SENDER_ID, senderId.toString());
+		fields.put(FIELD_CONTENT, content);
 
-		RecordId recordId = redisTemplate.opsForStream().add(STREAM_KEY, fields);
-
-		// 그룹 없으면 생성 (stream 생성 이후에만 가능)
-		try {
-			redisTemplate.opsForStream().createGroup(STREAM_KEY, GROUP);
-		} catch (Exception ignored) {
-			// BUSYGROUP 등은 무시
-		}
-
-		return recordId;
+		return redisTemplate.opsForStream().add(STREAM_KEY, fields);
 	}
 }
