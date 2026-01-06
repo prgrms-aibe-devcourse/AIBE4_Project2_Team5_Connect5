@@ -1,7 +1,7 @@
 package kr.eolmago.controller.api.auction;
 
 import kr.eolmago.dto.api.auction.response.AuctionListResponse;
-import kr.eolmago.global.common.dto.PageResponse;
+import kr.eolmago.dto.api.common.PageResponse;
 import kr.eolmago.service.auction.AuctionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

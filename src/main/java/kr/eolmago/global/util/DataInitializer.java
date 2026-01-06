@@ -45,6 +45,7 @@ public class DataInitializer implements ApplicationRunner {
     private final RedisTemplate<String, String> redisTemplate;
 
     private static final String AUTOCOMPLETE_KEY = "autocomplete:all";
+    private static final int DEFAULT_BID_INCREMENT = 10000;
 
     @Override
     @Transactional
@@ -166,7 +167,7 @@ public class DataInitializer implements ApplicationRunner {
                             specs.get("storageGb")),
                     status,
                     basePrice,
-                    bidIncrement,
+                    DEFAULT_BID_INCREMENT,
                     durationHours,
                     startAt,
                     endAt
@@ -234,8 +235,8 @@ public class DataInitializer implements ApplicationRunner {
                             ItemCondition.values()[i % 4].name()),
                     status,
                     basePrice,
-                    bidIncrement,
-                    durationHours,
+                    DEFAULT_BID_INCREMENT,
+                durationHours,
                     startAt,
                     endAt
             );
