@@ -1,18 +1,25 @@
-FROM gradle:8-jdk17-temurin AS build
+# Gradle Wrapper로 빌드
+FROM eclipse-temurin:17-jdk AS build
 WORKDIR /app
+
+# Gradle Wrapper 복사
+COPY gradlew .
+COPY gradle gradle/
+
+# 실행 권한 부여
+RUN chmod +x gradlew
 
 # Gradle 빌드 설정 복사 (의존성 캐싱 최적화)
 COPY build.gradle settings.gradle ./
-COPY gradle ./gradle
 
 # 의존성 다운로드 (캐싱)
-RUN gradle dependencies --no-daemon || true
+RUN ./gradlew dependencies --no-daemon || true
 
 # 소스 코드 복사
 COPY src ./src
 
-# Gradle을 사용하여 JAR 파일 빌드 (테스트는 생략)
-RUN gradle bootJar --no-daemon -x test
+# Gradle Wrapper로 JAR 파일 빌드 (테스트는 생략)
+RUN ./gradlew bootJar --no-daemon -x test
 
 # JRE로 애플리케이션 실행
 FROM eclipse-temurin:17-jre
