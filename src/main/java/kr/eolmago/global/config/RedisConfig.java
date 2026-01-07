@@ -5,6 +5,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
+import org.springframework.data.redis.connection.lettuce.LettuceClientConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
@@ -29,6 +30,12 @@ public class RedisConfig {
     @Value("${spring.data.redis.port}")
     private int port;
 
+    @Value("${spring.data.redis.password:}") // 기본값 빈 문자열 (로컬용)
+    private String password;
+
+    @Value("${spring.data.redis.ssl.enabled:false}") // 기본값 false
+    private boolean sslEnabled;
+
     /**
      * Redis 연결 팩토리
      *  - Redis 서버와의 연결 관리
@@ -41,8 +48,18 @@ public class RedisConfig {
         RedisStandaloneConfiguration config = new RedisStandaloneConfiguration();
         config.setHostName(host);
         config.setPort(port);
-        // 로컬은 비밀번호 없음
-        // 배포 환경: application-prod.yml에서 설정
+        
+        if (password != null && !password.isBlank()) {
+            config.setPassword(password);
+        }
+
+        // SSL 설정 적용
+        if (sslEnabled) {
+            LettuceClientConfiguration clientConfig = LettuceClientConfiguration.builder()
+                    .useSsl()
+                    .build();
+            return new LettuceConnectionFactory(config, clientConfig);
+        }
 
         return new LettuceConnectionFactory(config);
     }
