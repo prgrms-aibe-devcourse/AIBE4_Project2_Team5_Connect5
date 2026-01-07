@@ -3,7 +3,7 @@
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layouts/base}">
 <head>
-    <title layout:fragment="title">판매 관리</title>
+    <title layout:fragment="title">내 경매</title>
     <link rel="stylesheet" href="/css/auction-list.css" />
 </head>
 
@@ -13,7 +13,7 @@
         <!-- 헤더 -->
         <div class="flex items-center justify-between">
             <div>
-                <h1 class="text-3xl font-extrabold tracking-tight text-gray-900">판매 관리</h1>
+                <h1 class="text-3xl font-extrabold tracking-tight text-gray-900">내 경매</h1>
                 <p class="mt-2 text-sm text-gray-600">내가 등록한 경매를 관리하세요.</p>
             </div>
             <a th:href="@{/seller/auctions/create}"

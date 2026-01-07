@@ -2,7 +2,6 @@
     <div class="mx-auto max-w-7xl px-6">
         <div class="flex h-16 items-center justify-between">
 
-            <!-- Left: Logo + Menus -->
             <div class="flex items-center gap-10">
                 <a th:href="@{/}" class="flex items-center flex-shrink-0">
                     <img th:src="@{/images/brand/logo_nav.png}" alt="얼마고"
@@ -17,7 +16,6 @@
                         경매 목록
                     </a>
 
-                    <!-- 판매 관리 드롭다운 -->
                     <div class="relative" id="sellerMenuWrapper">
                         <button type="button" id="sellerMenuButton"
                                 class="rounded-md px-3 py-2 text-sm font-semibold text-gray-900
@@ -31,20 +29,16 @@
 
                         <div id="sellerMenu" class="absolute left-0 mt-2 hidden w-48 z-50">
                             <div class="rounded-md border border-gray-200 bg-white shadow-lg py-1">
-                                <a th:href="@{/seller/auctions}" class="block px-4 py-2 text-sm text-gray-800 hover:bg-gray-100">
-                                    판매 관리
+                                <a th:href="@{/seller/auctions}" class="block px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50">
+                                    내 경매
                                 </a>
-                                <a th:href="@{/seller/deals}" class="block px-4 py-2 text-sm text-gray-800 hover:bg-gray-100">
-                                    거래 관리
-                                </a>
-                                <a th:href="@{/seller/reviews}" class="block px-4 py-2 text-sm text-gray-800 hover:bg-gray-100">
-                                    받은 리뷰
+                                <a th:href="@{/seller/deals}" class="block px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50">
+                                    판매 거래 관리
                                 </a>
                             </div>
                         </div>
                     </div>
 
-                    <!-- 구매 관리 드롭다운 -->
                     <div class="relative" id="purchaseMenuWrapper">
                         <button type="button" id="purchaseMenuButton"
                                 class="rounded-md px-3 py-2 text-sm font-semibold text-gray-900
@@ -58,17 +52,11 @@
 
                         <div id="purchaseMenu" class="absolute left-0 mt-2 hidden w-48 z-50">
                             <div class="rounded-md border border-gray-200 bg-white shadow-lg py-1">
-                                <a th:href="@{/buyer/bids}" class="block px-4 py-2 text-sm text-gray-800 hover:bg-gray-100">
+                                <a th:href="@{/buyer/bids}" class="block px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50">
                                     입찰/낙찰 내역
                                 </a>
-                                <a th:href="@{/buyer/deals}" class="block px-4 py-2 text-sm text-gray-800 hover:bg-gray-100">
-                                    거래 관리
-                                </a>
-                                <a th:href="@{/buyer/favorites}" class="block px-4 py-2 text-sm text-gray-800 hover:bg-gray-100">
-                                    찜 목록
-                                </a>
-                                <a th:href="@{/buyer/reviews}" class="block px-4 py-2 text-sm text-gray-800 hover:bg-gray-100">
-                                    내 리뷰
+                                <a th:href="@{/buyer/deals}" class="block px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50">
+                                    구매 거래 관리
                                 </a>
                             </div>
                         </div>
@@ -130,7 +118,6 @@
                                   d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V4a2 2 0 10-4 0v1.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0a3 3 0 11-6 0h6z"/>
                         </svg>
 
-                        <!-- ✅ 알림 뱃지: DOM은 항상 두고 hidden만 토글 -->
                         <span id="notifBadge"
                               th:text="${unreadNotificationCount != null ? (unreadNotificationCount > 99 ? '99+' : unreadNotificationCount) : 0}"
                               th:classappend="${unreadNotificationCount == null or unreadNotificationCount == 0} ? ' hidden' : ''"
@@ -158,16 +145,45 @@
                             </svg>
                         </button>
 
-                        <div id="profileMenu" class="absolute right-0 mt-2 hidden w-48 z-50">
-                            <div class="rounded-md border border-gray-200 bg-white shadow-lg py-1">
-                                <a th:href="@{/me}" class="block px-4 py-2 text-sm text-gray-800 hover:bg-gray-100">
-                                    마이페이지
+                        <div id="profileMenu" class="absolute right-0 mt-2 hidden w-56 z-50">
+                            <div class="rounded-xl border border-slate-200 bg-white shadow-lg overflow-hidden py-1">
+
+                                <a th:href="@{/mypage/favorites}"
+                                   class="block px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50">
+                                    찜 목록
                                 </a>
-                                <a th:href="@{/logout}" class="block px-4 py-2 text-sm text-gray-800 hover:bg-gray-100">
+
+                                <div class="px-4 pt-2 pb-1 text-sm font-semibold text-slate-900 select-none">
+                                    리뷰
+                                </div>
+                                <a th:href="@{/mypage/buyer-reviews}"
+                                   class="block pl-7 pr-4 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900">
+                                    받은 리뷰
+                                </a>
+                                <a th:href="@{/mypage/seller-reviews}"
+                                   class="block pl-7 pr-4 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900">
+                                    내 리뷰
+                                </a>
+
+                                <a th:href="@{/mypage/reports}"
+                                   class="block px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50">
+                                    신고 내역
+                                </a>
+
+                                <a th:href="@{/mypage/profile}"
+                                   class="block px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50">
+                                    내 정보
+                                </a>
+
+                                <div class="my-1 border-t border-slate-200"></div>
+
+                                <a th:href="@{/logout}"
+                                   class="block px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50">
                                     로그아웃
                                 </a>
                             </div>
                         </div>
+
                     </div>
                 </div>
             </div>
