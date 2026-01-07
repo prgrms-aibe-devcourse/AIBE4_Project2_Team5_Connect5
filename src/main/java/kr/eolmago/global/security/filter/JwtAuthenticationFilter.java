@@ -72,7 +72,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String accessToken = extractAccessToken(request);
         String refreshToken = extractRefreshToken(request);
 
+        // accessToken이 없는 경우 - refreshToken으로 갱신 시도
         if (accessToken == null || accessToken.isBlank()) {
+            if (refreshToken != null && !refreshToken.isBlank()) {
+                log.info("AccessToken 없음, RefreshToken으로 갱신 시도");
+                if (tryRefreshTokens(refreshToken, request, response)) {
+                    log.info("토큰 갱신 성공");
+                } else {
+                    log.warn("토큰 갱신 실패");
+                    clearAuthCookies(response);
+                }
+            } else {
+                log.debug("토큰 없음, 인증 스킵");
+            }
             filterChain.doFilter(request, response);
             return;
         }
@@ -85,17 +97,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 break;
 
             case EXPIRED:
-                log.debug("AccessToken 만료, 갱신 시도");
+                log.info("AccessToken 만료, 갱신 시도");
                 if (refreshToken != null && tryRefreshTokens(refreshToken, request, response)) {
                     log.info("토큰 갱신 성공");
                 } else {
-                    log.debug("토큰 갱신 실패, 재로그인 필요");
+                    log.warn("토큰 갱신 실패, 재로그인 필요");
                     clearAuthCookies(response);
                 }
                 break;
 
             case INVALID:
-                log.debug("AccessToken 유효하지 않음");
+                log.warn("AccessToken 유효하지 않음");
                 SecurityContextHolder.clearContext();
                 break;
         }
@@ -116,29 +128,27 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private boolean tryRefreshTokens(String refreshToken, HttpServletRequest request, HttpServletResponse response) {
         try {
-            // refreshToken 상태 확인
             TokenStatus refreshStatus = checkTokenStatus(refreshToken);
+            log.info("RefreshToken 상태: {}", refreshStatus);
+
             if (refreshStatus != TokenStatus.VALID) {
-                log.debug("RefreshToken 유효하지 않음: {}", refreshStatus);
+                log.warn("RefreshToken 유효하지 않음: {}", refreshStatus);
                 return false;
             }
 
             UUID userId = jwtService.getUserIdFromToken(refreshToken);
+            log.info("RefreshToken에서 userId 추출: {}", userId);
 
-            // Redis에 저장된 refreshToken과 비교
             if (!refreshTokenService.validate(userId, refreshToken)) {
-                log.debug("RefreshToken이 Redis와 일치하지 않음");
+                log.warn("RefreshToken이 Redis와 일치하지 않음");
                 return false;
             }
 
-            // 사용자 정보 조회
             UserDetails userDetails = userService.getUserDetailsById(userId);
 
-            // 역할 추출
             String role = userDetails.getAuthorities().iterator().next()
                     .getAuthority().replace("ROLE_", "");
 
-            // 새 토큰 발급
             String newAccessToken = jwtService.generateAccessToken(
                     userId,
                     userDetails.getUsername(),
@@ -146,14 +156,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             );
             String newRefreshToken = jwtService.generateRefreshToken(userId);
 
-            // Redis 갱신
             refreshTokenService.rotate(userId, newRefreshToken);
 
-            // 새 쿠키 설정
             setAccessTokenCookie(response, newAccessToken);
             setRefreshTokenCookie(response, newRefreshToken);
 
-            // SecurityContext에 인증 정보 설정
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(
                             userDetails,
@@ -167,7 +174,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return true;
 
         } catch (Exception e) {
-            log.warn("토큰 갱신 중 오류: {}", e.getMessage());
+            log.error("토큰 갱신 중 오류: {}", e.getMessage(), e);
             return false;
         }
     }

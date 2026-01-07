@@ -9,6 +9,7 @@ import kr.eolmago.domain.entity.user.User;
 import kr.eolmago.domain.entity.user.enums.SocialProvider;
 import kr.eolmago.repository.user.SocialLoginRepository;
 import kr.eolmago.service.user.JwtService;
+import kr.eolmago.service.user.RefreshTokenService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
@@ -28,6 +29,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
     private final JwtService jwtService;
     private final SocialLoginRepository socialLoginRepository;
+    private final RefreshTokenService refreshTokenService;
 
     @Override
     @Transactional(readOnly = true)
@@ -46,6 +48,8 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
             String accessToken = jwtService.generateAccessToken(user.getUserId(), socialLogin.getEmail(), user.getRole().name());
             String refreshToken = jwtService.generateRefreshToken(user.getUserId());
+
+            refreshTokenService.save(user.getUserId(), refreshToken);
 
             Cookie accessCookie = new Cookie("accessToken", accessToken);
             accessCookie.setPath("/");

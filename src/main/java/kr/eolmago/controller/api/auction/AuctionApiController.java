@@ -2,22 +2,16 @@ package kr.eolmago.controller.api.auction;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
-import kr.eolmago.domain.entity.auction.Auction;
 import kr.eolmago.domain.entity.auction.enums.AuctionStatus;
-import kr.eolmago.domain.entity.user.User;
-import kr.eolmago.dto.api.auction.request.AuctionCreateRequest;
-import kr.eolmago.dto.api.auction.request.AuctionUpdateRequest;
-import kr.eolmago.dto.api.auction.response.AuctionCreateDto;
-import kr.eolmago.dto.api.auction.response.AuctionCreateResponse;
 import kr.eolmago.dto.api.auction.response.AuctionListResponse;
 import kr.eolmago.dto.api.common.PageResponse;
 import kr.eolmago.service.auction.AuctionService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
 
