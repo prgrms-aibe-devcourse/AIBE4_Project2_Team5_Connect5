@@ -8,6 +8,7 @@ import kr.eolmago.domain.entity.auction.enums.AuctionStatus;
 import kr.eolmago.domain.entity.user.User;
 import kr.eolmago.dto.api.auction.request.AuctionCreateRequest;
 import kr.eolmago.dto.api.auction.request.AuctionUpdateRequest;
+import kr.eolmago.dto.api.auction.response.AuctionCreateDto;
 import kr.eolmago.dto.api.auction.response.AuctionCreateResponse;
 import kr.eolmago.dto.api.auction.response.AuctionListResponse;
 import kr.eolmago.dto.api.common.PageResponse;
@@ -27,52 +28,6 @@ import java.util.UUID;
 public class AuctionApiController {
 
     private final AuctionService auctionService;
-
-    @Operation(summary = "경매 생성")
-    @PostMapping
-    public ResponseEntity<AuctionCreateResponse> createAuction(
-            @Valid @RequestBody AuctionCreateRequest request,
-            @AuthenticationPrincipal User user
-    ) {
-        Auction auction = auctionService.createAuction(request, user);
-        AuctionCreateResponse response = AuctionCreateResponse.of(
-                user.getUserId(),
-                auction.getAuctionId(),
-                auction.getStatus()
-        );
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
-
-    @Operation(summary = "경매 수정")
-    @PutMapping("/{auctionId}")
-    public ResponseEntity<Void> updateAuction(
-            @PathVariable UUID auctionId,
-            @Valid @RequestBody AuctionUpdateRequest request,
-            @AuthenticationPrincipal User user
-    ) {
-        auctionService.updateAuction(auctionId, request, user);
-        return ResponseEntity.noContent().build();
-    }
-
-    @Operation(summary = "경매 삭제")
-    @DeleteMapping("/{auctionId}")
-    public ResponseEntity<Void> deleteAuction(
-            @PathVariable UUID auctionId,
-            @AuthenticationPrincipal User user
-    ) {
-        auctionService.deleteAuction(auctionId, user);
-        return ResponseEntity.noContent().build();
-    }
-
-    @Operation(summary = "경매 게시")
-    @PostMapping("/{auctionId}/publish")
-    public ResponseEntity<Void> publishAuction(
-            @PathVariable UUID auctionId,
-            @AuthenticationPrincipal User user
-    ) {
-        auctionService.publishAuction(auctionId, user);
-        return ResponseEntity.noContent().build();
-    }
 
     @Operation(summary = "경매 목록 조회")
     @GetMapping
