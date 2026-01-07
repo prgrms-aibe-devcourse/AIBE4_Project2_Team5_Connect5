@@ -80,18 +80,41 @@
             <div class="flex items-center gap-3">
 
                 <!-- Search -->
-                <form th:action="@{/auctions}" method="get"
-                      class="relative hidden sm:block w-[320px] md:w-[380px]">
-                    <input type="text" name="keyword" placeholder="상품명, 브랜드 검색..."
-                           class="w-full rounded-md border border-gray-300 bg-white py-2 pl-10 pr-3 text-sm
-                                  placeholder:text-gray-400 focus:border-gray-400 focus:outline-none
-                                  focus:ring-2 focus:ring-gray-200" />
-                    <svg class="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-900"
-                         fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                    </svg>
-                </form>
+                <div class="relative hidden sm:block w-[320px] md:w-[380px]">
+                    <!-- 검색 입력창 -->
+                    <div class="relative">
+                        <input type="text"
+                               id="searchInput"
+                               placeholder="상품명, 브랜드 검색..."
+                               autocomplete="off"
+                               class="w-full rounded-md border border-gray-300 bg-white py-2 pl-10 pr-3 text-sm
+                      placeholder:text-gray-400 focus:border-gray-400 focus:outline-none
+                      focus:ring-2 focus:ring-gray-200" />
+                        <svg class="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-900"
+                             fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                    </div>
+
+                    <!-- 자동완성 드롭다운 -->
+                    <div id="autocompleteDropdown"
+                         class="absolute top-full left-0 right-0 mt-1 hidden bg-white border border-gray-200 rounded-md shadow-lgmax-h-[400px] overflow-y-auto z-50">
+
+                        <!-- 자동완성 결과 -->
+                        <div id="autocompleteResults" class="py-1">
+                            <!-- JavaScript로 동적 생성 -->
+                        </div>
+
+                        <!-- 인기 검색어 -->
+                        <div id="popularKeywords" class="border-t border-gray-200 py-1">
+                            <div class="px-4 py-2 text-xs font-semibold text-gray-500">
+                                인기 검색어
+                            </div>
+                            <!-- JavaScript로 동적 생성 -->
+                        </div>
+                    </div>
+                </div>
 
                 <!-- 로그인 전 -->
                 <div th:if="${!isAuthenticated}" id="nav-before-login">
@@ -174,6 +197,8 @@
         </div>
     </div>
 
+    <!-- 자동완성 스크립트 -->
+    <script th:src="@{/js/search/autocomplete.js}"></script>
     <script>
         // 알림 뱃지 관리
         (function () {

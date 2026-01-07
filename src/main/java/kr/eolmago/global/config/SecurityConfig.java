@@ -64,6 +64,9 @@ public class SecurityConfig {
                         // 경매 조회만 로그인 전 공개
                         .requestMatchers(HttpMethod.GET, "/api/auctions/**").permitAll()
 
+                        // 검색
+                        .requestMatchers(HttpMethod.GET, "/api/search/**").permitAll()
+
                         // 그 외 API는 인증 필요
                         .anyRequest().authenticated()
                 )
