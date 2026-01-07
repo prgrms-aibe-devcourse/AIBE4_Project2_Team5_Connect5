@@ -1,4 +1,4 @@
-package kr.eolmago.controller.view.auction;
+package kr.eolmago.controller.view.seller;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
