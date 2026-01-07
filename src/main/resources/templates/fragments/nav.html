@@ -1,4 +1,5 @@
-<header th:fragment="nav" class="sticky top-0 z-50 bg-white border-b border-gray-200">
+<header th:fragment="nav" class="sticky top-0 z-50 bg-white border-b border-gray-200"
+        xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
     <div class="mx-auto max-w-7xl px-6">
         <div class="flex h-16 items-center justify-between">
 
@@ -192,6 +193,14 @@
                                    class="block px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50">
                                     신고 내역
                                 </a>
+
+                                <div sec:authorize="hasAuthority('ADMIN')">
+                                    <div class="my-1 border-t border-slate-200"></div>
+                                    <a th:href="@{/admin/dashboard}"
+                                       class="block px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50">
+                                        관리자 페이지
+                                    </a>
+                                </div>
 
                                 <a th:href="@{/mypage/profile}"
                                    class="block px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50">
