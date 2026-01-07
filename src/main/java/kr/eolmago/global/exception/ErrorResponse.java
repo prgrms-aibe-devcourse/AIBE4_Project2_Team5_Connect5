@@ -38,6 +38,13 @@ public class ErrorResponse {
         this.errors = errors;
     }
 
+    private ErrorResponse(String code, String message) {
+        this.code = code;
+        this.message = message;
+        this.timestamp = OffsetDateTime.now();
+        this.errors = new ArrayList<>();
+    }
+
     public static ErrorResponse of(ErrorCode errorCode) {
         return new ErrorResponse(errorCode);
     }
@@ -48,6 +55,10 @@ public class ErrorResponse {
 
     public static ErrorResponse of(ErrorCode errorCode, List<FieldError> errors) {
         return new ErrorResponse(errorCode, errors);
+    }
+
+    public static ErrorResponse of(String code, String message) {
+        return new ErrorResponse(code, message);
     }
 
     @Getter

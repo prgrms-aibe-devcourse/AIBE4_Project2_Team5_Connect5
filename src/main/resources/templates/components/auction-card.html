@@ -1,0 +1,82 @@
+<div th:fragment="auctionCard(auction)"
+     class="group rounded-xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition overflow-hidden">
+
+  <!-- 썸네일 -->
+  <div class="relative">
+    <a th:href="@{/auctions/{auctionId}(auctionId=${auction.auctionId})}"
+       class="block aspect-square bg-white overflow-hidden ring-1 ring-slate-200">
+      <!-- 흰색 네모 동일 크기 + 이미지 가두기 -->
+      <div class="h-full w-full p-3 flex items-center justify-center">
+        <!-- 실제 썸네일 -->
+        <img th:if="${auction.thumbnailUrl != null and !#strings.isEmpty(auction.thumbnailUrl)}"
+             th:src="${auction.thumbnailUrl}"
+             th:alt="${auction.title}"
+             class="max-h-full max-w-full object-contain" />
+
+        <!-- 대체 이미지 -->
+        <img th:unless="${auction.thumbnailUrl != null and !#strings.isEmpty(auction.thumbnailUrl)}"
+             th:src="@{/images/placeholder.png}"
+             alt="placeholder"
+             class="max-h-full max-w-full object-contain opacity-80" />
+      </div>
+    </a>
+
+    <!-- 좋아요 버튼 -->
+    <button type="button"
+            class="absolute right-3 bottom-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/95 shadow ring-1 ring-slate-200 hover:bg-white"
+            th:attr="data-auction-id=${auction.auctionId}"
+            aria-label="좋아요">
+      <!-- heart icon (outline) -->
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"
+           class="h-5 w-5 text-slate-700">
+        <path stroke-linecap="round" stroke-linejoin="round"
+              d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733C11.285 4.876 9.623 3.75 7.688 3.75 5.099 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
+      </svg>
+    </button>
+  </div>
+
+  <!-- 본문 -->
+  <div class="p-4">
+    <!-- 제목 -->
+    <a th:href="@{/auctions/{auctionId}(auctionId=${auction.auctionId})}" class="block">
+      <h3 class="text-[15px] font-semibold text-slate-900 leading-snug line-clamp-2"
+          th:text="${auction.title}">
+        상품명
+      </h3>
+    </a>
+
+    <!-- 현재가 -->
+    <div class="mt-2">
+      <div class="text-lg font-extrabold tracking-tight text-slate-900">
+        <span th:text="${#numbers.formatInteger(auction.currentPrice, 0, 'COMMA')}">0</span>
+        <span class="ml-0.5 text-sm font-semibold text-slate-700">원</span>
+      </div>
+    </div>
+
+    <!-- 메타: 입찰/남은시간 -->
+    <div class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-600">
+      <!-- 입찰 -->
+      <span class="inline-flex items-center gap-1">
+        <span>입찰</span>
+        <span class="font-semibold text-slate-800" th:text="${auction.bidCount}">0</span>
+        <span>회</span>
+      </span>
+
+      <!-- 남은 시간 -->
+      <span class="inline-flex items-center gap-1">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"
+             class="h-4 w-4 text-slate-500">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M12 6v6l4 2m6-2a10 10 0 1 1-20 0 10 10 0 0 1 20 0Z" />
+        </svg>
+        <span class="font-semibold text-slate-800" th:text="${auction.remainingTime}">0시간</span>
+      </span>
+    </div>
+
+    <!-- 판매자 -->
+    <div class="mt-3 text-xs text-slate-500">
+      <span>판매자</span>
+      <span class="ml-1 font-semibold text-slate-700" th:text="${auction.sellerNickname}">닉네임</span>
+    </div>
+  </div>
+</div>

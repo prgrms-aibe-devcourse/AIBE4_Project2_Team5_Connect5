@@ -9,10 +9,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
@@ -34,6 +37,7 @@ import java.util.stream.IntStream;
 @Slf4j
 @Transactional(readOnly = true)
 public class SearchKeywordService {
+
     private final SearchKeywordRepository searchKeywordRepository;
     private final RedisTemplate<String, String> redisTemplate;
 
@@ -65,10 +69,6 @@ public class SearchKeywordService {
 
         // Redis에서 자동완성 조회 (O(log N))
         ZSetOperations<String, String> zSetOps = redisTemplate.opsForZSet();
-
-        // prefix로 시작하는 검색어 범위 조회
-        String min = prefix;
-        String max = prefix + Character.MAX_VALUE;
 
         try {
             // 점수 역순 정렬(높은 점수=인기 검색어)
@@ -137,13 +137,13 @@ public class SearchKeywordService {
      * @param keyword 검색어
      * @param userId 사용자 ID (중복 방지용)
      */
-    @Transactional
-    public void recordSearch(String keyword, String userId) {
-        log.debug("검색어 통계 기록: keyword={}, userId={}", keyword, userId);
+    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = false)
+    public void recordSearch(String keyword, UUID userId) {
+        log.info("검색어 통계 기록: keyword={}, userId={}", keyword, userId);
 
-        // 1. 중복 검색 체크 (1분 내 동일 검색어 무시)
-        if (isDuplicateSearch(keyword, userId)) {
-            log.debug("중복 검색 무시: keyword={}, userId={}", keyword, userId);
+        // 1. userId가 있을 때만 중복 검색 체크 (1분 내 동일 검색어 무시)
+        if (userId != null && isDuplicateSearch(keyword, userId)) {
+            log.info("중복 검색 무시: keyword={}, userId={}", keyword, userId);
             return;
         }
 
@@ -158,8 +158,14 @@ public class SearchKeywordService {
         // 3. DB 영구 저장
         updateDatabaseStatistics(keyword);
 
-        // 4. 중복 방지 키 설정 (1분 TTL)
-        setDedupeKey(keyword, userId);
+        // 4. userId가 있을 때만 중복 방지 키 설정 (1분 TTL)
+        if (userId != null) {
+            try {
+                setDedupeKey(keyword, userId);
+            } catch (Exception e) {
+                log.warn("Redis 중복방지 키 설정 실패: keyword={}", keyword, e);
+            }
+        }
     }
 
     /**
@@ -178,25 +184,36 @@ public class SearchKeywordService {
      * @param userId 사용자 ID
      * @return true: 중복 검색, false: 신규 검색
      */
-    private boolean isDuplicateSearch(String keyword, String userId) {
-        String dedupeKey = SEARCH_DEDUPE_PREFIX + keyword + ":" + userId;
-        return redisTemplate.hasKey(dedupeKey);
+    private boolean isDuplicateSearch(String keyword, UUID userId) {
+        try {
+            String dedupeKey = SEARCH_DEDUPE_PREFIX + keyword + ":" + userId;
+            Boolean hasKey = redisTemplate.hasKey(dedupeKey);
+            return hasKey != null && hasKey;
+        } catch (Exception e) {
+            log.warn("Redis 중복 체크 실패, 통계 기록 계속 진행: keyword={}", keyword, e);
+            return false;  // Redis 실패 시 중복 아님으로 처리
+        }
     }
 
     /**
-     * 중복 방지 키 설정
+     * 중복 방지 키 설정 (실수/연타 방지)
      *
      * 동작:
      * - Redis Key 생성 (값은 "1")
-     * - TTL 60초 설정
-     * - 60초 후 자동 삭제
+     * - TTL 10초 설정
+     * - 10초 후 자동 삭제
      *
      * @param keyword 검색어
      * @param userId 사용자 ID
      */
-    private void setDedupeKey(String keyword, String userId) {
-        String dedupeKey = SEARCH_DEDUPE_PREFIX + keyword + ":" + userId;
-        redisTemplate.opsForValue().set(dedupeKey, "1", 60, TimeUnit.SECONDS);
+    private void setDedupeKey(String keyword, UUID userId) {
+        try {
+            String dedupeKey = SEARCH_DEDUPE_PREFIX + keyword + ":" + userId;
+            redisTemplate.opsForValue().set(dedupeKey, "1", 10, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            log.warn("Redis 중복방지 키 설정 실패 (무시): keyword={}", keyword, e);
+            // 필수 기능 아니므로 무시
+        }
     }
 
     /**
@@ -254,20 +271,23 @@ public class SearchKeywordService {
      * @param keyword 검색어
      */
     private void updateDatabaseStatistics(String keyword) {
-        SearchKeyword searchKeyword = searchKeywordRepository.findByKeyword(keyword)
-                .orElseGet(() -> {
-                    // 신규 검색어 생성
-                    SearchKeyword newKeyword = SearchKeyword.create(keyword);
-                    return searchKeywordRepository.save(newKeyword);
-                });
+        Optional<SearchKeyword> existing = searchKeywordRepository.findByKeyword(keyword);
 
-        // 기존 검색어면 카운트 증가
-        if (searchKeyword.getSearchCount() > 1) {
+        if (existing.isPresent()) {
+            // 기존 검색어 - 카운트 증가
+            SearchKeyword searchKeyword = existing.get();
             searchKeyword.incrementSearchCount();
-        }
+            // save() 불필요 - JPA 더티 체킹이 자동 UPDATE
 
-        log.debug("DB 통계 업데이트: keyword={}, count={}",
-                keyword, searchKeyword.getSearchCount());
+            log.debug("기존 검색어 카운트 증가: keyword={}, count={}",
+                    keyword, searchKeyword.getSearchCount());
+        } else {
+            // 신규 검색어 - 생성 (count=1)
+            SearchKeyword newKeyword = SearchKeyword.create(keyword);
+            searchKeywordRepository.save(newKeyword);
+
+            log.debug("신규 검색어 생성: keyword={}, count=1", keyword);
+        }
     }
 
     /**

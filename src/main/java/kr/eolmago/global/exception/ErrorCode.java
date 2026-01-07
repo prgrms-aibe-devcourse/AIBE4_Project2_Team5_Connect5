@@ -41,7 +41,19 @@ public enum ErrorCode {
     // User
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "U001", "사용자를 찾을 수 없습니다."),
     USER_UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "U002", "인증되지 않은 사용자입니다."),
-    USER_FORBIDDEN(HttpStatus.FORBIDDEN, "U003", "권한이 없습니다.");
+    USER_FORBIDDEN(HttpStatus.FORBIDDEN, "U003", "권한이 없습니다."),
+
+    // Chat
+    CHAT_AUTH_REQUIRED(HttpStatus.UNAUTHORIZED, "CH001", "로그인이 필요합니다."),
+    CHAT_INVALID_AUTH(HttpStatus.UNAUTHORIZED, "CH002", "인증 정보가 올바르지 않습니다."),
+
+    CHAT_ROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "CH101", "채팅방을 찾을 수 없습니다."),
+
+    CHAT_FORBIDDEN_ROOM(HttpStatus.FORBIDDEN, "CH201", "해당 채팅방에 접근 권한이 없습니다."),
+    CHAT_FORBIDDEN_AUCTION(HttpStatus.FORBIDDEN, "CH202", "해당 경매 채팅에 접근 권한이 없습니다."),
+    CHAT_SELLER_CANNOT_CREATE_AS_BUYER(HttpStatus.BAD_REQUEST, "CH203", "판매자는 구매자 권한으로 채팅방을 생성할 수 없습니다."),
+
+    CHAT_INVALID_SEND_REQUEST(HttpStatus.BAD_REQUEST, "CH301", "채팅 전송 요청이 올바르지 않습니다.");
 
     private final HttpStatus status;
     private final String code;

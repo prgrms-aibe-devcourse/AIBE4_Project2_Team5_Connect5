@@ -39,8 +39,8 @@ out/
 ### Claude Code ###
 .claude/
 
-# Ignore all profile-specific configs
-src/main/resources/application-*.yml
+# Ignore dev profile only (keep prod tracked)
+src/main/resources/application-dev.yml
 
 # QueryDSL이 생성하는 Q클래스 경로
 src/main/generated/

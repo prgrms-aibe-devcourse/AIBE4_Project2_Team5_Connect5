@@ -8,6 +8,8 @@ import kr.eolmago.domain.entity.user.enums.UserRole;
 import kr.eolmago.repository.user.SocialLoginRepository;
 import kr.eolmago.repository.user.UserProfileRepository;
 import kr.eolmago.repository.user.UserRepository;
+import kr.eolmago.service.notification.publish.NotificationPublishCommand;
+import kr.eolmago.service.notification.publish.NotificationPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -31,6 +33,7 @@ public class SocialLoginService extends DefaultOAuth2UserService {
 
     private final UserRepository userRepository;
     private final SocialLoginRepository socialLoginRepository;
+    private final NotificationPublisher notificationPublisher;
     private final UserProfileRepository userProfileRepository;
 
     @Override
@@ -116,24 +119,19 @@ public class SocialLoginService extends DefaultOAuth2UserService {
         User newUser = User.create(UserRole.USER);
         User savedUser = userRepository.save(newUser);
 
-        SocialLogin socialLogin = SocialLogin.create(
-            savedUser,
-            provider,
-            providerId,
-            email
-        );
+        // 2) SocialLogin 생성
+        SocialLogin socialLogin = SocialLogin.create(savedUser, provider, providerId, email);
         SocialLogin savedSocialLogin = socialLoginRepository.save(socialLogin);
         log.info("SocialLogin 생성 완료: socialId={}", savedSocialLogin.getSocialId());
 
-        // 3. UserProfile 생성
+        // 3) UserProfile 생성
         String finalName = validateAndProcessName(name, provider, providerId);
-        UserProfile userProfile = UserProfile.create(
-                savedUser,
-                finalName,
-                finalName
-        );
+        UserProfile userProfile = UserProfile.create(savedUser, finalName, finalName);
         UserProfile savedUserProfile = userProfileRepository.save(userProfile);
         log.info("UserProfile 생성 완료: profileId={}", savedUserProfile.getProfileId());
+
+        // 4) 웰컴 알림 발행
+        notificationPublisher.publish(NotificationPublishCommand.welcome(savedUser.getUserId()));
 
         return savedSocialLogin;
     }

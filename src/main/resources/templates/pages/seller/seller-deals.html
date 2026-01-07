@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/base}">
+<head>
+    <title layout:fragment="title">판매 거래 관리</title>
+</head>
+
+<body>
+<div layout:fragment="content">
+    <div class="space-y-6">
+        <!-- 헤더 -->
+        <div>
+            <h1 class="text-3xl font-extrabold tracking-tight text-gray-900">판매 거래 관리</h1>
+            <p class="mt-2 text-sm text-gray-600">판매한 상품의 거래 진행 상황을 확인하세요.</p>
+        </div>
+
+        <!-- 탭 메뉴 -->
+        <div class="border-b border-gray-200">
+            <nav class="flex gap-8">
+                <button type="button"
+                        class="seller-deal-tab-btn border-b-2 border-gray-900 pb-4 text-sm font-semibold text-gray-900"
+                        data-tab="pending">
+                    확정 대기 (<span id="pending-count">0</span>)
+                </button>
+                <button type="button"
+                        class="seller-deal-tab-btn border-b-2 border-transparent pb-4 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                        data-tab="ongoing">
+                    진행 중 (<span id="ongoing-count">0</span>)
+                </button>
+                <button type="button"
+                        class="seller-deal-tab-btn border-b-2 border-transparent pb-4 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                        data-tab="completed">
+                    완료 (<span id="completed-count">0</span>)
+                </button>
+                <button type="button"
+                        class="seller-deal-tab-btn border-b-2 border-transparent pb-4 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                        data-tab="cancelled">
+                    취소/만료 (<span id="cancelled-count">0</span>)
+                </button>
+            </nav>
+        </div>
+
+        <!-- 확정 대기 탭 -->
+        <div id="tab-pending" class="seller-deal-tab-content">
+            <div class="space-y-4">
+                <!-- 빈 상태 -->
+                <div class="text-center py-12 bg-gray-50 rounded-lg">
+                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <h3 class="mt-4 text-sm font-semibold text-gray-900">확정 대기 중인 거래가 없습니다</h3>
+                    <p class="mt-2 text-sm text-gray-600">구매자의 거래 확정을 기다리는 거래가 여기에 표시됩니다.</p>
+                </div>
+
+                <!-- 확정 대기 목록 (데이터 있을 때) -->
+                <div id="pending-list" class="hidden space-y-4">
+                    <!-- JavaScript로 동적 렌더링 -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 진행 중 탭 -->
+        <div id="tab-ongoing" class="seller-deal-tab-content hidden">
+            <div class="space-y-4">
+                <!-- 빈 상태 -->
+                <div class="text-center py-12 bg-gray-50 rounded-lg">
+                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    <h3 class="mt-4 text-sm font-semibold text-gray-900">진행 중인 거래가 없습니다</h3>
+                    <p class="mt-2 text-sm text-gray-600">확정된 거래가 여기에 표시됩니다.</p>
+                </div>
+
+                <!-- 진행 중 목록 (데이터 있을 때) -->
+                <div id="ongoing-list" class="hidden space-y-4">
+                    <!-- JavaScript로 동적 렌더링 -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 완료 탭 -->
+        <div id="tab-completed" class="seller-deal-tab-content hidden">
+            <div class="space-y-4">
+                <!-- 빈 상태 -->
+                <div class="text-center py-12 bg-gray-50 rounded-lg">
+                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <h3 class="mt-4 text-sm font-semibold text-gray-900">완료된 거래가 없습니다</h3>
+                    <p class="mt-2 text-sm text-gray-600">거래가 완료되면 여기에 표시됩니다.</p>
+                </div>
+
+                <!-- 완료 목록 (데이터 있을 때) -->
+                <div id="completed-list" class="hidden space-y-4">
+                    <!-- JavaScript로 동적 렌더링 -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 취소/만료 탭 -->
+        <div id="tab-cancelled" class="seller-deal-tab-content hidden">
+            <div class="space-y-4">
+                <!-- 빈 상태 -->
+                <div class="text-center py-12 bg-gray-50 rounded-lg">
+                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                    <h3 class="mt-4 text-sm font-semibold text-gray-900">취소/만료된 거래가 없습니다</h3>
+                    <p class="mt-2 text-sm text-gray-600">취소되거나 만료된 거래가 여기에 표시됩니다.</p>
+                </div>
+
+                <!-- 취소/만료 목록 (데이터 있을 때) -->
+                <div id="cancelled-list" class="hidden space-y-4">
+                    <!-- JavaScript로 동적 렌더링 -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<th:block layout:fragment="scripts">
+    <script src="/js/seller-deals.js"></script>
+</th:block>
+</body>
+</html>

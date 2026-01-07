@@ -2,6 +2,7 @@ package kr.eolmago.repository.auction.impl;
 
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.Projections;
+import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import kr.eolmago.domain.entity.auction.enums.AuctionStatus;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import static kr.eolmago.domain.entity.auction.QAuction.auction;
 import static kr.eolmago.domain.entity.auction.QAuctionItem.auctionItem;
@@ -29,7 +31,7 @@ public class AuctionRepositoryImpl implements AuctionRepositoryCustom {
     private final JPAQueryFactory queryFactory;
 
     @Override
-    public Page<AuctionListDto> searchList(AuctionStatus status, Pageable pageable, String sortKey) {
+    public Page<AuctionListDto> searchList(Pageable pageable, String sortKey, AuctionStatus status, UUID sellerId) {
         OrderSpecifier<?>[] orderSpecifiers = createOrderSpecifiers(sortKey);
 
         List<AuctionListDto> content = queryFactory
@@ -55,7 +57,10 @@ public class AuctionRepositoryImpl implements AuctionRepositoryCustom {
                 .innerJoin(auction.seller, user)
                 .innerJoin(userProfile)
                 .on(userProfile.user.eq(user))
-                .where(auction.status.eq(status))
+                .where(
+                        status == null ? null : auction.status.eq(status),
+                        sellerId == null ? null : user.userId.eq(sellerId)
+                )
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
                 .orderBy(orderSpecifiers)
@@ -71,19 +76,21 @@ public class AuctionRepositoryImpl implements AuctionRepositoryCustom {
                 .innerJoin(auction.seller, user)
                 .innerJoin(userProfile)
                 .on(userProfile.user.eq(user))
-                .where(auction.status.eq(status));
+                .where(
+                        status == null ? null : auction.status.eq(status),
+                        sellerId == null ? null : user.userId.eq(sellerId)
+                );
 
         return PageableExecutionUtils.getPage(content, pageable, countQuery::fetchOne);
     }
 
     private OrderSpecifier<?>[] createOrderSpecifiers(String sortKey) {
         if (sortKey == null || sortKey.isEmpty()) {
-            sortKey = "latest"; // 기본값
+            sortKey = "latest";
         }
 
         List<OrderSpecifier<?>> orders = new ArrayList<>();
 
-        // 정렬 기준
         switch (sortKey.toLowerCase()) {
             case "latest" -> orders.add(auction.createdAt.desc());
             case "deadline" -> orders.add(auction.endAt.asc());
@@ -93,10 +100,9 @@ public class AuctionRepositoryImpl implements AuctionRepositoryCustom {
                 orders.add(auction.viewCount.desc());
                 orders.add(auction.bidCount.desc());
             }
-            default -> orders.add(auction.createdAt.desc()); // 기본값
+            default -> orders.add(auction.createdAt.desc());
         }
 
-        // 페이징 안정성을 위한 고유 정렬 기준
         orders.add(auction.auctionId.desc());
 
         return orders.toArray(new OrderSpecifier[0]);

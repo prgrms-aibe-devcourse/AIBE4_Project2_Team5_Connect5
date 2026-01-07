@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/base}">
+<head>
+    <title layout:fragment="title">내 정보</title>
+</head>
+
+<body>
+<div layout:fragment="content" class="py-12">
+    <div class="mx-auto max-w-4xl px-6 space-y-8">
+
+        <!-- 페이지 헤더 -->
+        <div class="space-y-2">
+            <h1 class="text-4xl font-bold text-gray-900">내 정보</h1>
+            <p class="text-base text-gray-600">프로필 정보를 관리하세요</p>
+        </div>
+
+        <!-- 로딩 스피너 -->
+        <div id="loadingSpinner" class="flex items-center justify-center py-12">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-900"></div>
+        </div>
+
+        <!-- 프로필 카드 -->
+        <div id="profileCard" class="hidden rounded-2xl border border-gray-200 bg-white shadow-sm p-8 space-y-6">
+            <!-- 프로필 헤더 -->
+            <div class="flex items-center gap-6 pb-6 border-b border-gray-100">
+                <!-- 프로필 이미지 -->
+                <div class="h-20 w-20 rounded-full overflow-hidden bg-slate-200">
+                    <img id="profileImage"
+                         src="/images/profile/base.png"
+                         alt="프로필 이미지"
+                         class="h-full w-full object-cover" />
+                </div>
+                <div class="flex-1">
+                    <p class="text-sm text-gray-600">닉네임</p>
+                    <h2 class="text-2xl font-bold text-gray-900" id="profileNickname">닉네임</h2>
+                </div>
+            </div>
+
+            <!-- 거래 정보 -->
+            <div class="grid grid-cols-3 gap-4">
+                <div class="rounded-lg bg-slate-50 p-4 text-center">
+                    <p class="text-sm text-gray-600">거래 횟수</p>
+                    <p class="text-2xl font-bold text-gray-900 mt-2" id="tradeCount">0</p>
+                </div>
+                <div class="rounded-lg bg-slate-50 p-4 text-center">
+                    <p class="text-sm text-gray-600">별점</p>
+                    <p class="text-2xl font-bold text-gray-900 mt-2" id="ratingAvg">0.00</p>
+                </div>
+                <div class="rounded-lg bg-slate-50 p-4 text-center">
+                    <p class="text-sm text-gray-600">신고 횟수</p>
+                    <p class="text-2xl font-bold text-gray-900 mt-2" id="reportCount">0</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 프로필 수정 폼 -->
+        <form id="profileForm" class="hidden rounded-2xl border border-gray-200 bg-white shadow-sm p-8 space-y-6">
+            <div class="space-y-2">
+                <label for="name" class="block text-sm font-semibold text-gray-900">이름</label>
+                <input type="text" id="name" name="name" placeholder="이름을 입력하세요"
+                       class="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm placeholder:text-gray-400 focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10" />
+                <span class="text-xs text-red-600 hidden" id="nameError"></span>
+            </div>
+
+            <div class="space-y-2">
+                <label for="nickname" class="block text-sm font-semibold text-gray-900">닉네임</label>
+                <div class="flex gap-3">
+                    <input type="text" id="nickname" name="nickname" placeholder="닉네임을 입력하세요"
+                           class="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm placeholder:text-gray-400 focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10" />
+                    <button type="button" id="checkNicknameBtn"
+                            class="rounded-lg bg-slate-900 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 transition">
+                        중복 확인
+                    </button>
+                </div>
+                <span class="text-xs text-red-600 hidden" id="nicknameError"></span>
+                <span class="text-xs text-green-600 hidden" id="nicknameSuccess">✓ 사용 가능한 닉네임입니다</span>
+            </div>
+
+            <div class="space-y-2">
+                <label for="phoneNumber" class="block text-sm font-semibold text-gray-900">휴대폰 번호</label>
+                <div class="flex gap-3">
+                    <input type="text" id="phoneNumber" name="phoneNumber" placeholder="01012345678"
+                           class="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm placeholder:text-gray-400 focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10" />
+                    <button type="button" id="sendVerificationBtn"
+                            class="rounded-lg bg-slate-900 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 transition">
+                        인증 코드 발송
+                    </button>
+                </div>
+                <span class="text-xs text-red-600 hidden" id="phoneError"></span>
+                <div id="phoneVerifiedBadge" class="hidden flex items-center gap-2 text-xs text-green-600">
+                    <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                    </svg>
+                    <span>휴대폰 번호 인증 완료</span>
+                </div>
+            </div>
+
+            <div id="verificationCodeSection" class="space-y-2 hidden">
+                <label for="verificationCode" class="block text-sm font-semibold text-gray-900">인증 코드</label>
+                <div class="flex gap-3">
+                    <input type="text" id="verificationCode" name="verificationCode" placeholder="123456"
+                           class="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm placeholder:text-gray-400 focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10" />
+                    <button type="button" id="confirmVerificationBtn"
+                            class="rounded-lg bg-green-600 px-4 py-3 text-sm font-semibold text-white hover:bg-green-700 transition">
+                        인증 확인
+                    </button>
+                </div>
+                <span class="text-xs text-red-600 hidden" id="verificationError"></span>
+                <span class="text-xs text-gray-500" id="verificationTimer"></span>
+            </div>
+
+            <div class="space-y-2">
+                <label for="profileImageUrl" class="block text-sm font-semibold text-gray-900">프로필 이미지 URL</label>
+                <input type="text" id="profileImageUrl" name="profileImageUrl" placeholder="https://example.com/image.jpg"
+                       class="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm placeholder:text-gray-400 focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10" />
+                <span class="text-xs text-gray-500">TODO: 파일 업로드 기능 구현 예정</span>
+            </div>
+
+            <div class="flex gap-3 pt-6 border-t border-gray-100">
+                <button type="submit"
+                        class="flex-1 rounded-lg bg-slate-900 px-6 py-3 text-sm font-semibold text-white hover:bg-slate-800 transition">
+                    저장
+                </button>
+                <button type="button" onclick="history.back()"
+                        class="flex-1 rounded-lg border border-gray-300 bg-white px-6 py-3 text-sm font-semibold text-gray-900 hover:bg-gray-50 transition">
+                    취소
+                </button>
+            </div>
+        </form>
+
+        <!-- 에러 메시지 -->
+        <div id="errorMessage" class="hidden rounded-lg border border-red-300 bg-red-50 p-4 text-sm text-red-700"></div>
+
+    </div>
+</div>
+
+<!-- 스크립트를 별도 fragment로 분리 -->
+<th:block layout:fragment="scripts">
+    <script>
+        let currentProfile = null;
+
+        async function apiCall(url, options = {}) {
+            try {
+                const response = await fetch(url, options);
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.message || `HTTP ${response.status}`);
+                }
+                return await response.json().catch(() => ({}));
+            } catch (error) {
+                console.error('API Error:', error);
+                throw error;
+            }
+        }
+
+        async function loadProfile() {
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            const profileCard = document.getElementById('profileCard');
+            const profileForm = document.getElementById('profileForm');
+            const errorMessage = document.getElementById('errorMessage');
+
+            try {
+                const profile = await apiCall('/api/users/me');
+                currentProfile = profile;
+
+                const profileImage = document.getElementById('profileImage');
+                if (profile.profileImageUrl) {
+                    profileImage.src = profile.profileImageUrl;
+                } else {
+                    profileImage.src = '/images/profile/base.png';  // 기본 이미지
+                }
+
+                document.getElementById('profileNickname').textContent = profile.nickname;
+                document.getElementById('tradeCount').textContent = profile.tradeCount;
+                document.getElementById('ratingAvg').textContent = profile.ratingAvg.toFixed(2);
+                document.getElementById('reportCount').textContent = profile.reportCount;
+
+                document.getElementById('name').value = profile.name;
+                document.getElementById('nickname').value = profile.nickname;
+                document.getElementById('phoneNumber').value = profile.phoneNumber || '';
+                document.getElementById('profileImageUrl').value = profile.profileImageUrl || '';
+
+                const phoneVerifiedBadge = document.getElementById('phoneVerifiedBadge');
+                if (profile.phoneVerified) {
+                    phoneVerifiedBadge.classList.remove('hidden');
+                } else {
+                    phoneVerifiedBadge.classList.add('hidden');
+                }
+
+                loadingSpinner.classList.add('hidden');
+                profileCard.classList.remove('hidden');
+                profileForm.classList.remove('hidden');
+            } catch (error) {
+                console.error('프로필 로드 실패:', error);
+                loadingSpinner.classList.add('hidden');
+                errorMessage.textContent = '프로필을 불러올 수 없습니다. 다시 로그인해주세요.';
+                errorMessage.classList.remove('hidden');
+            }
+        }
+
+        // 닉네임 중복 확인
+        document.getElementById('checkNicknameBtn').addEventListener('click', async () => {
+            const nickname = document.getElementById('nickname').value.trim();
+            const nicknameError = document.getElementById('nicknameError');
+            const nicknameSuccess = document.getElementById('nicknameSuccess');
+
+            nicknameError.classList.add('hidden');
+            nicknameSuccess.classList.add('hidden');
+
+            if (!nickname) {
+                nicknameError.textContent = '닉네임을 입력해주세요';
+                nicknameError.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                const response = await apiCall('/api/users/checkNickname', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nickname })
+                });
+
+                if (response.available) {
+                    nicknameSuccess.classList.remove('hidden');
+                } else {
+                    nicknameError.textContent = '이미 사용 중인 닉네임입니다';
+                    nicknameError.classList.remove('hidden');
+                }
+            } catch (error) {
+                nicknameError.textContent = '중복 확인 중 오류가 발생했습니다';
+                nicknameError.classList.remove('hidden');
+            }
+        });
+
+        // 인증 코드 발송
+        document.getElementById('sendVerificationBtn').addEventListener('click', async () => {
+            const phoneNumber = document.getElementById('phoneNumber').value.trim();
+            const phoneError = document.getElementById('phoneError');
+            const verificationSection = document.getElementById('verificationCodeSection');
+
+            phoneError.classList.add('hidden');
+
+            if (!phoneNumber) {
+                phoneError.textContent = '휴대폰 번호를 입력해주세요';
+                phoneError.classList.remove('hidden');
+                return;
+            }
+
+            if (!/^\d{10,11}$/.test(phoneNumber)) {
+                phoneError.textContent = '유효한 휴대폰 번호를 입력해주세요';
+                phoneError.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                await apiCall(`/api/users/sendPhoneVerification?phoneNumber=${phoneNumber}`, {
+                    method: 'POST'
+                });
+                alert('인증 코드가 발송되었습니다');
+                verificationSection.classList.remove('hidden');
+            } catch (error) {
+                phoneError.textContent = '인증 코드 발송 중 오류가 발생했습니다';
+                phoneError.classList.remove('hidden');
+            }
+        });
+
+        // 인증 코드 검증
+        document.getElementById('confirmVerificationBtn').addEventListener('click', async () => {
+            const phoneNumber = document.getElementById('phoneNumber').value.trim();
+            const verificationCode = document.getElementById('verificationCode').value.trim();
+            const verificationError = document.getElementById('verificationError');
+
+            verificationError.classList.add('hidden');
+
+            if (!verificationCode) {
+                verificationError.textContent = '인증 코드를 입력해주세요';
+                verificationError.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                const response = await apiCall('/api/users/verifyPhone', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phoneNumber, verificationCode })
+                });
+
+                if (response.verified) {
+                    alert('휴대폰 번호 인증이 완료되었습니다');
+                    document.getElementById('verificationCodeSection').classList.add('hidden');
+                    location.reload();
+                } else {
+                    verificationError.textContent = response.message || '인증에 실패했습니다';
+                    verificationError.classList.remove('hidden');
+                }
+            } catch (error) {
+                verificationError.textContent = '인증 확인 중 오류가 발생했습니다';
+                verificationError.classList.remove('hidden');
+            }
+        });
+
+        // 프로필 저장
+        document.getElementById('profileForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const name = document.getElementById('name').value.trim();
+            const nickname = document.getElementById('nickname').value.trim();
+            const phoneNumber = document.getElementById('phoneNumber').value.trim() || null;
+            const profileImageUrl = document.getElementById('profileImageUrl').value.trim() || null;
+
+            const nameError = document.getElementById('nameError');
+            const nicknameError = document.getElementById('nicknameError');
+
+            nameError.classList.add('hidden');
+            nicknameError.classList.add('hidden');
+
+            if (!name) {
+                nameError.textContent = '이름을 입력해주세요';
+                nameError.classList.remove('hidden');
+                return;
+            }
+
+            if (!nickname) {
+                nicknameError.textContent = '닉네임을 입력해주세요';
+                nicknameError.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                await apiCall('/api/users/me', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, nickname, phoneNumber, profileImageUrl })
+                });
+
+                alert('프로필이 저장되었습니다');
+                location.reload();
+            } catch (error) {
+                alert('프로필 저장 중 오류가 발생했습니다: ' + error.message);
+            }
+        });
+
+        // 페이지 로드 시 실행
+        loadProfile();
+    </script>
+</th:block>
+
+</body>
+</html>

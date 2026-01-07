@@ -21,7 +21,7 @@
             margin-bottom: 5px;
             font-weight: bold;
         }
-        input, select, textarea {
+        select, input, textarea {
             width: 100%;
             padding: 10px;
             border: 1px solid #ddd;
@@ -50,115 +50,115 @@
             background-color: #6c757d;
         }
         .button-cancel:hover {
-            background-color: #545b62;
+            background-color: #5a6268;
         }
-        .error {
+        .info-text {
+            color: #666;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        .deal-info {
+            background-color: #f8f9fa;
             padding: 10px;
-            margin: 10px 0;
-            background-color: #f8d7da;
-            border: 1px solid #f5c6cb;
             border-radius: 4px;
-            color: #721c24;
+            margin-bottom: 20px;
+            display: none;
         }
-        .rating-input {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-        .rating-input input[type="radio"] {
-            width: auto;
-        }
-        .star-label {
-            cursor: pointer;
-            padding: 5px 10px;
-            border: 2px solid #ffc107;
-            border-radius: 4px;
-            transition: all 0.2s;
-        }
-        .star-label:hover {
-            background-color: #ffc107;
-            color: white;
-        }
-        input[type="radio"]:checked + .star-label {
-            background-color: #ffc107;
-            color: white;
+        .deal-info.active {
+            display: block;
         }
     </style>
+    <script>
+        // 거래 선택 시 정보 표시
+        function updateDealInfo() {
+            const dealSelect = document.getElementById('dealId');
+            const dealInfo = document.getElementById('dealInfo');
+            
+            if (dealSelect.value) {
+                const selectedOption = dealSelect.options[dealSelect.selectedIndex];
+                const dealTitle = selectedOption.getAttribute('data-title');
+                const sellerId = selectedOption.getAttribute('data-seller');
+                const buyerId = selectedOption.getAttribute('data-buyer');
+                const finalPrice = selectedOption.getAttribute('data-price');
+                
+                document.getElementById('dealTitle').textContent = dealTitle;
+                document.getElementById('sellerInfo').textContent = sellerId;
+                document.getElementById('buyerInfo').textContent = buyerId;
+                document.getElementById('priceInfo').textContent = Number(finalPrice).toLocaleString() + '원';
+                
+                dealInfo.classList.add('active');
+            } else {
+                dealInfo.classList.remove('active');
+            }
+        }
+    </script>
 </head>
 <body>
-    <h1>⭐ 새 후기 작성</h1>
+    <h1>📝 Review 작성</h1>
 
-    <div th:if="${error}" class="error" th:text="${error}"></div>
-
-    <form method="post" action="/test/review/create">
+    <form th:action="@{/test/review}" method="post">
+        <!-- 거래 선택 -->
         <div class="form-group">
             <label for="dealId">거래 선택 *</label>
-            <select id="dealId" name="dealId" required>
+            <select id="dealId" name="dealId" required onchange="updateDealInfo()">
                 <option value="">-- 거래를 선택하세요 --</option>
                 <option th:each="deal : ${deals}" 
-                        th:value="${deal.dealId}" 
-                        th:text="${deal.auctionTitle} + ' (거래 ID: ' + ${deal.dealId} + ', 판매자: ' + ${deal.sellerId} + ', 구매자: ' + ${deal.buyerId} + ')'">
+                        th:value="${deal.dealId}"
+                        th:attr="data-title=${deal.auction.title},
+                                data-seller=${deal.seller.userId},
+                                data-buyer=${deal.buyer.userId},
+                                data-price=${deal.finalPrice}"
+                        th:text="${deal.dealId} + ' - ' + ${deal.auction.title} + ' (' + ${#numbers.formatInteger(deal.finalPrice, 3, 'COMMA')} + '원)'">
                     거래
                 </option>
             </select>
+            <div class="info-text">리뷰를 작성할 거래를 선택하세요</div>
         </div>
 
+        <!-- 거래 정보 표시 (자동) -->
+        <div id="dealInfo" class="deal-info">
+            <h3>📦 거래 정보</h3>
+            <p><strong>경매 제목:</strong> <span id="dealTitle"></span></p>
+            <p><strong>판매자 ID:</strong> <span id="sellerInfo"></span> (자동 설정)</p>
+            <p><strong>구매자 ID:</strong> <span id="buyerInfo"></span> (자동 설정)</p>
+            <p><strong>최종가:</strong> <span id="priceInfo"></span></p>
+        </div>
+
+        <!-- 평점 입력 -->
         <div class="form-group">
-            <label for="sellerId">판매자 선택 *</label>
-            <select id="sellerId" name="sellerId" required>
-                <option value="">-- 판매자를 선택하세요 --</option>
-                <option th:each="user : ${users}" 
-                        th:value="${user.userId}" 
-                        th:text="'User ' + ${user.userId} + ' (' + ${user.role} + ')'">
-                    사용자
-                </option>
+            <label for="rating">평점 *</label>
+            <select id="rating" name="rating" required>
+                <option value="">-- 평점을 선택하세요 --</option>
+                <option value="5">⭐⭐⭐⭐⭐ (5점 - 매우 만족)</option>
+                <option value="4">⭐⭐⭐⭐ (4점 - 만족)</option>
+                <option value="3">⭐⭐⭐ (3점 - 보통)</option>
+                <option value="2">⭐⭐ (2점 - 불만족)</option>
+                <option value="1">⭐ (1점 - 매우 불만족)</option>
             </select>
         </div>
 
+        <!-- 리뷰 내용 -->
         <div class="form-group">
-            <label for="buyerId">구매자 선택 *</label>
-            <select id="buyerId" name="buyerId" required>
-                <option value="">-- 구매자를 선택하세요 --</option>
-                <option th:each="user : ${users}" 
-                        th:value="${user.userId}" 
-                        th:text="'User ' + ${user.userId} + ' (' + ${user.role} + ')'">
-                    사용자
-                </option>
-            </select>
-        </div>
-
-        <div class="form-group">
-            <label>평점 선택 *</label>
-            <div class="rating-input">
-                <input type="radio" id="rating1" name="rating" value="1" required>
-                <label for="rating1" class="star-label">⭐ 1점</label>
-
-                <input type="radio" id="rating2" name="rating" value="2">
-                <label for="rating2" class="star-label">⭐⭐ 2점</label>
-
-                <input type="radio" id="rating3" name="rating" value="3">
-                <label for="rating3" class="star-label">⭐⭐⭐ 3점</label>
-
-                <input type="radio" id="rating4" name="rating" value="4">
-                <label for="rating4" class="star-label">⭐⭐⭐⭐ 4점</label>
-
-                <input type="radio" id="rating5" name="rating" value="5" checked>
-                <label for="rating5" class="star-label">⭐⭐⭐⭐⭐ 5점</label>
-            </div>
-        </div>
-
-        <div class="form-group">
-            <label for="content">후기 내용 *</label>
+            <label for="content">리뷰 내용 *</label>
             <textarea id="content" name="content" required 
-                      placeholder="거래 후기를 작성해주세요..."></textarea>
+                      placeholder="거래에 대한 솔직한 리뷰를 작성해주세요"></textarea>
         </div>
 
-        <div>
+        <!-- 버튼 -->
+        <div class="form-group">
             <button type="submit" class="button">✅ 작성 완료</button>
-            <a href="/test/review" class="button button-cancel">❌ 취소</a>
+            <a th:href="@{/test/review}" class="button button-cancel">❌ 취소</a>
         </div>
     </form>
 
-    <hr style="margin-top: 40px;">
+    <hr style="margin: 30px 0;">
+    
+    <div>
+        <h3>💡 안내</h3>
+        <ul>
+            <li>평점은 1-5점으로 선택할 수 있습니다</li>
+            <li>리뷰 내용은 필수 입력 항목입니다</li>
+        </ul>
+    </div>
 </body>
 </html>

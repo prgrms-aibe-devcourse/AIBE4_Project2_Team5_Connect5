@@ -1,0 +1,35 @@
+# Gradle
+.gradle
+build
+
+!gradle/
+!gradlew
+!gradlew.bat
+
+# IDE
+.idea
+.vscode
+*.iml
+*.ipr
+*.iws
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore
+
+# Logs
+*.log
+
+# Temp
+tmp
+temp
+
+# Test
+src/test
+
+# QueryDSL generated
+src/main/generated

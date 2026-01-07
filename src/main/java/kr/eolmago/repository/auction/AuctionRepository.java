@@ -14,7 +14,6 @@ public interface AuctionRepository extends JpaRepository<Auction, UUID>, Auction
     // 상태별 경매 목록 조회
     Page<Auction> findByStatus(AuctionStatus status, Pageable pageable);
 
-
     // 판매자별 경매 목록 조회
     Page<Auction> findBySeller(User seller, Pageable pageable);
 

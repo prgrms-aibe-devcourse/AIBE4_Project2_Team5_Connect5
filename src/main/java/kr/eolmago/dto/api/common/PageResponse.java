@@ -68,4 +68,23 @@ public record PageResponse<T> (
                 PageInfo.from(page)
         );
     }
+
+
+    //알림 조회용
+    public static <T> PageResponse<T> of1Based(Page<T> page) {
+        PageInfo info = PageInfo.from(page);
+
+        PageInfo fixed = new PageInfo(
+            info.currentPage() + 1,
+            info.totalPages(),
+            info.totalElements(),
+            info.size(),
+            info.first(),
+            info.last(),
+            info.hasNext(),
+            info.hasPrevious()
+        );
+
+        return new PageResponse<>(page.getContent(), fixed);
+    }
 }

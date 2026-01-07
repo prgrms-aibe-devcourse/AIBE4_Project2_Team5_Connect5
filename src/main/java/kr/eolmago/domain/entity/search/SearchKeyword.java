@@ -63,6 +63,11 @@ public class SearchKeyword extends CreatedAtEntity {
     @Column(name = "last_searched_at", nullable = false)
     private OffsetDateTime lastSearchedAt;
 
+    // 초성 컬럼 (Generated Column)
+    @Column(name = "keyword_chosung", insertable = false, updatable = false)
+    private String keywordChosung;  // 읽기 전용
+
+
     public static SearchKeyword create(String keyword) {
         SearchKeyword searchKeyword = new SearchKeyword();
         searchKeyword.keyword = keyword;

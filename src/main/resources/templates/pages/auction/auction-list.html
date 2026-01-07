@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/base}">
+<head>
+    <title layout:fragment="title">경매 목록</title>
+</head>
+
+<body>
+<div layout:fragment="content" class="bg-gray-50">
+    <div class="mx-auto max-w-7xl px-6 py-10">
+
+        <!-- 페이지 헤더 -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-extrabold tracking-tight text-gray-900">경매 목록</h1>
+            <p class="mt-2 text-sm text-gray-600">진행 중인 모든 경매를 확인하세요.</p>
+        </div>
+
+        <!-- 카테고리 -->
+
+        <!-- 필터 -->
+
+        <!-- 경매 카드 그리드 -->
+        <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <!-- 각 경매 카드 -->
+            <th:block th:each="auction : ${auctions.content}">
+                <div th:replace="~{components/auction-card :: auctionCard(auction=${auction})}"></div>
+            </th:block>
+        </div>
+
+        <!-- 경매가 없을 때 -->
+        <div th:if="${auctions.content.isEmpty()}"
+             class="py-20 text-center">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M12 12h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <h3 class="mt-4 text-lg font-semibold text-gray-900">진행 중인 경매가 없습니다</h3>
+            <p class="mt-2 text-sm text-gray-600">나중에 다시 확인해주세요.</p>
+        </div>
+
+        <!-- 페이지네이션 -->
+        <div th:if="${!auctions.content.isEmpty() and auctions.pageInfo.totalPages > 0}" class="mt-10">
+            <nav class="flex items-center justify-center gap-2" aria-label="Pagination">
+                <!-- 이전 페이지 -->
+                <a th:if="${auctions.pageInfo.hasPrevious}"
+                   th:href="@{/auctions(page=${auctions.pageInfo.currentPage - 1})}"
+                   class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-gray-300 bg-white text-sm font-semibold text-gray-700 hover:bg-gray-50">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                </a>
+
+                <!-- 페이지 번호 -->
+                <div class="flex gap-1" th:if="${auctions.pageInfo.totalPages > 0}">
+                    <a th:each="i : ${#numbers.sequence(0, auctions.pageInfo.totalPages - 1)}"
+                       th:href="@{/auctions(page=${i})}"
+                       th:classappend="${i == auctions.pageInfo.currentPage} ? 'bg-slate-900 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'"
+                       class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-gray-300 text-sm font-semibold">
+                        <span th:text="${i + 1}">1</span>
+                    </a>
+                </div>
+
+                <!-- 다음 페이지 -->
+                <a th:if="${auctions.pageInfo.hasNext}"
+                   th:href="@{/auctions(page=${auctions.pageInfo.currentPage + 1})}"
+                   class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-gray-300 bg-white text-sm font-semibold text-gray-700 hover:bg-gray-50">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </a>
+            </nav>
+        </div>
+
+    </div>
+</div>
+</body>
+</html>

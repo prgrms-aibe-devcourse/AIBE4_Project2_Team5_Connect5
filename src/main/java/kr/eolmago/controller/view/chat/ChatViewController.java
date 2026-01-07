@@ -3,19 +3,21 @@ package kr.eolmago.controller.view.chat;
 import java.util.UUID;
 import kr.eolmago.domain.entity.chat.ChatRoom;
 import kr.eolmago.global.security.CustomUserDetails;
-import kr.eolmago.service.chat.ChatRoomService;
+import kr.eolmago.service.chat.ChatService;
+import kr.eolmago.service.chat.validation.ChatValidator;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 @Controller
 @RequiredArgsConstructor
 @RequestMapping("/chats")
 public class ChatViewController {
 
-	private final ChatRoomService chatRoomService;
+	private final ChatService chatService;
+	private final ChatValidator chatValidator;
 
 	@GetMapping
 	public String chatList() {
@@ -23,14 +25,14 @@ public class ChatViewController {
 	}
 
 	@GetMapping("/rooms/{roomId}")
-	public String chatRoom(@PathVariable Long roomId,
+	public String chatRoom(
+		@PathVariable Long roomId,
 		@AuthenticationPrincipal CustomUserDetails me,
-		Model model) {
+		Model model
+	) {
+		UUID userId = chatValidator.requireUserId(me);
 
-		UUID userId = UUID.fromString(me.getId());
-
-		ChatRoom room = chatRoomService.getRoomOrThrow(roomId);
-		chatRoomService.validateParticipant(room, userId);
+		ChatRoom room = chatService.getRoomForUserOrThrow(userId, roomId);
 
 		model.addAttribute("roomId", roomId);
 		model.addAttribute("userId", userId.toString());

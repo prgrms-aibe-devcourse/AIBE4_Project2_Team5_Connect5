@@ -10,5 +10,5 @@ import java.util.UUID;
 public interface AuctionRepositoryCustom {
 
     // 경매 목록 조회
-    Page<AuctionListDto> searchList(AuctionStatus status, Pageable pageable, String sortKey);
+    Page<AuctionListDto> searchList(Pageable pageable, String sortKey, AuctionStatus status, UUID sellerId);
 }

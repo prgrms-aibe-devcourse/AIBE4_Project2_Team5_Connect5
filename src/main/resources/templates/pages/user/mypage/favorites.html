@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/base}">
+<head>
+    <title layout:fragment="title">찜 목록</title>
+    <link rel="stylesheet" href="/css/auction-list.css" />
+</head>
+
+<body>
+<div layout:fragment="content">
+    <div class="space-y-6">
+        <!-- 헤더 -->
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-extrabold tracking-tight text-gray-900">찜 목록</h1>
+                <p class="mt-2 text-sm text-gray-600">관심있는 경매를 모아보세요.</p>
+            </div>
+            <div class="text-sm text-gray-600">
+                총 <span id="favorite-count" class="font-semibold text-gray-900">0</span>개
+            </div>
+        </div>
+
+        <!-- 필터 옵션 -->
+        <div class="flex items-center justify-between border-b border-gray-200 pb-4">
+            <div class="flex items-center gap-2">
+                <button type="button"
+                        class="fav-filter-btn rounded-md px-4 py-2 text-sm font-semibold bg-gray-900 text-white"
+                        data-filter="all">
+                    전체
+                </button>
+                <button type="button"
+                        class="fav-filter-btn rounded-md px-4 py-2 text-sm font-medium bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
+                        data-filter="live">
+                    진행 중
+                </button>
+                <button type="button"
+                        class="fav-filter-btn rounded-md px-4 py-2 text-sm font-medium bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
+                        data-filter="ended">
+                    종료됨
+                </button>
+            </div>
+            <div>
+                <select id="sort-select" class="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm">
+                    <option value="recent">최근 찜한 순</option>
+                    <option value="deadline">마감 임박순</option>
+                    <option value="price_asc">낮은 가격순</option>
+                    <option value="price_desc">높은 가격순</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- 찜 목록 그리드 -->
+        <div id="favorites-grid" class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+            <!-- JavaScript로 동적 렌더링 -->
+        </div>
+
+        <!-- 빈 상태 -->
+        <div id="empty-state" class="text-center py-12 bg-gray-50 rounded-lg">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+            </svg>
+            <h3 class="mt-4 text-sm font-semibold text-gray-900">찜한 경매가 없습니다</h3>
+            <p class="mt-2 text-sm text-gray-600">마음에 드는 경매에 하트를 눌러보세요!</p>
+            <div class="mt-6">
+                <a th:href="@{/auctions}"
+                   class="inline-flex items-center rounded-md bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-800">
+                    경매 둘러보기
+                </a>
+            </div>
+        </div>
+
+        <!-- 로딩 상태 -->
+        <div id="loading" class="hidden text-center py-12">
+            <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-gray-900 border-r-transparent"></div>
+            <p class="mt-4 text-sm text-gray-600">로딩 중...</p>
+        </div>
+    </div>
+</div>
+
+<th:block layout:fragment="scripts">
+    <script src="/js/auction/auction-list.js"></script>
+    <script src="/js/buyer-favorites.js"></script>
+</th:block>
+</body>
+</html>
