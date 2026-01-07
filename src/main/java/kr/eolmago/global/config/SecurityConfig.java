@@ -9,10 +9,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
@@ -40,7 +42,6 @@ public class SecurityConfig {
                         "/swagger-ui.html",
                         "/v3/api-docs/**",
                         "/api-docs/**"
-//                        "/api/**"
                 )
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
@@ -48,23 +49,51 @@ public class SecurityConfig {
         return http.build();
     }
 
-     // 애플리케이션 기본 체인
+    // 애플리케이션 체인
     @Bean
     @Order(1)
-    public SecurityFilterChain appChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain apiChain(HttpSecurity http) throws Exception {
+        http
+                .securityMatcher("/api/**")
+                .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth
+                        // 인증/토큰 발급
+                        .requestMatchers("/api/auth/**").permitAll()
+
+                        // 경매 조회만 로그인 전 공개
+                        .requestMatchers(HttpMethod.GET, "/api/auctions/**").permitAll()
+
+                        // 그 외 API는 인증 필요
+                        .anyRequest().authenticated()
+                )
+                .formLogin(AbstractHttpConfigurer::disable)
+                .oauth2Login(AbstractHttpConfigurer::disable)
+                .logout(AbstractHttpConfigurer::disable)
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(authenticationEntryPoint)
+                        .accessDeniedHandler(accessDeniedHandler)
+                );
+
+        return http.build();
+    }
+
+    // 뷰 체인
+    @Bean
+    @Order(2)
+    public SecurityFilterChain webChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                                "/",
-                                "/home",
-                                "/login",
-                                "/css/**",
-                                "/js/**",
-                                "/images/**",
-                                "/api/auth/**",
-                                "/test/**" //deal, review 페이지 동작을 위한 임시 주소 -> 추후 변경
+                                "/", "/home", "/login",
+                                "/css/**", "/js/**", "/images/**",
+                                "/auctions", "/auctions/**",
+                                "/oauth2/**",
+                                "/login/oauth2/**"
                         ).permitAll()
+                        .requestMatchers("/buyer/**", "/seller/**").authenticated()
                         .anyRequest().authenticated()
                 )
                 .formLogin(AbstractHttpConfigurer::disable)
@@ -79,8 +108,7 @@ public class SecurityConfig {
                         .deleteCookies("accessToken", "refreshToken", "JSESSIONID")
                         .permitAll()
                 )
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                .exceptionHandling(exception -> exception
+                .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(authenticationEntryPoint)
                         .accessDeniedHandler(accessDeniedHandler)
                 );

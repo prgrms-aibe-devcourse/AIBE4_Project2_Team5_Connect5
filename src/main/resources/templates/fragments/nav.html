@@ -17,11 +17,62 @@
                         경매 목록
                     </a>
 
-                    <a th:href="@{/seller/auctions}"
-                       class="rounded-md px-3 py-2 text-sm font-semibold text-gray-900
-                              hover:bg-gray-100 hover:text-gray-900">
-                        판매 관리
-                    </a>
+                    <!-- 판매 관리 드롭다운 -->
+                    <div class="relative" id="sellerMenuWrapper">
+                        <button type="button" id="sellerMenuButton"
+                                class="rounded-md px-3 py-2 text-sm font-semibold text-gray-900
+                                       hover:bg-gray-100 hover:text-gray-900 flex items-center gap-1"
+                                onclick="toggleSellerMenu()">
+                            <span>판매 관리</span>
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+
+                        <div id="sellerMenu" class="absolute left-0 mt-2 hidden w-48 z-50">
+                            <div class="rounded-md border border-gray-200 bg-white shadow-lg py-1">
+                                <a th:href="@{/seller/auctions}" class="block px-4 py-2 text-sm text-gray-800 hover:bg-gray-100">
+                                    판매 관리
+                                </a>
+                                <a th:href="@{/seller/deals}" class="block px-4 py-2 text-sm text-gray-800 hover:bg-gray-100">
+                                    거래 관리
+                                </a>
+                                <a th:href="@{/seller/reviews}" class="block px-4 py-2 text-sm text-gray-800 hover:bg-gray-100">
+                                    받은 리뷰
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 구매 관리 드롭다운 -->
+                    <div class="relative" id="purchaseMenuWrapper">
+                        <button type="button" id="purchaseMenuButton"
+                                class="rounded-md px-3 py-2 text-sm font-semibold text-gray-900
+                                       hover:bg-gray-100 hover:text-gray-900 flex items-center gap-1"
+                                onclick="togglePurchaseMenu()">
+                            <span>구매 관리</span>
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+
+                        <div id="purchaseMenu" class="absolute left-0 mt-2 hidden w-48 z-50">
+                            <div class="rounded-md border border-gray-200 bg-white shadow-lg py-1">
+                                <a th:href="@{/buyer/bids}" class="block px-4 py-2 text-sm text-gray-800 hover:bg-gray-100">
+                                    입찰/낙찰 내역
+                                </a>
+                                <a th:href="@{/buyer/deals}" class="block px-4 py-2 text-sm text-gray-800 hover:bg-gray-100">
+                                    거래 관리
+                                </a>
+                                <a th:href="@{/buyer/favorites}" class="block px-4 py-2 text-sm text-gray-800 hover:bg-gray-100">
+                                    찜 목록
+                                </a>
+                                <a th:href="@{/buyer/reviews}" class="block px-4 py-2 text-sm text-gray-800 hover:bg-gray-100">
+                                    내 리뷰
+                                </a>
+                            </div>
+                        </div>
+                    </div>
                 </nav>
             </div>
 
@@ -124,21 +175,7 @@
     </div>
 
     <script>
-        function toggleProfileMenu() {
-            const menu = document.getElementById('profileMenu');
-            if (!menu) return;
-            menu.classList.toggle('hidden');
-        }
-
-        document.addEventListener('click', (e) => {
-            const btn = document.getElementById('profileButton');
-            const menu = document.getElementById('profileMenu');
-            if (!btn || !menu) return;
-            if (!btn.contains(e.target) && !menu.contains(e.target)) {
-                menu.classList.add('hidden');
-            }
-        });
-
+        // 알림 뱃지 관리
         (function () {
             const badge = document.getElementById('notifBadge');
             if (!badge) return;

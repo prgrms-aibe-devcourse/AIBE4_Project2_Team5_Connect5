@@ -2,8 +2,10 @@ package kr.eolmago.controller.api.user;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
+import kr.eolmago.domain.entity.user.User;
 import kr.eolmago.global.security.CustomUserDetails;
 import kr.eolmago.global.security.filter.JwtAuthenticationFilter;
+import kr.eolmago.repository.user.UserRepository;
 import kr.eolmago.service.user.JwtService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -12,12 +14,15 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ModelAttribute;
 
+import java.util.UUID;
+
 @Slf4j
 @ControllerAdvice
 @RequiredArgsConstructor
 public class GlobalControllerAdvice {
 
     private final JwtService jwtService;
+    private final UserRepository userRepository;
 
     /**
      * 모든 Thymeleaf 템플릿에 로그인 여부를 전달
@@ -101,5 +106,30 @@ public class GlobalControllerAdvice {
             log.debug("Failed to get unread notification count", e);
         }
         return 0;
+    }
+
+    /**
+     * 모든 Thymeleaf 템플릿에 사용자 프로필 이미지를 전달
+     */
+    @ModelAttribute("userProfileImage")
+    public String getUserProfileImage() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication != null && authentication.isAuthenticated()
+                    && authentication.getPrincipal() instanceof CustomUserDetails) {
+                CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+                UUID userId = UUID.fromString(userDetails.getId());
+
+                return userRepository.findById(userId)
+                        .map(User::getUserProfile)
+                        .map(profile -> profile.getProfileImageUrl() != null
+                                ? profile.getProfileImageUrl()
+                                : "/images/profile/base.png")
+                        .orElse("/images/profile/base.png");
+            }
+        } catch (Exception e) {
+            log.debug("Failed to get user profile image", e);
+        }
+        return "/images/profile/base.png";
     }
 }

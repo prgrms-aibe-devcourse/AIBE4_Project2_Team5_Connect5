@@ -9,23 +9,37 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.BindException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
-/**
- * 전역 예외 처리 핸들러
- */
 @Slf4j
-@RestControllerAdvice
+@RestControllerAdvice(basePackages = "kr.eolmago.controller.api")
 public class GlobalExceptionHandler {
+
+    /**
+     * 정적 리소스 없음 (Spring MVC 6)
+     * - 보통은 여기(basePackages 제한)에서 잡히지 않을 수 있으나,
+     *   요청하신 대로 핸들러는 추가합니다.
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<Void> handleNoResourceFound(
+            NoResourceFoundException e,
+            HttpServletRequest request
+    ) {
+        // 정적 리소스 404는 서버 장애가 아니므로 과도한 로그를 남기지 않는 편이 낫습니다.
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+    }
 
     /**
      * 비즈니스 예외 처리 (AuctionException)
@@ -33,8 +47,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AuctionException.class)
     public ResponseEntity<ErrorResponse> handleAuctionException(
             AuctionException e,
-            HttpServletRequest request) {
-
+            HttpServletRequest request
+    ) {
         logWarn(request, e, "AuctionException");
 
         ErrorCode errorCode = e.getErrorCode();
@@ -46,13 +60,31 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Notification 비즈니스 예외
+     */
+    @ExceptionHandler(NotificationException.class)
+    public ResponseEntity<ErrorResponse> handleNotificationException(
+            NotificationException e,
+            HttpServletRequest request
+    ) {
+        logWarn(request, e, "NotificationException");
+
+        NotificationErrorCode ec = e.getErrorCode();
+        ErrorResponse response = ErrorResponse.of(ec.getCode(), e.getMessage());
+
+        return ResponseEntity
+                .status(ec.getStatus())
+                .body(response);
+    }
+
+    /**
      * {@code @Valid} 검증 실패 ({@code @RequestBody})
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleMethodArgumentNotValidException(
             MethodArgumentNotValidException e,
-            HttpServletRequest request) {
-
+            HttpServletRequest request
+    ) {
         logWarn(request, e, "MethodArgumentNotValidException");
 
         List<ErrorResponse.FieldError> errors = e.getBindingResult()
@@ -78,8 +110,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BindException.class)
     public ResponseEntity<ErrorResponse> handleBindException(
             BindException e,
-            HttpServletRequest request) {
-
+            HttpServletRequest request
+    ) {
         logWarn(request, e, "BindException");
 
         List<ErrorResponse.FieldError> errors = e.getBindingResult()
@@ -105,8 +137,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HandlerMethodValidationException.class)
     public ResponseEntity<ErrorResponse> handleHandlerMethodValidationException(
             HandlerMethodValidationException e,
-            HttpServletRequest request) {
-
+            HttpServletRequest request
+    ) {
         logWarn(request, e, "HandlerMethodValidationException");
 
         ErrorResponse response = ErrorResponse.of(
@@ -125,8 +157,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ErrorResponse> handleMethodArgumentTypeMismatchException(
             MethodArgumentTypeMismatchException e,
-            HttpServletRequest request) {
-
+            HttpServletRequest request
+    ) {
         logWarn(request, e, "MethodArgumentTypeMismatchException");
 
         String message = String.format(
@@ -149,8 +181,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorResponse> handleHttpMessageNotReadableException(
             HttpMessageNotReadableException e,
-            HttpServletRequest request) {
-
+            HttpServletRequest request
+    ) {
         logWarn(request, e, "HttpMessageNotReadableException");
 
         ErrorResponse response = ErrorResponse.of(
@@ -169,8 +201,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleIllegalArgumentException(
             IllegalArgumentException e,
-            HttpServletRequest request) {
-
+            HttpServletRequest request
+    ) {
         logWarn(request, e, "IllegalArgumentException");
 
         ErrorResponse response = ErrorResponse.of(ErrorCode.INVALID_INPUT_VALUE, e.getMessage());
@@ -186,8 +218,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<ErrorResponse> handleIllegalStateException(
             IllegalStateException e,
-            HttpServletRequest request) {
-
+            HttpServletRequest request
+    ) {
         logWarn(request, e, "IllegalStateException");
 
         ErrorResponse response = ErrorResponse.of(ErrorCode.INVALID_INPUT_VALUE, e.getMessage());
@@ -203,8 +235,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ErrorResponse> handleAuthenticationException(
             AuthenticationException e,
-            HttpServletRequest request) {
-
+            HttpServletRequest request
+    ) {
         logWarn(request, e, "AuthenticationException");
 
         ErrorResponse response = ErrorResponse.of(ErrorCode.USER_UNAUTHORIZED);
@@ -220,8 +252,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAccessDeniedException(
             AccessDeniedException e,
-            HttpServletRequest request) {
-
+            HttpServletRequest request
+    ) {
         logWarn(request, e, "AccessDeniedException");
 
         ErrorResponse response = ErrorResponse.of(ErrorCode.USER_FORBIDDEN);
@@ -237,8 +269,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleException(
             Exception e,
-            HttpServletRequest request) {
-
+            HttpServletRequest request
+    ) {
         logError(request, e, "UnhandledException");
 
         ErrorResponse response = ErrorResponse.of(ErrorCode.INTERNAL_SERVER_ERROR);
@@ -248,12 +280,12 @@ public class GlobalExceptionHandler {
                 .body(response);
     }
 
-    // ===== 로깅 헬퍼 메서드 =====
+    // ===== 로깅 헬퍼 =====
 
     private void logWarn(HttpServletRequest request, Exception e, String errorType) {
         String method = request.getMethod();
         String uri = getFullRequestPath(request);
-        String userInfo = getCurrentUser(request);
+        String userInfo = getCurrentUser();
 
         log.warn("[{}] | {} {} | User: {} | Error: {}",
                 errorType, method, uri, userInfo, e.getMessage());
@@ -262,33 +294,16 @@ public class GlobalExceptionHandler {
     private void logError(HttpServletRequest request, Exception e, String errorType) {
         String method = request.getMethod();
         String uri = getFullRequestPath(request);
-        String userInfo = getCurrentUser(request);
+        String userInfo = getCurrentUser();
 
         log.error("[{}] | {} {} | User: {} | Error: {}",
                 errorType, method, uri, userInfo, e.getMessage(), e);
     }
 
-
-
-    private String getCurrentUser(HttpServletRequest request) {
-        String remoteUser = request.getRemoteUser();
-        return remoteUser != null ? remoteUser : "anonymous";
-    }
-
-    @ExceptionHandler(NotificationException.class)
-    public ResponseEntity<ErrorResponse> handleNotificationException(
-        NotificationException e,
-        HttpServletRequest request
-    ) {
-        logWarn(request, e, "NotificationException");
-
-        NotificationErrorCode ec = e.getErrorCode();
-
-        ErrorResponse response = ErrorResponse.of(ec.getCode(), e.getMessage());
-
-        return ResponseEntity
-            .status(ec.getStatus())
-            .body(response);
+    private String getCurrentUser() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) return "anonymous";
+        return auth.getName();
     }
 
     private String getFullRequestPath(HttpServletRequest request) {
@@ -296,39 +311,4 @@ public class GlobalExceptionHandler {
         String queryString = request.getQueryString();
         return queryString != null ? requestURI + "?" + queryString : requestURI;
     }
-
-//    @ExceptionHandler(BadCredentialsException.class)
-//    public ResponseEntity<ErrorResponse> handleBadCredentials(BadCredentialsException e) {
-//        log.warn("인증 실패: {}", e.getMessage());
-//        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-//                .body(ErrorResponse.of(401, "Unauthorized", e.getMessage()));
-//    }
-//
-//    @ExceptionHandler(EntityNotFoundException.class)
-//    public ResponseEntity<ErrorResponse> handleNotFound(EntityNotFoundException e) {
-//        log.warn("리소스 없음: {}", e.getMessage());
-//        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-//                .body(ErrorResponse.of(404, "Not Found", e.getMessage()));
-//    }
-//
-//    @ExceptionHandler(MethodArgumentNotValidException.class)
-//    public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException e) {
-//        String message = e.getBindingResult().getFieldErrors().stream()
-//                .map(error -> error.getField() + ": " + error.getDefaultMessage())
-//                .collect(Collectors.joining(", "));
-//        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-//                .body(ErrorResponse.of(400, "Bad Request", message));
-//    }
-//
-//    @ExceptionHandler(AccessDeniedException.class)
-//    public ResponseEntity<Void> handleAccessDenied(AccessDeniedException e) {
-//        throw e; // 403 -> 흘러나가게 두면 AccessDeniedExceptionHandler가 잡아챔
-//    }
-//
-//    @ExceptionHandler(Exception.class)
-//    public ResponseEntity<ErrorResponse> handleGeneral(Exception e) {
-//        log.error("서버 오류: ", e);
-//        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-//                .body(ErrorResponse.of(500, "Internal Server Error", "서버 오류가 발생했습니다."));
-//}
 }

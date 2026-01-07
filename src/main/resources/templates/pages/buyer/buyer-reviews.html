@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/base}">
+<head>
+    <title layout:fragment="title">내 리뷰</title>
+</head>
+
+<body>
+<div layout:fragment="content">
+    <div class="space-y-6">
+        <!-- 헤더 -->
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-extrabold tracking-tight text-gray-900">내 리뷰</h1>
+                <p class="mt-2 text-sm text-gray-600">내가 작성한 리뷰를 확인하세요.</p>
+            </div>
+            <div class="text-sm text-gray-600">
+                총 <span id="review-count" class="font-semibold text-gray-900">0</span>개
+            </div>
+        </div>
+
+        <!-- 필터 옵션 -->
+        <div class="flex items-center gap-2 border-b border-gray-200 pb-4">
+            <button type="button"
+                    class="review-filter-btn rounded-md px-4 py-2 text-sm font-semibold bg-gray-900 text-white"
+                    data-filter="all">
+                전체
+            </button>
+            <button type="button"
+                    class="review-filter-btn rounded-md px-4 py-2 text-sm font-medium bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
+                    data-filter="5">
+                ⭐⭐⭐⭐⭐
+            </button>
+            <button type="button"
+                    class="review-filter-btn rounded-md px-4 py-2 text-sm font-medium bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
+                    data-filter="4">
+                ⭐⭐⭐⭐
+            </button>
+            <button type="button"
+                    class="review-filter-btn rounded-md px-4 py-2 text-sm font-medium bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
+                    data-filter="3">
+                ⭐⭐⭐
+            </button>
+            <button type="button"
+                    class="review-filter-btn rounded-md px-4 py-2 text-sm font-medium bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
+                    data-filter="low">
+                ⭐⭐ 이하
+            </button>
+        </div>
+
+        <!-- 리뷰 목록 -->
+        <div id="reviews-list" class="space-y-4">
+            <!-- JavaScript로 동적 렌더링 -->
+        </div>
+
+        <!-- 빈 상태 -->
+        <div id="empty-state" class="text-center py-12 bg-gray-50 rounded-lg">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
+            </svg>
+            <h3 class="mt-4 text-sm font-semibold text-gray-900">작성한 리뷰가 없습니다</h3>
+            <p class="mt-2 text-sm text-gray-600">완료된 거래에 리뷰를 작성해보세요!</p>
+            <div class="mt-6">
+                <a th:href="@{/buyer/deals}"
+                   class="inline-flex items-center rounded-md bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-800">
+                    거래 내역 보기
+                </a>
+            </div>
+        </div>
+
+        <!-- 로딩 상태 -->
+        <div id="loading" class="hidden text-center py-12">
+            <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-gray-900 border-r-transparent"></div>
+            <p class="mt-4 text-sm text-gray-600">로딩 중...</p>
+        </div>
+    </div>
+</div>
+
+<th:block layout:fragment="scripts">
+    <script src="/js/buyer-reviews.js"></script>
+</th:block>
+</body>
+</html>
