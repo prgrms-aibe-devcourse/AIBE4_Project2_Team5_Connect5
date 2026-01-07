@@ -117,7 +117,7 @@ public class AuctionSearchService {
         };
 
         // 4. 검색 결과가 있으면 통계 기록
-        if (result.pageInfo().totalElements() > 0 /*&& userId != null*/) {
+        if (result.pageInfo().totalElements() > 0 && !keywordType.equals("CHOSUNG")) {
             try {
                 searchKeywordService.recordSearch(keyword, userId);
                 log.debug("검색어 통계 기록 완료: keyword={}, userId={}", keyword, userId);
