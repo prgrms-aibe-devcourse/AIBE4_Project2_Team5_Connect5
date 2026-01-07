@@ -298,12 +298,14 @@ public class AuctionSearchRepositoryCustomImpl implements AuctionSearchRepositor
                     (String) row[2],                            // title
                     (String) row[3],                            // image_url
                     (String) row[4],                            // nickname
-                    (Integer) row[5],                           // current_price
-                    (Integer) row[6],                           // bid_count
-                    (Integer) row[7],                           // view_count
-                    (Integer) row[8],                           // favorite_count
-                    convertToOffsetDateTime(row[9]),            // end_at
-                    AuctionStatus.valueOf((String) row[10])     // status
+                    (Integer) row[5],                          // start_price
+                    (Integer) row[6],                           // current_price
+                    (Long) row[7],                           // final_price
+                    (Integer) row[8],                           // bid_count
+                    (Integer) row[9],                           // view_count
+                    (Integer) row[10],                           // favorite_count
+                    convertToOffsetDateTime(row[11]),            // end_at
+                    AuctionStatus.valueOf((String) row[12])     // status
             );
             dtos.add(dto);
         }

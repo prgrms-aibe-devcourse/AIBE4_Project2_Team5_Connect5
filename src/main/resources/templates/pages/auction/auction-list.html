@@ -8,7 +8,12 @@
 
 <body>
 <div layout:fragment="content" class="bg-gray-50">
-    <div class="mx-auto max-w-7xl px-6 py-10">
+    <div class="mx-auto max-w-7xl px-6 py-10"
+         th:with="
+           q=${param.q != null ? param.q[0] : ''},
+           sort=${param.sort != null ? param.sort[0] : 'popular'},
+           categoryId=${param.categoryId != null ? param.categoryId[0] : null}
+         ">
 
         <!-- 페이지 헤더 -->
         <div class="mb-8">
@@ -18,11 +23,67 @@
 
         <!-- 카테고리 -->
 
+
         <!-- 필터 -->
+        <form th:action="@{/auctions}" method="get" class="mb-6">
+            <!-- 필터 변경/검색 시 1페이지(0)로 복귀 -->
+            <input type="hidden" name="page" value="0"/>
+
+            <!-- (카테고리 파라미터가 있다면 유지) -->
+            <input th:if="${categoryId != null}" type="hidden" name="categoryId" th:value="${categoryId}"/>
+
+            <div class="flex items-center justify-between gap-4 rounded-2xl border border-gray-200 bg-white px-4 py-3 shadow-sm
+                        max-[900px]:flex-col max-[900px]:items-stretch">
+
+                <!-- Left: 체크박스 + 총 개수 + 검색 -->
+                <div class="flex items-center gap-4 max-[900px]:flex-col max-[900px]:items-stretch">
+                    <div class="flex items-center gap-3">
+                        <div class="text-sm font-semibold text-gray-900 whitespace-nowrap">
+                            총
+                            <span class="font-extrabold text-red-600"
+                                  th:text="${#numbers.formatInteger(auctions.pageInfo.totalElements, 0, 'COMMA')}">0</span>
+                            개
+                        </div>
+                    </div>
+
+                    <div class="relative w-[360px] max-[900px]:w-full">
+                        <input name="q"
+                               th:value="${q}"
+                               class="h-10 w-full rounded-xl border border-gray-200 bg-white pl-4 pr-11 text-sm font-semibold text-gray-900
+                                      placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-slate-200"
+                               type="text"
+                               placeholder="현재 카테고리에서 검색"
+                               autocomplete="off"/>
+
+                        <button type="submit"
+                                class="absolute inset-y-0 right-2 inline-flex items-center justify-center rounded-lg px-2 text-gray-500 hover:text-gray-700"
+                                aria-label="검색">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M21 21l-4.35-4.35m1.6-5.4a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Right: 정렬 -->
+                <div class="flex items-center justify-end">
+                    <select name="sort"
+                            class="h-10 rounded-xl border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-700
+                                   focus:outline-none focus:ring-4 focus:ring-slate-200"
+                            onchange="this.form.submit()">
+                        <option value="popular" th:selected="${sort == 'popular'}">인기경매순</option>
+                        <option value="latest" th:selected="${sort == 'latest'}">최신순</option>
+                        <option value="deadline" th:selected="${sort == 'deadline'}">마감임박순</option>
+                        <option value="price_asc" th:selected="${sort == 'price_asc'}">가격 낮은순</option>
+                        <option value="price_desc" th:selected="${sort == 'price_desc'}">가격 높은순</option>
+                    </select>
+                </div>
+            </div>
+        </form>
 
         <!-- 경매 카드 그리드 -->
         <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            <!-- 각 경매 카드 -->
             <th:block th:each="auction : ${auctions.content}">
                 <div th:replace="~{components/auction-card :: auctionCard(auction=${auction})}"></div>
             </th:block>
@@ -39,12 +100,12 @@
             <p class="mt-2 text-sm text-gray-600">나중에 다시 확인해주세요.</p>
         </div>
 
-        <!-- 페이지네이션 -->
+        <!-- 페이지네이션 (q/sort/categoryId 유지) -->
         <div th:if="${!auctions.content.isEmpty() and auctions.pageInfo.totalPages > 0}" class="mt-10">
             <nav class="flex items-center justify-center gap-2" aria-label="Pagination">
                 <!-- 이전 페이지 -->
                 <a th:if="${auctions.pageInfo.hasPrevious}"
-                   th:href="@{/auctions(page=${auctions.pageInfo.currentPage - 1})}"
+                   th:href="@{/auctions(page=${auctions.pageInfo.currentPage - 1}, q=${q}, sort=${sort}, categoryId=${categoryId})}"
                    class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-gray-300 bg-white text-sm font-semibold text-gray-700 hover:bg-gray-50">
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
@@ -54,7 +115,7 @@
                 <!-- 페이지 번호 -->
                 <div class="flex gap-1" th:if="${auctions.pageInfo.totalPages > 0}">
                     <a th:each="i : ${#numbers.sequence(0, auctions.pageInfo.totalPages - 1)}"
-                       th:href="@{/auctions(page=${i})}"
+                       th:href="@{/auctions(page=${i}, q=${q}, sort=${sort}, categoryId=${categoryId})}"
                        th:classappend="${i == auctions.pageInfo.currentPage} ? 'bg-slate-900 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'"
                        class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-gray-300 text-sm font-semibold">
                         <span th:text="${i + 1}">1</span>
@@ -63,7 +124,7 @@
 
                 <!-- 다음 페이지 -->
                 <a th:if="${auctions.pageInfo.hasNext}"
-                   th:href="@{/auctions(page=${auctions.pageInfo.currentPage + 1})}"
+                   th:href="@{/auctions(page=${auctions.pageInfo.currentPage + 1}, q=${q}, sort=${sort}, categoryId=${categoryId})}"
                    class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-gray-300 bg-white text-sm font-semibold text-gray-700 hover:bg-gray-50">
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
