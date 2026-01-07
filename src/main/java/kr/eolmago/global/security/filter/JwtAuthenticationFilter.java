@@ -63,12 +63,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
 
-        Authentication existing = SecurityContextHolder.getContext().getAuthentication();
-        if (existing != null && existing.isAuthenticated() && !(existing instanceof AnonymousAuthenticationToken)) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
         String accessToken = extractAccessToken(request);
         String refreshToken = extractRefreshToken(request);
 
@@ -154,12 +148,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     userDetails.getUsername(),
                     role
             );
-            String newRefreshToken = jwtService.generateRefreshToken(userId);
 
-            refreshTokenService.rotate(userId, newRefreshToken);
-
+            // AccessToken은 항상 갱신
             setAccessTokenCookie(response, newAccessToken);
-            setRefreshTokenCookie(response, newRefreshToken);
+
+            // RefreshToken은 만료가 1일 미만으로 남았을 때만 갱신 (동시성 문제 최소화)
+            long oneDayMillis = 24 * 60 * 60 * 1000L;
+            long remainingMillis = jwtService.parseToken(refreshToken).getExpiration().getTime() - System.currentTimeMillis();
+
+            if (remainingMillis < oneDayMillis) {
+                String newRefreshToken = jwtService.generateRefreshToken(userId);
+                refreshTokenService.rotate(userId, newRefreshToken);
+                setRefreshTokenCookie(response, newRefreshToken);
+                log.info("RefreshToken 갱신 (만료 임박): userId={}", userId);
+            }
 
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(
