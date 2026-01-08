@@ -3,11 +3,11 @@ package kr.eolmago.controller.api.seller;
 import kr.eolmago.domain.entity.deal.enums.DealStatus;
 import kr.eolmago.dto.api.deal.SellerDealListDto;
 import kr.eolmago.dto.view.deal.DealResponse;
+import kr.eolmago.global.security.CustomUserDetails;
 import kr.eolmago.service.deal.DealService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -32,38 +32,39 @@ public class SellerDealApiController {
      */
     @GetMapping
     public ResponseEntity<Map<String, Object>> getSellerDeals(
-            @AuthenticationPrincipal OAuth2User principal
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        // OAuth2User에서 userId 추출
-        UUID sellerId = extractUserId(principal);
-        if (sellerId == null) {
+        if (userDetails == null) {
             return ResponseEntity.badRequest().body(
-                Map.of("error", "Invalid user authentication")
+                    Map.of("error", "User not authenticated")
             );
         }
 
+        // CustomUserDetails에서 userId 추출
+        UUID sellerId = userDetails.getUserId();
+
         // 판매자의 모든 거래 조회
         List<DealResponse> allDeals = dealService.getDealsBySeller(sellerId);
-        
+
         // 상태별로 분류
         List<SellerDealListDto> pending = allDeals.stream()
                 .filter(deal -> "PENDING_CONFIRMATION".equals(deal.status()))
                 .map(deal -> SellerDealListDto.from(deal, "구매자")) // TODO: 실제 구매자 이름 조회
                 .collect(Collectors.toList());
-                
+
         List<SellerDealListDto> ongoing = allDeals.stream()
                 .filter(deal -> "CONFIRMED".equals(deal.status()))
                 .map(deal -> SellerDealListDto.from(deal, "구매자"))
                 .collect(Collectors.toList());
-                
+
         List<SellerDealListDto> completed = allDeals.stream()
                 .filter(deal -> "COMPLETED".equals(deal.status()))
                 .map(deal -> SellerDealListDto.from(deal, "구매자"))
                 .collect(Collectors.toList());
-                
+
         List<SellerDealListDto> cancelled = allDeals.stream()
-                .filter(deal -> "TERMINATED".equals(deal.status()) 
-                             || "EXPIRED".equals(deal.status()))
+                .filter(deal -> "TERMINATED".equals(deal.status())
+                        || "EXPIRED".equals(deal.status()))
                 .map(deal -> SellerDealListDto.from(deal, "구매자"))
                 .collect(Collectors.toList());
 
@@ -89,13 +90,14 @@ public class SellerDealApiController {
      */
     @GetMapping("/status/{status}")
     public ResponseEntity<List<SellerDealListDto>> getDealsByStatus(
-            @AuthenticationPrincipal OAuth2User principal,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable String status
     ) {
-        UUID sellerId = extractUserId(principal);
-        if (sellerId == null) {
+        if (userDetails == null) {
             return ResponseEntity.badRequest().build();
         }
+
+        UUID sellerId = userDetails.getUserId();
 
         try {
             DealStatus dealStatus = DealStatus.valueOf(status);
@@ -116,17 +118,18 @@ public class SellerDealApiController {
      */
     @GetMapping("/{dealId}")
     public ResponseEntity<DealResponse> getDealDetail(
-            @AuthenticationPrincipal OAuth2User principal,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long dealId
     ) {
-        UUID sellerId = extractUserId(principal);
-        if (sellerId == null) {
+        if (userDetails == null) {
             return ResponseEntity.badRequest().build();
         }
 
+        UUID sellerId = userDetails.getUserId();
+
         try {
             DealResponse deal = dealService.getDeal(dealId);
-            
+
             // 판매자 본인의 거래인지 확인
             if (!deal.sellerId().equals(sellerId)) {
                 return ResponseEntity.status(403).build(); // Forbidden
@@ -144,17 +147,18 @@ public class SellerDealApiController {
      */
     @PostMapping("/{dealId}/confirm")
     public ResponseEntity<DealResponse> confirmDeal(
-            @AuthenticationPrincipal OAuth2User principal,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long dealId
     ) {
-        UUID sellerId = extractUserId(principal);
-        if (sellerId == null) {
+        if (userDetails == null) {
             return ResponseEntity.badRequest().build();
         }
 
+        UUID sellerId = userDetails.getUserId();
+
         try {
             DealResponse deal = dealService.getDeal(dealId);
-            
+
             // 판매자 본인의 거래인지 확인
             if (!deal.sellerId().equals(sellerId)) {
                 return ResponseEntity.status(403).build();
@@ -173,18 +177,19 @@ public class SellerDealApiController {
      */
     @PostMapping("/{dealId}/terminate")
     public ResponseEntity<DealResponse> terminateDeal(
-            @AuthenticationPrincipal OAuth2User principal,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long dealId,
             @RequestBody Map<String, String> body
     ) {
-        UUID sellerId = extractUserId(principal);
-        if (sellerId == null) {
+        if (userDetails == null) {
             return ResponseEntity.badRequest().build();
         }
 
+        UUID sellerId = userDetails.getUserId();
+
         try {
             DealResponse deal = dealService.getDeal(dealId);
-            
+
             // 판매자 본인의 거래인지 확인
             if (!deal.sellerId().equals(sellerId)) {
                 return ResponseEntity.status(403).build();
@@ -195,35 +200,6 @@ public class SellerDealApiController {
             return ResponseEntity.ok(terminated);
         } catch (IllegalStateException | IllegalArgumentException e) {
             return ResponseEntity.badRequest().build();
-        }
-    }
-
-    /**
-     * OAuth2User에서 userId(UUID) 추출
-     * 프로젝트의 실제 구조에 맞게 수정 필요
-     */
-    private UUID extractUserId(OAuth2User principal) {
-        if (principal == null) {
-            return null;
-        }
-        
-        try {
-            // OAuth2 provider별로 다른 속성명 사용
-            // Google: "sub", Kakao: "id", Naver: "id" 등
-            Object userId = principal.getAttribute("sub"); // Google 기준
-            if (userId == null) {
-                userId = principal.getAttribute("id"); // Kakao/Naver
-            }
-            
-            if (userId != null) {
-                // String을 UUID로 변환
-                return UUID.fromString(userId.toString());
-            }
-            
-            // Name에서 UUID 추출 시도 (프로젝트 구조에 따라 다름)
-            return UUID.fromString(principal.getName());
-        } catch (IllegalArgumentException e) {
-            return null;
         }
     }
 }
