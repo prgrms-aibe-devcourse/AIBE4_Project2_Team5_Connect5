@@ -11,9 +11,7 @@ import kr.eolmago.service.user.RefreshTokenService;
 import kr.eolmago.service.user.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
@@ -21,6 +19,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
 @Component
@@ -74,7 +74,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     log.info("토큰 갱신 성공");
                 } else {
                     log.warn("토큰 갱신 실패");
-                    clearAuthCookies(response);
+                    clearAuthCookies(response, request, "RefreshToken으로 갱신 실패 (accessToken 없음)");
                 }
             } else {
                 log.debug("토큰 없음, 인증 스킵");
@@ -96,7 +96,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     log.info("토큰 갱신 성공");
                 } else {
                     log.warn("토큰 갱신 실패, 재로그인 필요");
-                    clearAuthCookies(response);
+                    clearAuthCookies(response, request, "AccessToken 만료 후 RefreshToken 갱신 실패");
                 }
                 break;
 
@@ -243,7 +243,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         response.addCookie(cookie);
     }
 
-    private void clearAuthCookies(HttpServletResponse response) {
+    private void clearAuthCookies(HttpServletResponse response,  HttpServletRequest request, String reason) {
+
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS"));
+
         Cookie accessCookie = new Cookie(ACCESS_TOKEN_COOKIE, null);
         accessCookie.setPath("/");
         accessCookie.setMaxAge(0);
