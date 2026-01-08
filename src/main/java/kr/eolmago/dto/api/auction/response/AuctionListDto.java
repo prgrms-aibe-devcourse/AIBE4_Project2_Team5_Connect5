@@ -17,7 +17,6 @@ public record AuctionListDto(
         Integer currentPrice,
         Long finalPrice,
         int bidCount,
-        int viewCount,
         int favoriteCount,
         OffsetDateTime endAt,
         AuctionStatus status

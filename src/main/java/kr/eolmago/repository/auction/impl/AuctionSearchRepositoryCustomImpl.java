@@ -303,10 +303,9 @@ public class AuctionSearchRepositoryCustomImpl implements AuctionSearchRepositor
                     (Integer) row[7],                           // current_price
                     (Long) row[8],                           // final_price
                     (Integer) row[9],                           // bid_count
-                    (Integer) row[10],                           // view_count
-                    (Integer) row[11],                           // favorite_count
-                    convertToOffsetDateTime(row[12]),            // end_at
-                    AuctionStatus.valueOf((String) row[13])     // status
+                    (Integer) row[10],                           // favorite_count
+                    convertToOffsetDateTime(row[11]),            // end_at
+                    AuctionStatus.valueOf((String) row[12])     // status
             );
             dtos.add(dto);
         }
