@@ -39,6 +39,7 @@ public class AuctionRepositoryImpl implements AuctionRepositoryCustom {
                         AuctionListDto.class,
                         auction.auctionId,
                         auctionItem.auctionItemId,
+                        auctionItem.itemName,
                         auction.title,
                         auctionImage.imageUrl,
                         userProfile.nickname,

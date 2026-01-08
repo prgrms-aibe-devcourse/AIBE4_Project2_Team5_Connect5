@@ -9,6 +9,7 @@ import java.util.UUID;
 public record AuctionListResponse(
         UUID auctionId,
         Long auctionItemId,
+        String itemName,
         String title,
         String thumbnailUrl,
         String sellerNickname,
@@ -26,6 +27,7 @@ public record AuctionListResponse(
         return new AuctionListResponse(
                 dto.auctionId(),
                 dto.auctionItemId(),
+                dto.itemName(),
                 dto.title(),
                 dto.thumbnailUrl(),
                 dto.sellerNickname(),

@@ -9,6 +9,7 @@ import java.util.UUID;
 public record AuctionListDto(
         UUID auctionId,
         Long auctionItemId,
+        String itemName,
         String title,
         String thumbnailUrl,
         String sellerNickname,

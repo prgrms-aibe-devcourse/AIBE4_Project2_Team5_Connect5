@@ -295,17 +295,18 @@ public class AuctionSearchRepositoryCustomImpl implements AuctionSearchRepositor
             AuctionListDto dto = new AuctionListDto(
                     (UUID) row[0],                              // auction_id
                     (Long) row[1],                              // auction_item_id
-                    (String) row[2],                            // title
-                    (String) row[3],                            // image_url
-                    (String) row[4],                            // nickname
-                    (Integer) row[5],                          // start_price
-                    (Integer) row[6],                           // current_price
-                    (Long) row[7],                           // final_price
-                    (Integer) row[8],                           // bid_count
-                    (Integer) row[9],                           // view_count
-                    (Integer) row[10],                           // favorite_count
-                    convertToOffsetDateTime(row[11]),            // end_at
-                    AuctionStatus.valueOf((String) row[12])     // status
+                    (String) row[2],                            // item_name
+                    (String) row[3],                            // title
+                    (String) row[4],                            // image_url
+                    (String) row[5],                            // nickname
+                    (Integer) row[6],                          // start_price
+                    (Integer) row[7],                           // current_price
+                    (Long) row[8],                           // final_price
+                    (Integer) row[9],                           // bid_count
+                    (Integer) row[10],                           // view_count
+                    (Integer) row[11],                           // favorite_count
+                    convertToOffsetDateTime(row[12]),            // end_at
+                    AuctionStatus.valueOf((String) row[13])     // status
             );
             dtos.add(dto);
         }

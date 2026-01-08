@@ -4,6 +4,8 @@ import kr.eolmago.domain.entity.auction.Auction;
 import kr.eolmago.domain.entity.auction.AuctionImage;
 import kr.eolmago.domain.entity.auction.AuctionItem;
 import kr.eolmago.domain.entity.auction.enums.AuctionStatus;
+import kr.eolmago.domain.entity.auction.enums.ItemCategory;
+import kr.eolmago.domain.entity.auction.enums.ItemCondition;
 import kr.eolmago.domain.entity.user.User;
 import kr.eolmago.dto.api.auction.request.AuctionDraftRequest;
 import kr.eolmago.dto.api.auction.response.AuctionDraftDetailResponse;
@@ -27,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
@@ -157,6 +160,47 @@ public class AuctionService {
         auctionImageRepository.deleteByAuctionItem(item);
         auctionRepository.delete(auction);
         auctionItemRepository.delete(item);
+    }
+
+    // 경매 임시저장 초기화
+    @Transactional
+    public AuctionDraftResponse initDraft(UUID sellerId) {
+
+        final String initTitle = "작성 중인 경매";
+        final String initItemName = "작성 중인 상품";
+        final int initStartPrice = 10_000;
+        final int initDurationHours = 12;
+
+        User sellerRef = userRepository.getReferenceById(sellerId);
+
+        ItemCategory defaultCategory = ItemCategory.values()[0];
+        ItemCondition defaultCondition = ItemCondition.values()[0];
+
+        AuctionItem auctionItem = AuctionItem.create(
+                initItemName,
+                defaultCategory,
+                defaultCondition,
+                new HashMap<>()
+        );
+        auctionItemRepository.save(auctionItem);
+
+        int bidIncrement = BidIncrementCalculator.calculate(initStartPrice);
+
+        Auction auction = Auction.create(
+                auctionItem,
+                sellerRef,
+                initTitle,
+                null,
+                AuctionStatus.DRAFT,
+                initStartPrice,
+                bidIncrement,
+                initDurationHours,
+                null,
+                null
+        );
+        auctionRepository.save(auction);
+
+        return new AuctionDraftResponse(sellerId, auction.getAuctionId(), auction.getStatus());
     }
 
     // 경매 목록 조회

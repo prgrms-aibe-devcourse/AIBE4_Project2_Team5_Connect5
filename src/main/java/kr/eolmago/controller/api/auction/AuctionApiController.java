@@ -72,6 +72,16 @@ public class AuctionApiController {
         return ResponseEntity.noContent().build();
     }
 
+    @Operation(summary = "경매 임시저장 초기화")
+    @PostMapping("/drafts/init")
+    public ResponseEntity<AuctionDraftResponse> initDraft(
+            @AuthenticationPrincipal CustomUserDetails principal
+    ) {
+        UUID sellerId = UUID.fromString(principal.getId());
+        AuctionDraftResponse response = auctionService.initDraft(sellerId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
     @Operation(summary = "경매 목록 조회")
     @GetMapping
     public ResponseEntity<PageResponse<AuctionListResponse>> getAuctions (
