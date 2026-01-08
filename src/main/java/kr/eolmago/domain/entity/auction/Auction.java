@@ -64,9 +64,6 @@ public class Auction extends CreatedAtEntity {
     private int bidCount;
 
     @Column(nullable = false)
-    private int viewCount;
-
-    @Column(nullable = false)
     private int favoriteCount;
 
     @Column
@@ -117,7 +114,6 @@ public class Auction extends CreatedAtEntity {
         auction.endAt = endAt;
         auction.originalEndAt = endAt;
         auction.bidCount = 0;
-        auction.viewCount = 0;
         auction.favoriteCount = 0;
         auction.extendCount = 0;
 

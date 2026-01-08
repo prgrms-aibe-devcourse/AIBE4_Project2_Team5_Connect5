@@ -17,7 +17,6 @@ public record AuctionSearchResponse(
         String sellerNickname,  // 판매자 닉네임
         Integer currentPrice,   // 현재 가격 (입찰가)
         int bidCount,           // 입찰 횟수
-        int viewCount,          // 조회수
         int favoriteCount,      // 찜 개수
         OffsetDateTime endAt,   // 경매 종료 시간
         String remainingTime,   // 남은 시간 (포맷팅)

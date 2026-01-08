@@ -296,7 +296,6 @@
 
             const title = escapeHtml(it?.title ?? '');
             const thumb = it?.thumbnailUrl || '';
-            const viewCount = Number(it?.viewCount ?? 0);
             const favoriteCount = Number(it?.favoriteCount ?? 0);
             const bidCount = Number(it?.bidCount ?? 0);
 
