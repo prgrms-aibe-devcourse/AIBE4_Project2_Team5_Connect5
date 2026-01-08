@@ -111,6 +111,7 @@ public class SecurityConfig {
                         .deleteCookies("accessToken", "refreshToken", "JSESSIONID")
                         .permitAll()
                 )
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(authenticationEntryPoint)
                         .accessDeniedHandler(accessDeniedHandler)

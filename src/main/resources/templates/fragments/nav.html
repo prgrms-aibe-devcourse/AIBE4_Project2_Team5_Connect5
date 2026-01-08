@@ -194,7 +194,7 @@
                                     신고 내역
                                 </a>
 
-                                <div sec:authorize="hasAuthority('ADMIN')">
+                                <div sec:authorize="hasRole('ADMIN')">
                                     <div class="my-1 border-t border-slate-200"></div>
                                     <a th:href="@{/admin/dashboard}"
                                        class="block px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50">
