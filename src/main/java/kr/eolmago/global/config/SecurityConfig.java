@@ -3,6 +3,7 @@ package kr.eolmago.global.config;
 import kr.eolmago.global.exception.CustomAccessDeniedHandler;
 import kr.eolmago.global.exception.CustomAuthenticationEntryPoint;
 import kr.eolmago.global.security.filter.JwtAuthenticationFilter;
+import kr.eolmago.global.security.handler.OAuth2FailureHandler;
 import kr.eolmago.global.security.handler.OAuth2SuccessHandler;
 import kr.eolmago.service.user.SocialLoginService;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,7 @@ public class SecurityConfig {
 
     private final SocialLoginService socialLoginService;
     private final OAuth2SuccessHandler oAuth2SuccessHandler;
+    private final OAuth2FailureHandler oAuth2FailureHandler;
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final CustomAuthenticationEntryPoint authenticationEntryPoint;
@@ -104,6 +106,7 @@ public class SecurityConfig {
                         .loginPage("/login")
                         .userInfoEndpoint(userInfo -> userInfo.userService(socialLoginService))
                         .successHandler(oAuth2SuccessHandler)
+                        .failureHandler(oAuth2FailureHandler)
                 )
                 .logout(logout -> logout
                         .logoutUrl("/logout")
@@ -112,6 +115,7 @@ public class SecurityConfig {
                         .permitAll()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                // exceptionHandling을 oauth2Login 뒤로 이동
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(authenticationEntryPoint)
                         .accessDeniedHandler(accessDeniedHandler)

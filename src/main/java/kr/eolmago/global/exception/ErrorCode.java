@@ -42,6 +42,7 @@ public enum ErrorCode {
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "U001", "사용자를 찾을 수 없습니다."),
     USER_UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "U002", "인증되지 않은 사용자입니다."),
     USER_FORBIDDEN(HttpStatus.FORBIDDEN, "U003", "권한이 없습니다."),
+    USER_BANNED(HttpStatus.FORBIDDEN, "U004", "영구 정지된 이용자입니다."),
 
     // Chat
     CHAT_AUTH_REQUIRED(HttpStatus.UNAUTHORIZED, "CH001", "로그인이 필요합니다."),

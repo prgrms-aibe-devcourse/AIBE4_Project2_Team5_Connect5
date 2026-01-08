@@ -2,8 +2,11 @@ package kr.eolmago.service.user;
 
 import kr.eolmago.domain.entity.user.SocialLogin;
 import kr.eolmago.domain.entity.user.User;
+import kr.eolmago.domain.entity.user.enums.UserStatus;
 import kr.eolmago.dto.api.user.request.LoginRequest;
 import kr.eolmago.dto.api.user.response.TokenResponse;
+import kr.eolmago.global.exception.BusinessException;
+import kr.eolmago.global.exception.ErrorCode;
 import kr.eolmago.repository.user.SocialLoginRepository;
 import kr.eolmago.repository.user.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +33,11 @@ public class AuthService {
                 .orElseThrow(() -> new BadCredentialsException("이메일 오류"));
 
         User user = socialLoginUser.getUser();
+
+        // BANNED 상태 체크
+        if (user.getStatus() == UserStatus.BANNED) {
+            throw new BusinessException(ErrorCode.USER_BANNED);
+        }
 
         String accessToken = jwtService.generateAccessToken(
                 user.getUserId(), socialLoginUser.getEmail(), user.getRole().name()
@@ -61,6 +69,11 @@ public class AuthService {
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BadCredentialsException("사용자 없음"));
+
+        // BANNED 상태 체크 (refresh할 때도 확인)
+        if (user.getStatus() == UserStatus.BANNED) {
+            throw new BusinessException(ErrorCode.USER_BANNED);
+        }
         
         SocialLogin socialLogin = socialLoginRepository.findByUser(user).stream().findFirst()
                 .orElseThrow(() -> new BadCredentialsException("소셜 로그인 정보 없음"));

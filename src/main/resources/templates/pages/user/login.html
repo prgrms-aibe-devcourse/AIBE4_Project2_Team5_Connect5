@@ -38,5 +38,16 @@
         </div>
     </div>
 </div>
+
+<script layout:fragment="scripts">
+    document.addEventListener('DOMContentLoaded', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const errorMessage = urlParams.get('errorMessage');
+
+        if (errorMessage) {
+            alert(errorMessage);
+        }
+    });
+</script>
 </body>
 </html>

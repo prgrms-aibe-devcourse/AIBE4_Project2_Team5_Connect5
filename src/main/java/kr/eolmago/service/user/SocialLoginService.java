@@ -5,6 +5,7 @@ import kr.eolmago.domain.entity.user.User;
 import kr.eolmago.domain.entity.user.UserProfile;
 import kr.eolmago.domain.entity.user.enums.SocialProvider;
 import kr.eolmago.domain.entity.user.enums.UserRole;
+import kr.eolmago.domain.entity.user.enums.UserStatus;
 import kr.eolmago.repository.user.SocialLoginRepository;
 import kr.eolmago.repository.user.UserProfileRepository;
 import kr.eolmago.repository.user.UserRepository;
@@ -24,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -49,9 +51,22 @@ public class SocialLoginService extends DefaultOAuth2UserService {
         final String finalName = parsed.name();
         final String finalEmail = parsed.email();
 
-        SocialLogin socialLoginUser = socialLoginRepository
-            .findByProviderAndProviderId(socialProvider, finalProviderId)
-            .orElseGet(() -> createOAuth2User(socialProvider, finalProviderId, finalName, finalEmail));
+        Optional<SocialLogin> socialLoginOptional = socialLoginRepository
+                .findByProviderAndProviderId(socialProvider, finalProviderId);
+
+        if (socialLoginOptional.isPresent()) {
+            User user = socialLoginOptional.get().getUser();
+            if (user.getStatus() == UserStatus.BANNED) {
+                log.warn("BANNED 유저 로그인 시도: userId={}, email={}", user.getUserId(), finalEmail);
+                // ✨ OAuth2Error를 사용하여 U004 코드 전달
+                throw new OAuth2AuthenticationException(
+                        new org.springframework.security.oauth2.core.OAuth2Error("U004")
+                );
+            }
+        }
+
+        SocialLogin socialLoginUser = socialLoginOptional
+                .orElseGet(() -> createOAuth2User(socialProvider, finalProviderId, finalName, finalEmail));
 
         Map<String, Object> attributes = new HashMap<>(oAuth2User.getAttributes());
         attributes.put("userId", socialLoginUser.getUser().getUserId().toString()); // User PK getter 맞춰
@@ -60,9 +75,9 @@ public class SocialLoginService extends DefaultOAuth2UserService {
         }
 
         return new DefaultOAuth2User(
-            Collections.singleton(new SimpleGrantedAuthority(socialLoginUser.getUser().getRole().toString())),
-            attributes,
-            "userId"
+                Collections.singleton(new SimpleGrantedAuthority(socialLoginUser.getUser().getRole().toString())),
+                attributes,
+                "userId"
         );
     }
 
@@ -148,6 +163,7 @@ public class SocialLoginService extends DefaultOAuth2UserService {
         }
         return name;
     }
-    private record ParsedOAuthUser(String providerId, String name, String email) { }
-}
 
+    private record ParsedOAuthUser(String providerId, String name, String email) {
+    }
+}

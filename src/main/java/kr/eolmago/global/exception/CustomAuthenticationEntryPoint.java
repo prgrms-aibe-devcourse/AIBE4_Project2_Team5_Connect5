@@ -14,8 +14,6 @@ import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 
 @Component
 @Slf4j
@@ -27,16 +25,25 @@ public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint 
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException, ServletException {
         String requestUri = request.getRequestURI();
-        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS"));
 
         // API 요청인 경우 JSON 응답
         if (requestUri.startsWith("/api/")) {
-            response.setStatus(HttpStatus.UNAUTHORIZED.value());
-            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-            response.setCharacterEncoding("UTF-8");
-            response.getWriter().write(objectMapper.writeValueAsString(
-                    ErrorResponse.of(401, "Unauthorized", "로그인이 필요합니다.")
-            ));
+            // ✨ BANNED 유저 체크 추가
+            if (authException.getMessage() != null && authException.getMessage().contains("BANNED")) {
+                response.setStatus(HttpStatus.FORBIDDEN.value());
+                response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                response.setCharacterEncoding("UTF-8");
+                response.getWriter().write(objectMapper.writeValueAsString(
+                        ErrorResponse.of(403, "Forbidden", "영구 정지된 이용자입니다.")
+                ));
+            } else {
+                response.setStatus(HttpStatus.UNAUTHORIZED.value());
+                response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                response.setCharacterEncoding("UTF-8");
+                response.getWriter().write(objectMapper.writeValueAsString(
+                        ErrorResponse.of(401, "Unauthorized", "로그인이 필요합니다.")
+                ));
+            }
         } else {
             // 웹 페이지 요청인 경우 알림창 띄우고 로그인 페이지로 이동
             response.setContentType("text/html; charset=UTF-8");
