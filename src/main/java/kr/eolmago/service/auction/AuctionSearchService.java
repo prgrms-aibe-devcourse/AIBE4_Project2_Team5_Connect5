@@ -109,18 +109,18 @@ public class AuctionSearchService {
                 }
             };
         } else {
-            // 전체 조회 (키워드 없음) 그치만 검색된 상태에서 필터링을 할 수 있음으로 이런식으로 분기처리
             log.info("전체 조회 모드");
-            Page<AuctionListDto> dtoPage = auctionRepository.searchList(
-                    pageable,
-                    sort,
+            AuctionSearchRequest listRequest = new AuctionSearchRequest(
                     status,
-                    null,  // sellerId -> null로 변경하여 전체 조회
+                    null,
                     category,
                     brands,
                     minPrice,
-                    maxPrice
+                    maxPrice,
+                    null
             );
+
+            Page<AuctionListDto> dtoPage = auctionRepository.searchList(pageable, sort, listRequest);
             result = PageResponse.of(dtoPage, AuctionListResponse::from);
         }
 

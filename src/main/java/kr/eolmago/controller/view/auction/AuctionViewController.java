@@ -98,7 +98,8 @@ public class AuctionViewController {
     }
 
     @GetMapping("/{auctionId}")
-    public String auctionDetail(@PathVariable UUID auctionId) {
-        return "pages/auction/detail";
+    public String auctionDetail(@PathVariable UUID auctionId, Model model) {
+        model.addAttribute("auctionId", auctionId);
+        return "pages/auction/auction-detail";
     }
 }
