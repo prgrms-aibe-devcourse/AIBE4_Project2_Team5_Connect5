@@ -1,13 +1,19 @@
 package kr.eolmago.service.user;
 
+import kr.eolmago.domain.entity.user.SocialLogin;
 import kr.eolmago.domain.entity.user.User;
 import kr.eolmago.domain.entity.user.UserProfile;
 import kr.eolmago.domain.entity.user.enums.UserRole;
 import kr.eolmago.dto.api.user.request.UpdateUserProfileRequest;
 import kr.eolmago.dto.api.user.response.UserProfileResponse;
+import kr.eolmago.global.security.CustomUserDetails;
+import kr.eolmago.repository.user.SocialLoginRepository;
 import kr.eolmago.repository.user.UserProfileRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -22,6 +28,7 @@ public class UserProfileService {
     private final UserProfileRepository userProfileRepository;
     private final VerificationCodeService verificationCodeService;
     private final UserProfileImageUploadService userProfileImageUploadService;
+    private final SocialLoginRepository socialLoginRepository;
 
     @Transactional(readOnly = true)
     public UserProfileResponse getUserProfile(UUID userId) {
@@ -74,7 +81,26 @@ public class UserProfileService {
         userProfileRepository.save(userProfile);
         log.info("프로필 DB 업데이트 완료: userId={}", userId);
 
+        // 세션 정보 업데이트
+        updateAuthentication(userProfile.getUser(), userProfile);
+
         return UserProfileResponse.from(userProfile);
+    }
+
+    private void updateAuthentication(User user, UserProfile userProfile) {
+        SocialLogin socialLogin = socialLoginRepository.findByUser(user).stream().findFirst()
+                .orElseThrow(() -> new IllegalStateException("소셜 로그인 정보를 찾을 수 없습니다."));
+
+        CustomUserDetails newUserDetails = CustomUserDetails.from(user, socialLogin, userProfile);
+
+        Authentication newAuth = new UsernamePasswordAuthenticationToken(
+                newUserDetails,
+                null,
+                newUserDetails.getAuthorities()
+        );
+
+        SecurityContextHolder.getContext().setAuthentication(newAuth);
+        log.info("SecurityContext 업데이트 완료: userId={}", user.getUserId());
     }
 
     @Transactional(readOnly = true)

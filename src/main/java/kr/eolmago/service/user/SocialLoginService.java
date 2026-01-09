@@ -6,6 +6,7 @@ import kr.eolmago.domain.entity.user.UserProfile;
 import kr.eolmago.domain.entity.user.enums.SocialProvider;
 import kr.eolmago.domain.entity.user.enums.UserRole;
 import kr.eolmago.domain.entity.user.enums.UserStatus;
+import kr.eolmago.global.security.CustomUserDetails;
 import kr.eolmago.repository.user.SocialLoginRepository;
 import kr.eolmago.repository.user.UserProfileRepository;
 import kr.eolmago.repository.user.UserRepository;
@@ -13,17 +14,13 @@ import kr.eolmago.service.notification.publish.NotificationPublishCommand;
 import kr.eolmago.service.notification.publish.NotificationPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
-import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -58,27 +55,20 @@ public class SocialLoginService extends DefaultOAuth2UserService {
             User user = socialLoginOptional.get().getUser();
             if (user.getStatus() == UserStatus.BANNED) {
                 log.warn("BANNED 유저 로그인 시도: userId={}, email={}", user.getUserId(), finalEmail);
-                // ✨ OAuth2Error를 사용하여 U004 코드 전달
                 throw new OAuth2AuthenticationException(
                         new org.springframework.security.oauth2.core.OAuth2Error("U004")
                 );
             }
         }
 
-        SocialLogin socialLoginUser = socialLoginOptional
+        SocialLogin socialLogin = socialLoginOptional
                 .orElseGet(() -> createOAuth2User(socialProvider, finalProviderId, finalName, finalEmail));
 
-        Map<String, Object> attributes = new HashMap<>(oAuth2User.getAttributes());
-        attributes.put("userId", socialLoginUser.getUser().getUserId().toString()); // User PK getter 맞춰
-        if (finalEmail != null) {
-            attributes.put("email", finalEmail);
-        }
+        User user = socialLogin.getUser();
+        UserProfile userProfile = userProfileRepository.findByUser(user)
+                .orElseThrow(() -> new IllegalStateException("사용자 프로필을 찾을 수 없습니다."));
 
-        return new DefaultOAuth2User(
-                Collections.singleton(new SimpleGrantedAuthority(socialLoginUser.getUser().getRole().toString())),
-                attributes,
-                "userId"
-        );
+        return CustomUserDetails.from(user, socialLogin, userProfile, oAuth2User.getAttributes());
     }
 
     private ParsedOAuthUser parse(String provider, OAuth2User oAuth2User) {
@@ -130,30 +120,23 @@ public class SocialLoginService extends DefaultOAuth2UserService {
     }
 
     private SocialLogin createOAuth2User(SocialProvider provider, String providerId, String name, String email) {
-//        User newUser = User.create(UserRole.USER);
         User newUser = User.create(UserRole.GUEST);
         User savedUser = userRepository.save(newUser);
 
-        // 2) SocialLogin 생성
         SocialLogin socialLogin = SocialLogin.create(savedUser, provider, providerId, email);
         SocialLogin savedSocialLogin = socialLoginRepository.save(socialLogin);
         log.info("SocialLogin 생성 완료: socialId={}", savedSocialLogin.getSocialId());
 
-        // 3) UserProfile 생성
         String finalName = validateAndProcessName(name, provider, providerId);
         UserProfile userProfile = UserProfile.create(savedUser, finalName, finalName);
         UserProfile savedUserProfile = userProfileRepository.save(userProfile);
         log.info("UserProfile 생성 완료: profileId={}", savedUserProfile.getProfileId());
 
-        // 4) 웰컴 알림 발행
         notificationPublisher.publish(NotificationPublishCommand.welcome(savedUser.getUserId()));
 
         return savedSocialLogin;
     }
 
-    /**
-     * 사용자 이름 검증 및 정제
-     */
     private String validateAndProcessName(String name, SocialProvider provider, String providerId) {
         if (name == null || name.trim().isEmpty()) {
             String generatedName = provider.name().toLowerCase() + "_" + providerId.substring(0, Math.min(8, providerId.length()));

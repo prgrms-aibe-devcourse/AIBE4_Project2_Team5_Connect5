@@ -120,8 +120,10 @@ public class UserProfileImageUploadService {
             if (response.getStatusCode().is2xxSuccessful()) {
                 String imageUrl = supabaseConfig.getUrl() + "/storage/v1/object/public/" +
                         supabaseConfig.getBucket() + "/" + fileName;
-                log.info("Supabase 업로드 성공: fileName={}", fileName);
-                return imageUrl;
+                // 캐시 버스팅을 위해 타임스탬프 추가
+                String cacheBustedUrl = imageUrl + "?t=" + System.currentTimeMillis();
+                log.info("Supabase 업로드 성공: fileName={}, url={}", fileName, cacheBustedUrl);
+                return cacheBustedUrl;
             } else {
                 throw new RuntimeException("Supabase 업로드 실패: " + response.getStatusCode());
             }

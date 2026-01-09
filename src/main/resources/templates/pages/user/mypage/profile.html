@@ -456,18 +456,27 @@
                     formData.append('image', selectedImageFile);
                 }
 
-                const response = await fetch('/api/users/me', {
+                const updatedProfile = await apiCall('/api/users/me', {
                     method: 'PUT',
                     body: formData
                 });
 
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    throw new Error(errorData.message || `HTTP ${response.status}`);
+                alert('프로필이 저장되었습니다');
+
+                // 네비게이션 바 프로필 이미지 업데이트
+                const navProfileImg = document.querySelector('#profileButton img');
+                if (navProfileImg && updatedProfile.profileImageUrl) {
+                    navProfileImg.src = updatedProfile.profileImageUrl;
                 }
 
-                alert('프로필이 저장되었습니다');
-                location.reload();
+                // 현재 페이지 프로필 정보 업데이트
+                currentProfile = updatedProfile;
+                document.getElementById('profileNickname').textContent = updatedProfile.nickname;
+                if (updatedProfile.profileImageUrl) {
+                    document.getElementById('profileImage').src = updatedProfile.profileImageUrl;
+                }
+                selectedImageFile = null; // 이미지 파일 선택 상태 초기화
+
             } catch (error) {
                 alert('프로필 저장 중 오류가 발생했습니다: ' + error.message);
             }

@@ -2,10 +2,12 @@ package kr.eolmago.service.user;
 
 import kr.eolmago.domain.entity.user.SocialLogin;
 import kr.eolmago.domain.entity.user.User;
+import kr.eolmago.domain.entity.user.UserProfile;
 import kr.eolmago.domain.entity.user.enums.UserRole;
 import kr.eolmago.domain.entity.user.enums.UserStatus;
 import kr.eolmago.global.security.CustomUserDetails;
 import kr.eolmago.repository.user.SocialLoginRepository;
+import kr.eolmago.repository.user.UserProfileRepository;
 import kr.eolmago.repository.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +25,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final SocialLoginRepository socialLoginRepository;
+    private final UserProfileRepository userProfileRepository; // UserProfileRepository 추가
 
     @Transactional(readOnly = true)
     public User getUserById(UUID userId) {
@@ -35,8 +38,10 @@ public class UserService {
         User user = getUserById(userId);
         SocialLogin socialLogin = socialLoginRepository.findByUser(user).stream().findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("소셜 로그인 정보를 찾을 수 없습니다."));
+        UserProfile userProfile = userProfileRepository.findByUser(user)
+                .orElseThrow(() -> new IllegalArgumentException("사용자 프로필을 찾을 수 없습니다."));
 
-        return CustomUserDetails.from(user, socialLogin);
+        return CustomUserDetails.from(user, socialLogin, userProfile);
     }
 
     private void validateAdminRole(User admin) {

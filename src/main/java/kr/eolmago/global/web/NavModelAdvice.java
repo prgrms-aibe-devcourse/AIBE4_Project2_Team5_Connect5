@@ -1,12 +1,13 @@
 package kr.eolmago.global.web;
 
-import java.util.UUID;
 import kr.eolmago.global.security.CustomUserDetails;
 import kr.eolmago.service.notification.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ModelAttribute;
+
+import java.util.UUID;
 
 @ControllerAdvice
 @RequiredArgsConstructor
@@ -22,6 +23,14 @@ public class NavModelAdvice {
 	@ModelAttribute("userName")
 	public String userName(@AuthenticationPrincipal CustomUserDetails me) {
 		return me != null ? me.getUsername() : null;
+	}
+
+	@ModelAttribute("userProfileImage")
+	public String userProfileImage(@AuthenticationPrincipal CustomUserDetails me) {
+		if (me != null && me.getProfileImageUrl() != null) {
+			return me.getProfileImageUrl();
+		}
+		return "/images/profile/base.png"; // 기본 이미지
 	}
 
 	@ModelAttribute("unreadNotificationCount")
