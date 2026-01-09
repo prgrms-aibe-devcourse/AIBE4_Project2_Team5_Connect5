@@ -1,10 +1,10 @@
 package kr.eolmago.controller.api.seller;
 
-import kr.eolmago.domain.entity.deal.enums.DealStatus;
-import kr.eolmago.dto.api.deal.SellerDealListDto;
-import kr.eolmago.dto.view.deal.DealResponse;
+import kr.eolmago.domain.entity.deal.Deal;
 import kr.eolmago.global.security.CustomUserDetails;
-import kr.eolmago.service.deal.DealService;
+import kr.eolmago.repository.deal.DealRepository;
+import kr.eolmago.repository.user.UserRepository;
+import kr.eolmago.repository.auction.AuctionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -13,193 +13,140 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
-import java.util.stream.Collectors;
 
 /**
- * 판매자 거래 REST API 컨트롤러
+ * DB 연결 테스트용 간단한 API 컨트롤러
  */
 @RestController
 @RequestMapping("/api/seller/deals")
 @RequiredArgsConstructor
 public class SellerDealApiController {
 
-    private final DealService dealService;
+    private final DealRepository dealRepository;
+    private final UserRepository userRepository;
+    private final AuctionRepository auctionRepository;
 
     /**
-     * 판매자의 모든 거래 조회 (상태별로 분류)
+     * DB 연결 테스트 - 모든 데이터 조회
      * GET /api/seller/deals
      */
     @GetMapping
     public ResponseEntity<Map<String, Object>> getSellerDeals(
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        if (userDetails == null) {
-            return ResponseEntity.badRequest().body(
-                    Map.of("error", "User not authenticated")
-            );
-        }
-
-        // CustomUserDetails에서 userId 추출
-        UUID sellerId = userDetails.getUserId();
-
-        // 판매자의 모든 거래 조회
-        List<DealResponse> allDeals = dealService.getDealsBySeller(sellerId);
-
-        // 상태별로 분류
-        List<SellerDealListDto> pending = allDeals.stream()
-                .filter(deal -> "PENDING_CONFIRMATION".equals(deal.status()))
-                .map(deal -> SellerDealListDto.from(deal, "구매자")) // TODO: 실제 구매자 이름 조회
-                .collect(Collectors.toList());
-
-        List<SellerDealListDto> ongoing = allDeals.stream()
-                .filter(deal -> "CONFIRMED".equals(deal.status()))
-                .map(deal -> SellerDealListDto.from(deal, "구매자"))
-                .collect(Collectors.toList());
-
-        List<SellerDealListDto> completed = allDeals.stream()
-                .filter(deal -> "COMPLETED".equals(deal.status()))
-                .map(deal -> SellerDealListDto.from(deal, "구매자"))
-                .collect(Collectors.toList());
-
-        List<SellerDealListDto> cancelled = allDeals.stream()
-                .filter(deal -> "TERMINATED".equals(deal.status())
-                        || "EXPIRED".equals(deal.status()))
-                .map(deal -> SellerDealListDto.from(deal, "구매자"))
-                .collect(Collectors.toList());
-
-        // 응답 데이터 구성
         Map<String, Object> response = new HashMap<>();
-        response.put("pending", pending);
-        response.put("ongoing", ongoing);
-        response.put("completed", completed);
-        response.put("cancelled", cancelled);
-        response.put("counts", Map.of(
-                "pending", pending.size(),
-                "ongoing", ongoing.size(),
-                "completed", completed.size(),
-                "cancelled", cancelled.size()
-        ));
-
-        return ResponseEntity.ok(response);
-    }
-
-    /**
-     * 특정 상태의 거래만 조회
-     * GET /api/seller/deals/status/{status}
-     */
-    @GetMapping("/status/{status}")
-    public ResponseEntity<List<SellerDealListDto>> getDealsByStatus(
-            @AuthenticationPrincipal CustomUserDetails userDetails,
-            @PathVariable String status
-    ) {
-        if (userDetails == null) {
-            return ResponseEntity.badRequest().build();
-        }
-
-        UUID sellerId = userDetails.getUserId();
 
         try {
-            DealStatus dealStatus = DealStatus.valueOf(status);
-            List<DealResponse> deals = dealService.getDealsBySellerAndStatus(sellerId, dealStatus);
-            List<SellerDealListDto> response = deals.stream()
-                    .map(deal -> SellerDealListDto.from(deal, "구매자"))
-                    .collect(Collectors.toList());
+            // 1. 현재 로그인한 사용자 정보
+            if (userDetails != null) {
+                response.put("currentUser", Map.of(
+                        "userId", userDetails.getUserId(),
+                        "email", userDetails.getUsername()
+                ));
+            }
+
+            // 2. Deal 테이블의 모든 데이터 (최대 10개)
+            List<Deal> allDeals = dealRepository.findAll();
+            response.put("totalDeals", allDeals.size());
+            response.put("deals", allDeals.stream()
+                    .limit(10)
+                    .map(deal -> Map.of(
+                            "dealId", deal.getDealId(),
+                            "finalPrice", deal.getFinalPrice(),
+                            "status", deal.getStatus().name(),
+                            "createdAt", deal.getCreatedAt() != null ? deal.getCreatedAt().toString() : "N/A"
+                    ))
+                    .toList());
+
+            // 3. User 테이블 카운트
+            long userCount = userRepository.count();
+            response.put("totalUsers", userCount);
+
+            // 4. Auction 테이블 카운트
+            long auctionCount = auctionRepository.count();
+            response.put("totalAuctions", auctionCount);
+
+            // 5. DB 연결 상태
+            response.put("dbConnected", true);
+            response.put("message", "DB 연결 성공! 데이터를 정상적으로 조회했습니다.");
 
             return ResponseEntity.ok(response);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().build();
+
+        } catch (Exception e) {
+            response.put("dbConnected", false);
+            response.put("error", e.getMessage());
+            response.put("message", "DB 연결 실패: " + e.getMessage());
+            return ResponseEntity.ok(response);
         }
     }
 
     /**
-     * 거래 상세 정보 조회
-     * GET /api/seller/deals/{dealId}
+     * 특정 사용자의 거래만 조회 (테스트용)
+     * GET /api/seller/deals/my
      */
-    @GetMapping("/{dealId}")
-    public ResponseEntity<DealResponse> getDealDetail(
-            @AuthenticationPrincipal CustomUserDetails userDetails,
-            @PathVariable Long dealId
+    @GetMapping("/my")
+    public ResponseEntity<Map<String, Object>> getMyDeals(
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
+        Map<String, Object> response = new HashMap<>();
+
         if (userDetails == null) {
-            return ResponseEntity.badRequest().build();
+            response.put("error", "로그인이 필요합니다.");
+            return ResponseEntity.ok(response);
         }
 
-        UUID sellerId = userDetails.getUserId();
-
         try {
-            DealResponse deal = dealService.getDeal(dealId);
+            // 현재 사용자의 거래 조회
+            List<Deal> myDeals = dealRepository.findBySeller_UserId(userDetails.getUserId());
 
-            // 판매자 본인의 거래인지 확인
-            if (!deal.sellerId().equals(sellerId)) {
-                return ResponseEntity.status(403).build(); // Forbidden
-            }
+            response.put("userId", userDetails.getUserId());
+            response.put("totalMyDeals", myDeals.size());
+            response.put("myDeals", myDeals.stream()
+                    .map(deal -> Map.of(
+                            "dealId", deal.getDealId(),
+                            "finalPrice", deal.getFinalPrice(),
+                            "status", deal.getStatus().name()
+                    ))
+                    .toList());
 
-            return ResponseEntity.ok(deal);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            response.put("error", e.getMessage());
+            return ResponseEntity.ok(response);
         }
     }
 
     /**
-     * 판매자 거래 확정
-     * POST /api/seller/deals/{dealId}/confirm
+     * DB 연결 간단 테스트
+     * GET /api/seller/deals/test
      */
-    @PostMapping("/{dealId}/confirm")
-    public ResponseEntity<DealResponse> confirmDeal(
-            @AuthenticationPrincipal CustomUserDetails userDetails,
-            @PathVariable Long dealId
-    ) {
-        if (userDetails == null) {
-            return ResponseEntity.badRequest().build();
-        }
-
-        UUID sellerId = userDetails.getUserId();
+    @GetMapping("/test")
+    public ResponseEntity<Map<String, Object>> testConnection() {
+        Map<String, Object> response = new HashMap<>();
 
         try {
-            DealResponse deal = dealService.getDeal(dealId);
+            // 간단한 카운트 쿼리로 DB 연결 테스트
+            long dealCount = dealRepository.count();
+            long userCount = userRepository.count();
+            long auctionCount = auctionRepository.count();
 
-            // 판매자 본인의 거래인지 확인
-            if (!deal.sellerId().equals(sellerId)) {
-                return ResponseEntity.status(403).build();
-            }
+            response.put("success", true);
+            response.put("message", "DB 연결 성공!");
+            response.put("data", Map.of(
+                    "deals", dealCount,
+                    "users", userCount,
+                    "auctions", auctionCount
+            ));
 
-            DealResponse confirmed = dealService.confirmBySeller(dealId);
-            return ResponseEntity.ok(confirmed);
-        } catch (IllegalStateException | IllegalArgumentException e) {
-            return ResponseEntity.badRequest().build();
-        }
-    }
+            return ResponseEntity.ok(response);
 
-    /**
-     * 거래 종료 (취소)
-     * POST /api/seller/deals/{dealId}/terminate
-     */
-    @PostMapping("/{dealId}/terminate")
-    public ResponseEntity<DealResponse> terminateDeal(
-            @AuthenticationPrincipal CustomUserDetails userDetails,
-            @PathVariable Long dealId,
-            @RequestBody Map<String, String> body
-    ) {
-        if (userDetails == null) {
-            return ResponseEntity.badRequest().build();
-        }
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", "DB 연결 실패: " + e.getMessage());
+            response.put("error", e.getClass().getSimpleName());
 
-        UUID sellerId = userDetails.getUserId();
-
-        try {
-            DealResponse deal = dealService.getDeal(dealId);
-
-            // 판매자 본인의 거래인지 확인
-            if (!deal.sellerId().equals(sellerId)) {
-                return ResponseEntity.status(403).build();
-            }
-
-            String reason = body.getOrDefault("reason", "판매자 취소");
-            DealResponse terminated = dealService.terminateDeal(dealId, reason);
-            return ResponseEntity.ok(terminated);
-        } catch (IllegalStateException | IllegalArgumentException e) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.ok(response);
         }
     }
 }
