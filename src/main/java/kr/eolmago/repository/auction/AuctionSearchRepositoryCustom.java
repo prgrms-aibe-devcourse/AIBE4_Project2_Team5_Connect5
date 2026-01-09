@@ -1,6 +1,7 @@
 package kr.eolmago.repository.auction;
 
 import kr.eolmago.domain.entity.auction.enums.AuctionStatus;
+import kr.eolmago.domain.entity.auction.enums.ItemCategory;
 import kr.eolmago.dto.api.auction.response.AuctionListDto;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -15,24 +16,52 @@ import java.util.List;
  * - QueryDSL 대신 @Query 사용
  *
  * 구현체:
- * - AuctionSearchRepositoryImpl
+ * - AuctionSearchRepositoryCustomImpl
  */
 public interface AuctionSearchRepositoryCustom {
 
     /**
-     * Full-Text Search (PostgreSQL to_tsvector)
+     * Full-Text Search (PostgreSQL to_tsvector, 필터링 포함)
      */
-    Page<AuctionListDto> searchByFullText(String keyword, AuctionStatus status, Pageable pageable);
+    Page<AuctionListDto> searchByFullText(
+            String keyword,
+            ItemCategory category,
+            List<String> brands,
+            Integer minPrice,
+            Integer maxPrice,
+            String sort,
+            AuctionStatus status,
+            Pageable pageable
+    );
 
     /**
-     * Trigram Similarity (PostgreSQL pg_trgm)
+     * 오타 교정 : Trigram Similarity (PostgreSQL pg_trgm, 필터링 포함)
      */
-    Page<AuctionListDto> searchByTrigram(String keyword, double threshold, AuctionStatus status, Pageable pageable);
+    Page<AuctionListDto> searchByTrigram(
+            String keyword,
+            double threshold,
+            ItemCategory category,
+            List<String> brands,
+            Integer minPrice,
+            Integer maxPrice,
+            String sort,
+            AuctionStatus status,
+            Pageable pageable
+    );
 
     /**
-     * 초성 검색 (extract_chosung 함수)
+     * 초성 검색 (extract_chosung 함수, 필터링 포함)
      */
-    Page<AuctionListDto> searchByChosung(String chosungKeyword, AuctionStatus status, Pageable pageable);
+    Page<AuctionListDto> searchByChosung(
+            String chosungKeyword,
+            ItemCategory category,
+            List<String> brands,
+            Integer minPrice,
+            Integer maxPrice,
+            String sort,
+            AuctionStatus status,
+            Pageable pageable
+    );
 
     /**
      * 추천 키워드 조회

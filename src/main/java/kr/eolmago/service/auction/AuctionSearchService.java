@@ -1,10 +1,12 @@
 package kr.eolmago.service.auction;
 
 import kr.eolmago.domain.entity.auction.enums.AuctionStatus;
+import kr.eolmago.domain.entity.auction.enums.ItemCategory;
 import kr.eolmago.dto.api.auction.response.AuctionListDto;
 import kr.eolmago.dto.api.auction.response.AuctionListResponse;
 import kr.eolmago.dto.api.common.PageResponse;
 import kr.eolmago.global.util.ChosungUtils;
+import kr.eolmago.repository.auction.AuctionRepository;
 import kr.eolmago.repository.auction.AuctionSearchRepository;
 import kr.eolmago.service.search.SearchKeywordService;
 import lombok.RequiredArgsConstructor;
@@ -18,11 +20,13 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * 경매 검색 Service
+ * 경매 통합 검색 Service
  *
  * 역할:
- * - 통합 검색 로직 (초성 → Full-Text → Trigram)
- * - 검색 타입 자동 판단
+ * - 키워드 타입 자동 감지 (초성/한글/기타)
+ * - 검색 전략 선택 (Full-Text → Trigram Fallback)
+ * - 필터링 (카테고리, 브랜드, 가격 범위)
+ * - 정렬 (최신순, 인기순, 마감임박순, 가격순)
  * - 검색어 통계 기록 연동
  * - 추천 키워드 제공 (결과 없을 때)
  *
@@ -32,16 +36,6 @@ import java.util.UUID;
  * 3. 일반: searchByFullText()
  * 4. 결과 없으면: searchByTrigram() (오타 교정)
  * 5. 여전히 없으면: 빈 결과 (Controller에서 추천 키워드)
- *
- * 데이터 흐름:
- * Repository → Page<AuctionListDto> (DTO 프로젝션)
- * Service → Page<AuctionListDto> → PageResponse<AuctionListResponse>
- * Controller → JSON 응답
- *
- * 책임 분리:
- * - Repository: DTO 프로젝션, 데이터 조립
- * - Service: 비즈니스 로직, DTO → Response 변환
- * - DTO/Response: 계산 로직 없음 (순수 데이터)
  */
 @Service
 @Slf4j
@@ -50,10 +44,11 @@ import java.util.UUID;
 public class AuctionSearchService {
 
     private final AuctionSearchRepository auctionSearchRepository;
+    private final AuctionRepository auctionRepository;
     private final SearchKeywordService searchKeywordService;
 
     /**
-     * 통합 검색
+     * 통합 검색 (필터 + 정렬)
      *
      * 검색 흐름:
      * 1. 키워드 검증 (빈 값 체크)
@@ -70,66 +65,84 @@ public class AuctionSearchService {
      *    - 있으면: 검색어 통계 기록
      *    - 없으면: 빈 결과 (통계 기록 안 함)
      *
-     * 데이터 변환:
-     * - Repository: Page<AuctionListDto>
-     * - Service: PageResponse<AuctionListResponse>
-     *
      * @param keyword 검색 키워드
-     * @param status 경매 상태 (null이면 전체)
+     * @param category 카테고리
+     * @param brands 브랜드
+     * @param minPrice 최소 가격
+     * @param maxPrice 최대 가격
+     * @param sort 정렬 옵션
+     * @param status 경매 상태
      * @param pageable 페이지 정보
      * @param userId 사용자 ID (통계 기록용, null 가능)
-     * @return 검색 결과 PageResponse<AuctionListResponse>
+     * @return 검색 결과
      */
     public PageResponse<AuctionListResponse> search(
             String keyword,
+            ItemCategory category,
+            List<String> brands,
+            Integer minPrice,
+            Integer maxPrice,
+            String sort,
             AuctionStatus status,
             Pageable pageable,
             UUID userId
     ) {
-        log.info("통합 검색 시작: keyword={}, status={}, page={}, userId={}", keyword, status, pageable.getPageNumber(), userId);
+        log.info("통합 검색 시작: keyword={}, category={}, minPrice={}, maxPrice={}, sort={}, status={}, page={}, userId={}", keyword, category, minPrice, maxPrice, sort, status, pageable.getPageNumber(), userId);
 
-        // 1. 키워드 검증
-        if (keyword == null || keyword.trim().isEmpty()) {
-            log.warn("빈 검색어로 검색 시도");
-            return PageResponse.of(Page.empty());
+        // 1. 키워드 검증 및 처리
+        boolean hasKeyword = keyword != null && !keyword.trim().isEmpty();
+        String trimmedKeyword = hasKeyword ? keyword.trim() : null;
+
+        // 2. 검색 실행
+        PageResponse<AuctionListResponse> result;
+
+        String keywordType = ChosungUtils.getKeywordType(keyword);
+        if (hasKeyword) {
+            log.info("키워드 타입: {}", keywordType);
+
+            // 타입별 검색 실행
+            result = switch (keywordType) {
+                case "CHOSUNG" -> {
+                    log.debug("초성 검색 실행");
+                    yield searchByChosung(trimmedKeyword, category, brands, minPrice, maxPrice, sort, status, pageable);
+                }
+                case "HANGUL", "MIXED", "OTHER" -> {
+                    log.debug("Full-Text 검색 실행");
+                    yield searchByFullTextWithFallback(trimmedKeyword, category, brands, minPrice, maxPrice, sort,status, pageable);
+                }
+                default -> {
+                    log.warn("알 수 없는 키워드 타입: {}", keywordType);
+                    yield PageResponse.of(Page.empty());
+                }
+            };
+        } else {
+            // 전체 조회 (키워드 없음) 그치만 검색된 상태에서 필터링을 할 수 있음으로 이런식으로 분기처리
+            log.info("전체 조회 모드");
+            Page<AuctionListDto> dtoPage = auctionRepository.searchList(
+                    pageable,
+                    sort,
+                    status,
+                    null,  // sellerId -> null로 변경하여 전체 조회
+                    category,
+                    brands,
+                    minPrice,
+                    maxPrice
+            );
+            result = PageResponse.of(dtoPage, AuctionListResponse::from);
         }
 
-        keyword = keyword.trim();
-
-        // 2. 키워드 타입 판단
-        String keywordType = ChosungUtils.getKeywordType(keyword);
-        log.info("키워드 타입: {}", keywordType);
-
-        // 3. 타입별 검색 실행
-        PageResponse<AuctionListResponse> result = switch (keywordType) {
-            case "CHOSUNG" -> {
-                log.debug("초성 검색 실행");
-                yield searchByChosung(keyword, status, pageable);
-            }
-            case "HANGUL", "MIXED", "OTHER" -> {
-                log.debug("Full-Text 검색 실행");
-                yield searchByFullTextWithFallback(keyword, status, pageable);
-            }
-            default -> {
-                log.warn("알 수 없는 키워드 타입: {}", keywordType);
-                yield PageResponse.of(Page.empty());
-            }
-        };
-
-        // 4. 검색 결과가 있으면 통계 기록
+        // 3. 검색 결과가 있으면 통계 기록 (키워드만)
         if (result.pageInfo().totalElements() > 0 && !keywordType.equals("CHOSUNG")) {
             try {
-                searchKeywordService.recordSearch(keyword, userId);
+                searchKeywordService.recordSearch(trimmedKeyword, userId);
                 log.debug("검색어 통계 기록 완료: keyword={}, userId={}", keyword, userId);
             } catch (Exception e) {
                 // 통계 기록 실패해도 검색 결과는 반환
-                log.error("검색어 통계 기록 실패: keyword={}", keyword, e);
+                log.error("검색어 통계 기록 실패: keyword={}", trimmedKeyword, e);
             }
         }
 
-        log.info("통합 검색 완료: keyword={}, results={}",
-                keyword, result.pageInfo().totalElements());
-
+        log.info("통합 검색 완료: keyword={}, results={}", keyword, result.pageInfo().totalElements());
         return result;
     }
 
@@ -150,6 +163,10 @@ public class AuctionSearchService {
         log.debug("추천 키워드 조회");
         return auctionSearchRepository.getSuggestedKeywords();
     }
+
+    // ============================================
+    // 헬퍼 메서드
+    // ============================================
 
     /**
      * 초성 검색 실행
@@ -179,6 +196,11 @@ public class AuctionSearchService {
      */
     private PageResponse<AuctionListResponse> searchByChosung(
             String keyword,
+            ItemCategory category,
+            List<String> brands,
+            Integer minPrice,
+            Integer maxPrice,
+            String sort,
             AuctionStatus status,
             Pageable pageable
     ) {
@@ -190,6 +212,7 @@ public class AuctionSearchService {
         // 2. 초성 검색 (Native Query)
         Page<AuctionListDto> dtoPage = auctionSearchRepository.searchByChosung(
                 chosungPattern,
+                category, brands, minPrice, maxPrice, sort,
                 status != null ? AuctionStatus.valueOf(status.name()) : null,
                 pageable
         );
@@ -202,7 +225,7 @@ public class AuctionSearchService {
 
         // 3. 결과 없으면 Full-Text로 폴백
         log.debug("초성 검색 결과 없음, Full-Text로 폴백");
-        return searchByFullTextWithFallback(keyword, status, pageable);
+        return searchByFullTextWithFallback(keyword, category, brands, minPrice, maxPrice, sort, status, pageable);
     }
 
     /**
@@ -240,6 +263,11 @@ public class AuctionSearchService {
      */
     private PageResponse<AuctionListResponse> searchByFullTextWithFallback(
             String keyword,
+            ItemCategory category,
+            List<String> brands,
+            Integer minPrice,
+            Integer maxPrice,
+            String sort,
             AuctionStatus status,
             Pageable pageable
     ) {
@@ -253,6 +281,7 @@ public class AuctionSearchService {
         // 2. Full-Text Search (Native Query)
         Page<AuctionListDto> dtoPage = auctionSearchRepository.searchByFullText(
                 processedKeyword,
+                category, brands, minPrice, maxPrice, sort,
                 status,
                 pageable
         );
@@ -268,6 +297,7 @@ public class AuctionSearchService {
         dtoPage = auctionSearchRepository.searchByTrigram(
                 processedKeyword,
                 getDynamicThreshold(processedKeyword),
+                category, brands, minPrice, maxPrice, sort,
                 status,
                 pageable
         );
@@ -297,5 +327,7 @@ public class AuctionSearchService {
             return 0.25; // 긴 키워드는 관대하게
         }
     }
+
+
 }
 

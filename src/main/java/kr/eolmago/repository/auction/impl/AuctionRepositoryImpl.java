@@ -3,9 +3,12 @@ package kr.eolmago.repository.auction.impl;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.core.types.dsl.Expressions;
+import com.querydsl.core.types.dsl.StringExpression;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import kr.eolmago.domain.entity.auction.enums.AuctionStatus;
+import kr.eolmago.domain.entity.auction.enums.ItemCategory;
 import kr.eolmago.dto.api.auction.response.AuctionListDto;
 import kr.eolmago.repository.auction.AuctionRepositoryCustom;
 import lombok.RequiredArgsConstructor;
@@ -19,8 +22,8 @@ import java.util.List;
 import java.util.UUID;
 
 import static kr.eolmago.domain.entity.auction.QAuction.auction;
-import static kr.eolmago.domain.entity.auction.QAuctionItem.auctionItem;
 import static kr.eolmago.domain.entity.auction.QAuctionImage.auctionImage;
+import static kr.eolmago.domain.entity.auction.QAuctionItem.auctionItem;
 import static kr.eolmago.domain.entity.user.QUser.user;
 import static kr.eolmago.domain.entity.user.QUserProfile.userProfile;
 
@@ -31,7 +34,16 @@ public class AuctionRepositoryImpl implements AuctionRepositoryCustom {
     private final JPAQueryFactory queryFactory;
 
     @Override
-    public Page<AuctionListDto> searchList(Pageable pageable, String sortKey, AuctionStatus status, UUID sellerId) {
+    public Page<AuctionListDto> searchList(
+            Pageable pageable,
+            String sortKey,
+            AuctionStatus status,
+            UUID userId,
+            ItemCategory category,
+            List<String> brands,
+            Integer minPrice,
+            Integer maxPrice
+    ) {
         OrderSpecifier<?>[] orderSpecifiers = createOrderSpecifiers(sortKey);
 
         List<AuctionListDto> content = queryFactory
@@ -61,7 +73,11 @@ public class AuctionRepositoryImpl implements AuctionRepositoryCustom {
                 .on(userProfile.user.eq(user))
                 .where(
                         status == null ? null : auction.status.eq(status),
-                        sellerId == null ? null : user.userId.eq(sellerId)
+                        userId == null ? null : user.userId.eq(userId),
+                        category != null ? auctionItem.category.eq(category) : null,
+                        brandsIn(brands),
+                        minPrice != null ? auction.currentPrice.goe(minPrice) : null,
+                        maxPrice != null ? auction.currentPrice.loe(maxPrice) : null
                 )
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
@@ -80,11 +96,20 @@ public class AuctionRepositoryImpl implements AuctionRepositoryCustom {
                 .on(userProfile.user.eq(user))
                 .where(
                         status == null ? null : auction.status.eq(status),
-                        sellerId == null ? null : user.userId.eq(sellerId)
+                        userId == null ? null : user.userId.eq(userId),
+                        category != null ? auctionItem.category.eq(category) : null,
+                        brandsIn(brands),
+                        minPrice != null ? auction.currentPrice.goe(minPrice) : null,
+                        maxPrice != null ? auction.currentPrice.loe(maxPrice) : null
                 );
 
         return PageableExecutionUtils.getPage(content, pageable, countQuery::fetchOne);
     }
+
+
+    // ================
+    // 헬페 메서드
+    // ================
 
     private OrderSpecifier<?>[] createOrderSpecifiers(String sortKey) {
         if (sortKey == null || sortKey.isEmpty()) {
@@ -96,8 +121,8 @@ public class AuctionRepositoryImpl implements AuctionRepositoryCustom {
         switch (sortKey.toLowerCase()) {
             case "latest" -> orders.add(auction.createdAt.desc());
             case "deadline" -> orders.add(auction.endAt.asc());
-            case "price_asc" -> orders.add(auction.currentPrice.asc());
-            case "price_desc" -> orders.add(auction.currentPrice.desc());
+            case "price_low" -> orders.add(auction.currentPrice.asc());
+            case "price_high" -> orders.add(auction.currentPrice.desc());
             case "popular" -> {
                 orders.add(auction.bidCount.desc());
                 orders.add(auction.favoriteCount.desc());
@@ -109,4 +134,41 @@ public class AuctionRepositoryImpl implements AuctionRepositoryCustom {
 
         return orders.toArray(new OrderSpecifier[0]);
     }
+
+    private StringExpression brandValue() {
+        // specs에서 brand를 text로 뽑음: jsonb_extract_path_text(specs, 'brand')
+        return Expressions.stringTemplate(
+                "function('jsonb_extract_path_text', {0}, {1})",
+                auctionItem.specs,
+                Expressions.constant("brand")
+        );
+    }
+
+    private BooleanExpression brandsIn(List<String> brands) {
+        if (brands == null || brands.isEmpty()) {
+            return null;
+        }
+
+        StringExpression brand = brandValue();
+
+        boolean hasOther = brands.contains("기타");
+        List<String> selectedBrands = brands.stream()
+                .filter(b -> !"기타".equals(b))
+                .toList();
+
+        if (hasOther && selectedBrands.isEmpty()) {
+            // "기타"만: Apple, Samsung 제외
+            return brand.notIn("Apple", "Samsung");
+
+        } else if (hasOther) {
+            // "기타" + 특정 브랜드
+            return brand.in(selectedBrands)
+                    .or(brand.notIn("Apple", "Samsung"));
+
+        } else {
+            // 특정 브랜드만
+            return brand.in(selectedBrands);
+        }
+    }
+
 }

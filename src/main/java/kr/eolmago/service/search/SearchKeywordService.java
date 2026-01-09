@@ -20,7 +20,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
 /**
- * 검색 키워드 서비스
+ * 검색 부가 서비스
  *
  * 핵심 역할:
  * 1. Redis 기반 실시간 자동완성 제공

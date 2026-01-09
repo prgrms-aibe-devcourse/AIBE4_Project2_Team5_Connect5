@@ -10,9 +10,9 @@ import kr.eolmago.domain.entity.user.User;
 import kr.eolmago.dto.api.auction.request.AuctionDraftRequest;
 import kr.eolmago.dto.api.auction.response.AuctionDraftDetailResponse;
 import kr.eolmago.dto.api.auction.response.AuctionDraftResponse;
+import kr.eolmago.dto.api.auction.response.AuctionListDto;
 import kr.eolmago.dto.api.auction.response.AuctionListResponse;
 import kr.eolmago.dto.api.common.PageResponse;
-import kr.eolmago.dto.api.auction.response.AuctionListDto;
 import kr.eolmago.global.exception.BusinessException;
 import kr.eolmago.global.exception.ErrorCode;
 import kr.eolmago.global.util.BidIncrementCalculator;
@@ -204,10 +204,20 @@ public class AuctionService {
     }
 
     // 경매 목록 조회
-    public PageResponse<AuctionListResponse> getAuctions(int page, int size, String sortKey, AuctionStatus status, UUID sellerId) {
+    public PageResponse<AuctionListResponse> getAuction(
+        int page,
+        int size,
+        String sortKey,
+        AuctionStatus status,
+        UUID sellerId,
+        ItemCategory category,
+        List<String> brands,
+        Integer minPrice,
+        Integer maxPrice
+    ) {
         Pageable pageable = PageRequest.of(page, size);
 
-        Page<AuctionListDto> dtoPage = auctionRepository.searchList(pageable, sortKey, status, sellerId);
+        Page<AuctionListDto> dtoPage = auctionRepository.searchList(pageable, sortKey, status, sellerId, category, brands, minPrice, maxPrice);
         Page<AuctionListResponse> responsePage = dtoPage.map(AuctionListResponse::from);
 
         return PageResponse.of(responsePage);

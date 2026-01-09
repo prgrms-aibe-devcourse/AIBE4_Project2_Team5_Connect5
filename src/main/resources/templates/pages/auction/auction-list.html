@@ -29,9 +29,130 @@
             </div>
         </div>
 
-        <!-- 카테고리 -->
+        <!-- 필터 폼 -->
+        <form method="get" th:action="@{/auctions}" class="mb-8 bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+            <!-- 2열 그리드 컨테이너 -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-6">
+                <!-- 왼쪽 열 -->
+                <div class="space-y-6">
+                    <!-- 카테고리 필터 -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-900 mb-3">카테고리</label>
+                        <div class="flex flex-wrap gap-4">
+                            <label class="inline-flex items-center cursor-pointer">
+                                <input type="radio" name="category" value=""
+                                       th:checked="${category == null}"
+                                       class="rounded-full border-gray-300 text-gray-900 focus:ring-gray-900 cursor-pointer">
+                                <span class="ml-2 text-sm text-gray-700">전체</span>
+                            </label>
+                            <label class="inline-flex items-center cursor-pointer">
+                                <input type="radio" name="category" value="PHONE"
+                                       th:checked="${category != null and category.name() == 'PHONE'}"
+                                       class="rounded-full border-gray-300 text-gray-900 focus:ring-gray-900 cursor-pointer">
+                                <span class="ml-2 text-sm text-gray-700">핸드폰</span>
+                            </label>
+                            <label class="inline-flex items-center cursor-pointer">
+                                <input type="radio" name="category" value="TABLET"
+                                       th:checked="${category != null and category.name() == 'TABLET'}"
+                                       class="rounded-full border-gray-300 text-gray-900 focus:ring-gray-900 cursor-pointer">
+                                <span class="ml-2 text-sm text-gray-700">태블릿</span>
+                            </label>
+                        </div>
+                    </div>
 
-        <!-- 필터 -->
+                    <!-- 가격 범위 필터 -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-900 mb-3">가격 범위</label>
+                        <div class="flex items-center gap-3">
+                            <!-- minPrice -->
+                            <input id="minPriceInput"
+                                   type="text"
+                                   name="minPrice"
+                                   inputmode="numeric"
+                                   autocomplete="off"
+                                   th:value="${minPrice != null ? #numbers.formatInteger(minPrice, 0, 'COMMA') : ''}"
+                                   placeholder="최소 가격"
+                                   class="w-full rounded-xl border border-gray-300 bg-white py-3 pl-10 pr-4 text-sm outline-none transition
+                                          focus:border-gray-900 focus:ring-4 focus:ring-gray-900/10">
+
+                            <span class="text-sm text-gray-500">~</span>
+
+                            <!-- maxPrice -->
+                            <input id="maxPriceInput"
+                                   type="text"
+                                   name="maxPrice"
+                                   inputmode="numeric"
+                                   autocomplete="off"
+                                   th:value="${maxPrice != null ? #numbers.formatInteger(maxPrice, 0, 'COMMA') : ''}"
+                                   placeholder="최대 가격"
+                                   class="w-full rounded-xl border border-gray-300 bg-white py-3 pl-10 pr-4 text-sm outline-none transition
+                                          focus:border-gray-900 focus:ring-4 focus:ring-gray-900/10">
+
+                            <span class="text-sm text-gray-500">원</span>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- 오른쪽 열 -->
+                <div class="space-y-6">
+                    <!-- 브랜드 필터 -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-900 mb-3">브랜드</label>
+                        <div class="flex flex-wrap gap-4">
+                            <label class="inline-flex items-center cursor-pointer">
+                                <input type="checkbox" name="brands" value="Apple"
+                                       th:checked="${brands != null and brands.contains('Apple')}"
+                                       class="rounded border-gray-300 text-gray-900 focus:ring-gray-900 cursor-pointer">
+                                <span class="ml-2 text-sm text-gray-700">Apple</span>
+                            </label>
+                            <label class="inline-flex items-center cursor-pointer">
+                                <input type="checkbox" name="brands" value="Samsung"
+                                       th:checked="${brands != null and brands.contains('Samsung')}"
+                                       class="rounded border-gray-300 text-gray-900 focus:ring-gray-900 cursor-pointer">
+                                <span class="ml-2 text-sm text-gray-700">Samsung</span>
+                            </label>
+                            <label class="inline-flex items-center cursor-pointer">
+                                <input type="checkbox" name="brands" value="기타"
+                                       th:checked="${brands != null and brands.contains('기타')}"
+                                       class="rounded border-gray-300 text-gray-900 focus:ring-gray-900 cursor-pointer">
+                                <span class="ml-2 text-sm text-gray-700">기타</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- 정렬 옵션 -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-900 mb-3">정렬</label>
+                        <select name="sort"
+                                class="w-full rounded-md border-gray-300 text-sm focus:border-gray-900 focus:ring-gray-900">
+                            <option th:each="option : ${sortOptions}"
+                                    th:value="${option.value}"
+                                    th:text="${option.label}"
+                                    th:selected="${sort == option.value}">
+                            </option>
+                        </select>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- 키워드 유지 (hidden) -->
+            <input type="hidden" name="keyword" th:value="${keyword}">
+
+            <!-- 버튼 (전체 너비, 하단) -->
+            <div class="mt-6 flex gap-3 justify-center">
+                <button type="submit"
+                        class="px-8 py-2.5 bg-gray-900 text-white text-sm font-semibold rounded-md hover:bg-gray-800 transition-colors">
+                    필터 적용
+                </button>
+                <a th:href="@{/auctions}"
+                   class="inline-flex items-center px-8 py-2.5 border border-gray-300 text-gray-700 text-sm font-semibold rounded-md hover:bg-gray-50 transition-colors">
+                    초기화
+                </a>
+            </div>
+        </form>
 
         <!-- 검색 결과 없음 (추천 키워드 포함) -->
         <div th:if="${auctions.content.isEmpty() and isSearchMode}"
@@ -80,12 +201,12 @@
             <p class="mt-2 text-sm text-gray-600">나중에 다시 확인해주세요.</p>
         </div>
 
-        <!-- 페이지네이션 (검색 keyword 파라미터 유지) -->
-        <div th:if="${!auctions.content.isEmpty() and auctions.pageInfo.totalPages > 0}" class="mt-10">
+        <!-- 페이지네이션 (검색 keyword + 필터 파라미터 유지) -->
+        <div th:if="${!auctions.content.isEmpty() and auctions.pageInfo.totalPages > 1}" class="mt-10">
             <nav class="flex items-center justify-center gap-2" aria-label="Pagination">
                 <!-- 이전 페이지 -->
                 <a th:if="${auctions.pageInfo.hasPrevious}"
-                   th:href="@{/auctions(page=${auctions.pageInfo.currentPage - 1})}"
+                   th:href="@{/auctions(page=${auctions.pageInfo.currentPage - 1}, keyword=${keyword}, category=${category}, brands=${brands}, minPrice=${minPrice}, maxPrice=${maxPrice}, sort=${sort})}"
                    class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-gray-300 bg-white text-sm font-semibold text-gray-700 hover:bg-gray-50">
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
@@ -93,18 +214,31 @@
                 </a>
 
                 <!-- 페이지 번호 -->
-                <div class="flex gap-1" th:if="${auctions.pageInfo.totalPages > 0}">
-                    <a th:each="i : ${#numbers.sequence(0, auctions.pageInfo.totalPages - 1)}"
-                       th:href="@{/auctions(page=${i}, keyword=${keyword})}"
-                       th:classappend="${i == auctions.pageInfo.currentPage} ? 'bg-slate-900 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'"
-                       class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-gray-300 text-sm font-semibold">
-                        <span th:text="${i + 1}">1</span>
-                    </a>
+                <div class="flex gap-1">
+                    <th:block th:each="i : ${#numbers.sequence(0, auctions.pageInfo.totalPages - 1)}">
+                        <!-- 현재 페이지 근처만 표시 (최대 7개) -->
+                        <a th:if="${i == 0 || i == auctions.pageInfo.totalPages - 1 || (i >= auctions.pageInfo.currentPage - 2 && i <= auctions.pageInfo.currentPage + 2)}"
+                           th:href="@{/auctions(page=${i}, keyword=${keyword}, category=${category}, brands=${brands}, minPrice=${minPrice}, maxPrice=${maxPrice}, sort=${sort})}"
+                           th:classappend="${i == auctions.pageInfo.currentPage} ? 'bg-gray-900 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'"
+                           class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-gray-300 text-sm font-semibold transition-colors">
+                            <span th:text="${i + 1}">1</span>
+                        </a>
+
+                        <!-- ... 표시 -->
+                        <span th:if="${i == 1 && auctions.pageInfo.currentPage > 3}"
+                              class="inline-flex h-10 w-10 items-center justify-center text-gray-500">
+                            ...
+                        </span>
+                        <span th:if="${i == auctions.pageInfo.totalPages - 2 && auctions.pageInfo.currentPage < auctions.pageInfo.totalPages - 4}"
+                              class="inline-flex h-10 w-10 items-center justify-center text-gray-500">
+                            ...
+                        </span>
+                    </th:block>
                 </div>
 
                 <!-- 다음 페이지 -->
                 <a th:if="${auctions.pageInfo.hasNext}"
-                   th:href="@{/auctions(page=${auctions.pageInfo.currentPage + 1}, keyword=${keyword})}"
+                   th:href="@{/auctions(page=${auctions.pageInfo.currentPage + 1}, keyword=${keyword}, category=${category}, brands=${brands}, minPrice=${minPrice}, maxPrice=${maxPrice}, sort=${sort})}"
                    class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-gray-300 bg-white text-sm font-semibold text-gray-700 hover:bg-gray-50">
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
@@ -115,5 +249,10 @@
 
     </div>
 </div>
+
+<th:block layout:fragment="scripts">
+    <script th:src="@{/js/auction/auction-list.js}" defer></script>
+</th:block>
+
 </body>
 </html>

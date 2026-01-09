@@ -3,6 +3,7 @@ package kr.eolmago.repository.auction.impl;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import kr.eolmago.domain.entity.auction.enums.AuctionStatus;
+import kr.eolmago.domain.entity.auction.enums.ItemCategory;
 import kr.eolmago.dto.api.auction.response.AuctionListDto;
 import kr.eolmago.repository.auction.AuctionSearchRepositoryCustom;
 import lombok.RequiredArgsConstructor;
@@ -15,16 +16,16 @@ import org.springframework.stereotype.Repository;
 import java.sql.Timestamp;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Auction 검색 커스텀 Repository 구현체
  *
  * 역할:
- * - Native Query 기반 복잡한 검색 쿼리 구현
- * - PostgreSQL 함수 호출 (to_tsvector, word_similarity, extract_chosung)
+ * - 특수문자 포함으로 Native Query 기반 복잡한 검색 쿼리 구현
+ * - PostgreSQL 함수 호출 (to_tsvector(), word_similarity(), extract_chosung())
+ * - 필터링 (카테고리, 브랜드, 가격 범위) 및 정렬
  * - 인덱스 활용 최적화
  *
  * 검색 전략:
@@ -50,12 +51,14 @@ public class AuctionSearchRepositoryCustomImpl implements AuctionSearchRepositor
         SELECT
             a.auction_id,
             ai.auction_item_id,
+            ai.item_name,
             a.title,
             img.image_url,
             up.nickname,
+            a.start_price,
             a.current_price,
+            a.final_price,
             a.bid_count,
-            a.view_count,
             a.favorite_count,
             a.end_at,
             a.status
@@ -67,11 +70,6 @@ public class AuctionSearchRepositoryCustomImpl implements AuctionSearchRepositor
         """;
 
     /**
-     * 기본 ORDER BY 절 (생성일 기준 내림차순)
-     */
-    private static final String ORDER_BY_CREATED = "ORDER BY a.created_at DESC ";
-
-    /**
      * 페이징 절
      */
     private static final String PAGINATION = "LIMIT :limit OFFSET :offset";
@@ -79,81 +77,142 @@ public class AuctionSearchRepositoryCustomImpl implements AuctionSearchRepositor
     /**
      * 기본 COUNT 절
      */
-    private static final String BASE_COUNT = "SELECT COUNT(*) FROM auctions a ";
+    private static final String BASE_COUNT = """
+        SELECT COUNT(*) 
+        FROM auctions a
+        INNER JOIN auction_items ai ON a.auction_item_id = ai.auction_item_id
+        """;
 
     // ============================================
     // 검색 메서드 구현
     // ============================================
 
     @Override
-    public Page<AuctionListDto> searchByFullText(String processedKeyword, AuctionStatus status, Pageable pageable) {
-        log.debug("Full-Text Search 실행: processedKeyword={}, status={}", processedKeyword, status);
+    public Page<AuctionListDto> searchByFullText(
+            String processedKeyword,
+            ItemCategory category,
+            List<String> brands,
+            Integer minPrice,
+            Integer maxPrice,
+            String sort,
+            AuctionStatus status,
+            Pageable pageable
+    ) {
+        log.debug("Full-Text Search: keyword={}, category={}, brands={}, sort={}", processedKeyword, category, brands, sort);
 
-        // WHERE 조건
-        String whereClause = " WHERE to_tsvector('simple', a.title || ' ' || COALESCE(a.description, '')) @@ to_tsquery('simple', :processedKeyword) ";
-        String statusCondition = status != null ? "AND a.status = :status " : "";
+        // WHERE 절 생성
+        String whereClause = buildWhereClause(category, brands, minPrice, maxPrice, status);
+        whereClause += "AND to_tsvector('simple', ai.item_name || ' ' || COALESCE(a.description, '')) @@ to_tsquery('simple', :processedKeyword) ";
+
+        // ORDER BY 절 생성
+        String orderBy = buildOrderBy(sort);
 
         // 메인 쿼리 조립
-        String sql = BASE_SELECT + whereClause + statusCondition + ORDER_BY_CREATED + PAGINATION;
+        String sql = BASE_SELECT + whereClause + orderBy + PAGINATION;
 
-        Query query = createQueryWithParams(sql, processedKeyword, null, 0.0, status, pageable);
+        // 파라미터 생성
+        Map<String, Object> params = new HashMap<>();
+        params.put("processedKeyword", processedKeyword);
+        addCommonParams(params, category, minPrice, maxPrice, status, pageable);
+
+        // 쿼리 실행
+        Query query = createQueryWithParams(sql, params);
 
         @SuppressWarnings("unchecked")
         List<Object[]> results = query.getResultList();
         List<AuctionListDto> content = convertToDto(results);
 
         // Count 쿼리
-        String countSql = BASE_COUNT + whereClause + statusCondition;
-        long total = executeCountQuery(countSql, processedKeyword, null, 0.0, status);
+        String countSql = BASE_COUNT + whereClause;
+        long total = executeCountQuery(countSql, params);
 
         return new PageImpl<>(content, pageable, total);
     }
 
     @Override
-    public Page<AuctionListDto> searchByTrigram(String keyword, double threshold, AuctionStatus status, Pageable pageable) {
-        log.debug("Trigram Similarity 검색 실행: keyword={}, threshold={}, status={}", keyword, threshold, status);
+    public Page<AuctionListDto> searchByTrigram(
+            String keyword,
+            double threshold,
+            ItemCategory category,
+            List<String> brands,
+            Integer minPrice,
+            Integer maxPrice,
+            String sort,
+            AuctionStatus status,
+            Pageable pageable
+    ) {
+        log.debug("Trigram Similarity 검색 실행: keyword={}, threshold={}, category={}, brands={}, sort={}",
+                keyword, threshold, category, brands, sort);
 
-        // WHERE 조건
-        String whereClause = "WHERE word_similarity(:keyword, a.title) > :threshold ";
-        String statusCondition = status != null ? "AND a.status = :status " : "";
-        String orderBy = "ORDER BY word_similarity(:keyword, a.title) DESC ";
+        // WHERE 절 생성
+        String whereClause = buildWhereClause(category, brands, minPrice, maxPrice, status);
+        whereClause += "AND word_similarity(:keyword, ai.item_name) > :threshold ";
+
+        // ORDER BY 절 (Trigram 유사도 우선)
+        String orderBy = "ORDER BY word_similarity(:keyword, ai.item_name) DESC ";
 
         // 메인 쿼리 조립
-        String sql = BASE_SELECT + whereClause + statusCondition + orderBy + PAGINATION;
+        String sql = BASE_SELECT + whereClause + orderBy + PAGINATION;
 
-        Query query = createQueryWithParams(sql, keyword, keyword, threshold, status, pageable);
+        // 파라미터 생성
+        Map<String, Object> params = new HashMap<>();
+        params.put("keyword", keyword);
+        params.put("threshold", threshold);
+        addCommonParams(params, category, minPrice, maxPrice, status, pageable);
+
+        // 쿼리 실행
+        Query query = createQueryWithParams(sql, params);
 
         @SuppressWarnings("unchecked")
         List<Object[]> results = query.getResultList();
         List<AuctionListDto> content = convertToDto(results);
 
         // Count 쿼리
-        String countSql = BASE_COUNT + whereClause + statusCondition;
-        long total = executeCountQuery(countSql, keyword, keyword, threshold, status);
+        String countSql = BASE_COUNT + whereClause;
+        long total = executeCountQuery(countSql, params);
 
         return new PageImpl<>(content, pageable, total);
     }
 
     @Override
-    public Page<AuctionListDto> searchByChosung(String chosungKeyword, AuctionStatus status, Pageable pageable) {
-        log.debug("초성 검색 실행: chosungKeyword={}, status={}", chosungKeyword, status);
+    public Page<AuctionListDto> searchByChosung(
+            String chosungKeyword,
+            ItemCategory category,
+            List<String> brands,
+            Integer minPrice,
+            Integer maxPrice,
+            String sort,
+            AuctionStatus status,
+            Pageable pageable
+    ) {
+        log.debug("초성 검색 실행: chosungKeyword={}, category={}, brands={}, sort={}, status={}",
+                chosungKeyword, category, brands, sort, status);
 
-        // WHERE 조건
-        String whereClause = "WHERE extract_chosung(a.title) LIKE :chosungPattern ";
-        String statusCondition = status != null ? "AND a.status = :status " : "";
+        // WHERE 절 생성
+        String whereClause = buildWhereClause(category, brands, minPrice, maxPrice, status);
+        whereClause += "AND extract_chosung(ai.item_name) LIKE :chosungPattern ";
+
+        // ORDER BY 절 생성
+        String orderBy = buildOrderBy(sort);
 
         // 메인 쿼리 조립
-        String sql = BASE_SELECT + whereClause + statusCondition + ORDER_BY_CREATED + PAGINATION;
+        String sql = BASE_SELECT + whereClause + orderBy + PAGINATION;
 
-        Query query = createQueryWithParams(sql, chosungKeyword, null, 0.0, status, pageable);
+        // 파라미터 생성
+        Map<String, Object> params = new HashMap<>();
+        params.put("chosungPattern", chosungKeyword + "%");
+        addCommonParams(params, category, minPrice, maxPrice, status, pageable);
+
+        // 쿼리 실행
+        Query query = createQueryWithParams(sql, params);
 
         @SuppressWarnings("unchecked")
         List<Object[]> results = query.getResultList();
         List<AuctionListDto> content = convertToDto(results);
 
         // Count 쿼리
-        String countSql = BASE_COUNT + whereClause + statusCondition;
-        long total = executeCountQuery(countSql, chosungKeyword, null, 0.0, status);
+        String countSql = BASE_COUNT + whereClause;
+        long total = executeCountQuery(countSql, params);
 
         return new PageImpl<>(content, pageable, total);
     }
@@ -190,96 +249,158 @@ public class AuctionSearchRepositoryCustomImpl implements AuctionSearchRepositor
     // ============================================
 
     /**
-     * 쿼리 생성 및 파라미터 바인딩
-     *
-     * @param sql SQL 쿼리
-     * @param processedKeywordOrPattern 키워드 또는 패턴 (Full-Text, Chosung용)
-     * @param keyword 키워드 (Trigram용)
-     * @param threshold 유사도 임계값 (Trigram용)
-     * @param status 경매 상태
-     * @param pageable 페이징 정보
-     * @return 파라미터가 바인딩된 Query 객체
+     * WHERE 절 생성 (공통 필터 로직)
      */
-    private Query createQueryWithParams(
-            String sql,
-            String processedKeywordOrPattern,
-            String keyword,
-            double threshold,
+    private String buildWhereClause(
+            ItemCategory category,
+            List<String> brands,
+            Integer minPrice,
+            Integer maxPrice,
+            AuctionStatus status
+    ) {
+        StringBuilder where = new StringBuilder("WHERE 1=1 ");
+
+        // Status
+        if (status != null) {
+            where.append("AND a.status = :status ");
+        }
+
+        // Category
+        if (category != null) {
+            where.append("AND ai.category = :category ");
+        }
+
+        // Brands
+        where.append(buildBrandCondition(brands));
+
+        // Price Range
+        if (minPrice != null) {
+            where.append("AND a.current_price >= :minPrice ");
+        }
+        if (maxPrice != null) {
+            where.append("AND a.current_price <= :maxPrice ");
+        }
+
+        return where.toString();
+    }
+
+    /**
+     * 브랜드 필터 WHERE 절 생성
+     *
+     * 로직:
+     * - brands가 null/빈 리스트 → 전체 브랜드
+     * - "기타"만 선택 → Apple, Samsung 제외
+     * - "기타" + 특정 브랜드 → OR 조건
+     * - 특정 브랜드만 → IN 조건
+     */
+    private String buildBrandCondition(List<String> brands) {
+        if (brands == null || brands.isEmpty()) {
+            return "";  // 전체 브랜드
+        }
+
+        boolean hasOther = brands.contains("기타");
+        List<String> selectedBrands = brands.stream()
+                .filter(b -> !"기타".equals(b))
+                .toList();
+
+        if (hasOther && selectedBrands.isEmpty()) {
+            // "기타"만 선택: Apple, Samsung 제외한 모든 브랜드
+            return "AND ai.specs->>'brand' NOT IN ('Apple', 'Samsung') ";
+
+        } else if (hasOther && !selectedBrands.isEmpty()) {
+            // "기타" + 특정 브랜드 (예: Apple + 기타)
+            String brandsIn = selectedBrands.stream()
+                    .map(b -> "'" + b + "'")
+                    .collect(Collectors.joining(", "));
+            return String.format(
+                    "AND (ai.specs->>'brand' IN (%s) OR ai.specs->>'brand' NOT IN ('Apple', 'Samsung'))",
+                    brandsIn
+            );
+        } else {
+            // 특정 브랜드만 선택 (예: Apple만, Samsung만)
+            String brandsIn = selectedBrands.stream()
+                    .map(b -> "'" + b + "'")
+                    .collect(Collectors.joining(", "));
+            return String.format("AND ai.specs->>'brand' IN (%s) ", brandsIn);
+        }
+    }
+
+    /**
+     * ORDER BY 절 생성
+     *
+     * 정렬 옵션:
+     * - latest: 최신순 (created_at DESC)
+     * - popular: 인기순 (bid_count DESC)
+     * - deadline: 마감임박순 (end_at ASC)
+     * - price_low: 낮은가격순 (current_price ASC)
+     * - price_high: 높은가격순 (current_price DESC)
+     */
+    private String buildOrderBy(String sort) {
+        if (sort == null || sort.isEmpty()) {
+            sort = "latest";  // 기본값
+        }
+
+        return switch (sort) {
+            case "popular" -> "ORDER BY a.bid_count DESC, a.created_at DESC ";
+            case "deadline" -> "ORDER BY a.end_at ASC, a.created_at DESC ";
+            case "price_low" -> "ORDER BY a.current_price ASC, a.created_at DESC ";
+            case "price_high" -> "ORDER BY a.current_price DESC, a.created_at DESC ";
+            default -> "ORDER BY a.created_at DESC ";  // latest
+        };
+    }
+
+    /**
+     * 공통 파라미터 추가
+     */
+    private void addCommonParams(
+            Map<String, Object> params,
+            ItemCategory category,
+            Integer minPrice,
+            Integer maxPrice,
             AuctionStatus status,
             Pageable pageable
     ) {
+        if (status != null) {
+            params.put("status", status.name());
+        }
+        if (category != null) {
+            params.put("category", category.name());
+        }
+        if (minPrice != null) {
+            params.put("minPrice", minPrice);
+        }
+        if (maxPrice != null) {
+            params.put("maxPrice", maxPrice);
+        }
+
+        params.put("limit", pageable.getPageSize());
+        params.put("offset", pageable.getOffset());
+    }
+
+    /**
+     * 쿼리 생성 및 파라미터 바인딩
+     */
+    private Query createQueryWithParams(String sql, Map<String, Object> params) {
         Query query = entityManager.createNativeQuery(sql);
 
-        // Full-Text 또는 Chosung 검색
-        if (processedKeywordOrPattern != null) {
-            if (sql.contains(":processedKeyword")) {
-                query.setParameter("processedKeyword", processedKeywordOrPattern);
-            } else if (sql.contains(":chosungPattern")) {
-                query.setParameter("chosungPattern", processedKeywordOrPattern + "%");
-            }
+        for (Map.Entry<String, Object> entry : params.entrySet()) {
+            query.setParameter(entry.getKey(), entry.getValue());
         }
-
-        // Trigram 검색
-        if (keyword != null && sql.contains(":keyword")) {
-            query.setParameter("keyword", keyword);
-        }
-
-        if (threshold > 0 && sql.contains(":threshold")) {
-            query.setParameter("threshold", threshold);
-        }
-
-        // 상태 필터
-        if (status != null) {
-            query.setParameter("status", status.name());
-        }
-
-        // 페이징
-        query.setParameter("limit", pageable.getPageSize());
-        query.setParameter("offset", pageable.getOffset());
 
         return query;
     }
 
     /**
      * Count 쿼리 실행
-     *
-     * @param countSql Count SQL
-     * @param processedKeywordOrPattern 키워드 또는 패턴 (Full-Text, Chosung용)
-     * @param keyword 키워드 (Trigram용)
-     * @param threshold 유사도 임계값 (Trigram용)
-     * @param status 경매 상태
-     * @return 전체 건수
      */
-    private long executeCountQuery(
-            String countSql,
-            String processedKeywordOrPattern,
-            String keyword,
-            double threshold,
-            AuctionStatus status
-    ) {
+    private long executeCountQuery(String countSql, Map<String, Object> params) {
         Query countQuery = entityManager.createNativeQuery(countSql);
 
-        // Full-Text 또는 Chosung 검색
-        if (processedKeywordOrPattern != null) {
-            if (countSql.contains(":processedKeyword")) {
-                countQuery.setParameter("processedKeyword", processedKeywordOrPattern);
-            } else if (countSql.contains(":chosungPattern")) {
-                countQuery.setParameter("chosungPattern", processedKeywordOrPattern + "%");
+        for (Map.Entry<String, Object> entry : params.entrySet()) {
+            // limit, offset은 count 쿼리에 불필요
+            if (!"limit".equals(entry.getKey()) && !"offset".equals(entry.getKey())) {
+                countQuery.setParameter(entry.getKey(), entry.getValue());
             }
-        }
-
-        // Trigram 검색
-        if (keyword != null && countSql.contains(":keyword")) {
-            countQuery.setParameter("keyword", keyword);
-        }
-
-        if (threshold > 0 && countSql.contains(":threshold")) {
-            countQuery.setParameter("threshold", threshold);
-        }
-
-        // 상태 필터
-        if (status != null) {
-            countQuery.setParameter("status", status.name());
         }
 
         return ((Number) countQuery.getSingleResult()).longValue();
@@ -301,7 +422,7 @@ public class AuctionSearchRepositoryCustomImpl implements AuctionSearchRepositor
                     (String) row[5],                            // nickname
                     (Integer) row[6],                          // start_price
                     (Integer) row[7],                           // current_price
-                    (Long) row[8],                           // final_price
+                    (Long) row[8],                              // final_price
                     (Integer) row[9],                           // bid_count
                     (Integer) row[10],                           // favorite_count
                     convertToOffsetDateTime(row[11]),            // end_at

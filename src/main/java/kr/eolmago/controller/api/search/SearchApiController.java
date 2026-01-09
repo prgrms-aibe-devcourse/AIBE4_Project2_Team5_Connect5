@@ -1,16 +1,11 @@
 package kr.eolmago.controller.api.search;
 
-import kr.eolmago.domain.entity.auction.enums.AuctionStatus;
-import kr.eolmago.dto.api.auction.response.AuctionListResponse;
-import kr.eolmago.dto.api.common.PageResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import kr.eolmago.dto.api.search.response.AutocompleteResponse;
 import kr.eolmago.dto.api.search.response.PopularKeywordResponse;
-import kr.eolmago.service.auction.AuctionSearchService;
 import kr.eolmago.service.search.SearchKeywordService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -31,70 +26,12 @@ import java.util.UUID;
  */
 @RestController
 @RequestMapping("/api/search")
+@Tag(name = "Search", description = "검색 부가 기능API")
 @Slf4j
 @RequiredArgsConstructor
 public class SearchApiController {
 
     private final SearchKeywordService searchKeywordService;
-    private final AuctionSearchService auctionSearchService;
-
-    /**
-     * 경매 검색 API
-     *
-     * 사용 예시:
-     * ```
-     * GET /api/search?keyword=아이폰&status=LIVE&page=0&size=20
-     * GET /api/search?keyword=ㅇㅍ&page=0
-     * GET /api/search?keyword=아이혼&page=0  (오타 교정)
-     * ```
-     *
-     * 검색 전략:
-     * 1. 초성: "ㅇㅇㅍ" → 초성 검색
-     * 2. 일반: "아이폰" → Full-Text 검색
-     * 3. 오타: "아이혼" → Trigram 유사도 검색
-     * 4. 실패: 추천 키워드 제공
-     *
-     * @param keyword 검색 키워드 (필수)
-     * @param status 경매 상태 (선택, 기본: 전체)
-     * @param page 페이지 번호 (0-based, 기본: 0)
-     * @param size 페이지 크기 (기본: 20)
-     * @param userId 사용자 ID (선택, 통계 기록용)
-     * @return 검색 결과 + 추천 키워드 (결과 없을 때)
-     */
-    @GetMapping
-    public ResponseEntity<Map<String, Object>> search(
-            @RequestParam String keyword,
-            @RequestParam(required = false) AuctionStatus status,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
-            @RequestParam(required = false) UUID userId
-    ) {
-        log.info("검색 API 호출: keyword={}, status={}, page={}", keyword, status, page);
-
-        // 1. 페이지 정보 생성
-        Pageable pageable = PageRequest.of(page, size);
-
-        // 2. 검색 실행 (Service에서 통합 검색)
-        PageResponse<AuctionListResponse> results = auctionSearchService.search(
-                keyword,
-                status,
-                pageable,
-                userId
-        );
-
-        // 3. 응답 구성
-        Map<String, Object> response = new HashMap<>();
-        response.put("results", results);
-
-        // 4. 검색 결과 없으면 추천 키워드 제공
-        if (results.pageInfo().totalElements() == 0) {
-            List<String> suggestions = auctionSearchService.getSuggestedKeywords();
-            response.put("suggestions", suggestions);
-            log.debug("검색 결과 없음, 추천 키워드 제공: {}", suggestions);
-        }
-
-        return ResponseEntity.ok(response);
-    }
 
     /**
      * 자동완성 API
