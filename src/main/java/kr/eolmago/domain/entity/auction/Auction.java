@@ -52,19 +52,16 @@ public class Auction extends CreatedAtEntity {
     private AuctionStatus status;
 
     @Column(nullable = false)
-    private int startPrice;
+    private Integer startPrice;
 
     @Column(nullable = false)
-    private int currentPrice;
+    private Integer currentPrice;
 
     @Column(nullable = false)
-    private int bidIncrement;
+    private Integer bidIncrement;
 
     @Column(nullable = false)
     private int bidCount;
-
-    @Column(nullable = false)
-    private int viewCount;
 
     @Column(nullable = false)
     private int favoriteCount;
@@ -75,8 +72,11 @@ public class Auction extends CreatedAtEntity {
     @Column
     private OffsetDateTime endAt;
 
+    @Column
+    private OffsetDateTime originalEndAt;
+
     @Column(nullable = false)
-    private int durationHours;
+    private Integer durationHours;
 
     @Column(nullable = false)
     private int extendCount;
@@ -88,7 +88,7 @@ public class Auction extends CreatedAtEntity {
     @Column
     private Long finalPrice;
 
-    public static Auction create(
+    public static Auction create (
             AuctionItem auctionItem,
             User seller,
             String title,
@@ -109,15 +109,32 @@ public class Auction extends CreatedAtEntity {
         auction.startPrice = startPrice;
         auction.currentPrice = startPrice;
         auction.bidIncrement = bidIncrement;
-        auction.bidCount = 0;
-        auction.viewCount = 0;
-        auction.favoriteCount = 0;
         auction.durationHours = durationHours;
         auction.startAt = startAt;
         auction.endAt = endAt;
+        auction.originalEndAt = endAt;
+        auction.bidCount = 0;
+        auction.favoriteCount = 0;
         auction.extendCount = 0;
 
         return auction;
     }
 
+    // 경매 수정
+    public void updateDraft(String title, String description, int startPrice, int bidIncrement, int durationHours) {
+        this.title = title;
+        this.description = description;
+        this.startPrice = startPrice;
+        this.bidIncrement = bidIncrement;
+        this.durationHours = durationHours;
+    }
+
+    // 경매 게시
+    public void publish(OffsetDateTime startAt, OffsetDateTime endAt) {
+        this.status = AuctionStatus.LIVE;
+        this.startAt = startAt;
+        this.endAt = endAt;
+        this.originalEndAt = endAt;
+        this.currentPrice = this.startPrice;
+    }
 }

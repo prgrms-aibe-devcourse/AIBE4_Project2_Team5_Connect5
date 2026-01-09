@@ -15,6 +15,11 @@ public enum ErrorCode {
     INVALID_INPUT_VALUE(HttpStatus.BAD_REQUEST, "C001", "입력값이 올바르지 않습니다."),
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "C999", "서버 내부 오류가 발생했습니다."),
 
+    // User
+    USER_NOT_FOUND(HttpStatus.NOT_FOUND, "U001", "사용자를 찾을 수 없습니다."),
+    USER_UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "U002", "인증되지 않은 사용자입니다."),
+    USER_FORBIDDEN(HttpStatus.FORBIDDEN, "U003", "권한이 없습니다."),
+
     // Auction
     AUCTION_NOT_FOUND(HttpStatus.NOT_FOUND, "A001", "경매를 찾을 수 없습니다."),
     AUCTION_ALREADY_STARTED(HttpStatus.BAD_REQUEST, "A002", "이미 시작된 경매입니다."),
@@ -24,6 +29,13 @@ public enum ErrorCode {
     AUCTION_HAS_BIDS(HttpStatus.BAD_REQUEST, "A006", "입찰이 존재하는 경매는 중지할 수 없습니다."),
     AUCTION_UNAUTHORIZED(HttpStatus.FORBIDDEN, "A007", "본인의 경매만 접근할 수 있습니다."),
     SELLER_CANNOT_BID(HttpStatus.BAD_REQUEST, "A008", "본인의 경매에는 입찰할 수 없습니다."),
+    AUCTION_SELLER_ONLY(HttpStatus.FORBIDDEN, "A009", "판매자만 수행할 수 있습니다."),
+    AUCTION_BUYER_ONLY(HttpStatus.FORBIDDEN, "A010", "구매자만 수행할 수 있습니다."),
+    AUCTION_PARTICIPANT_ONLY(HttpStatus.FORBIDDEN, "A011", "해당 경매 참여자만 접근할 수 있습니다."),
+    AUCTION_PUBLISH_ONLY_DRAFT(HttpStatus.BAD_REQUEST, "A012", "임시저장 상태의 경매만 게시할 수 있습니다."),
+    AUCTION_DELETE_ONLY_DRAFT(HttpStatus.BAD_REQUEST, "A013", "임시저장 상태의 경매만 삭제할 수 있습니다."),
+    AUCTION_INVALID_DURATION(HttpStatus.BAD_REQUEST, "A014", "경매 기간이 올바르지 않습니다."),
+
 
     // Bid
     BID_AMOUNT_TOO_LOW(HttpStatus.BAD_REQUEST, "B001", "최소 입찰가보다 낮은 금액입니다."),

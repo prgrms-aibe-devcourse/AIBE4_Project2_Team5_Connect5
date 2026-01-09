@@ -295,15 +295,17 @@ public class AuctionSearchRepositoryCustomImpl implements AuctionSearchRepositor
             AuctionListDto dto = new AuctionListDto(
                     (UUID) row[0],                              // auction_id
                     (Long) row[1],                              // auction_item_id
-                    (String) row[2],                            // title
-                    (String) row[3],                            // image_url
-                    (String) row[4],                            // nickname
-                    (Integer) row[5],                           // current_price
-                    (Integer) row[6],                           // bid_count
-                    (Integer) row[7],                           // view_count
-                    (Integer) row[8],                           // favorite_count
-                    convertToOffsetDateTime(row[9]),            // end_at
-                    AuctionStatus.valueOf((String) row[10])     // status
+                    (String) row[2],                            // item_name
+                    (String) row[3],                            // title
+                    (String) row[4],                            // image_url
+                    (String) row[5],                            // nickname
+                    (Integer) row[6],                          // start_price
+                    (Integer) row[7],                           // current_price
+                    (Long) row[8],                           // final_price
+                    (Integer) row[9],                           // bid_count
+                    (Integer) row[10],                           // favorite_count
+                    convertToOffsetDateTime(row[11]),            // end_at
+                    AuctionStatus.valueOf((String) row[12])     // status
             );
             dtos.add(dto);
         }

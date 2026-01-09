@@ -86,7 +86,33 @@ public class DealService {
                 .map(DealResponse::from)
                 .collect(Collectors.toList());
     }
+    /**
+     * 판매자 ID로 거래 목록 조회
+     */
+    public List<DealResponse> getDealsBySeller(UUID sellerId) {
+        return dealRepository.findBySeller_UserId(sellerId).stream()
+                .map(DealResponse::from)
+                .collect(Collectors.toList());
+    }
 
+    /**
+     * 판매자 ID와 상태로 거래 목록 조회
+     */
+    public List<DealResponse> getDealsBySellerAndStatus(UUID sellerId, DealStatus status) {
+        return dealRepository.findBySeller_UserId(sellerId).stream()
+                .filter(deal -> deal.getStatus() == status)
+                .map(DealResponse::from)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 구매자 ID로 거래 목록 조회
+     */
+    public List<DealResponse> getDealsByBuyer(UUID buyerId) {
+        return dealRepository.findByBuyer_UserId(buyerId).stream()
+                .map(DealResponse::from)
+                .collect(Collectors.toList());
+    }
     /**
      * 판매자 확인
      */

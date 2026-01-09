@@ -27,29 +27,22 @@ import java.util.stream.Collectors;
 @RestControllerAdvice(basePackages = "kr.eolmago.controller.api")
 public class GlobalExceptionHandler {
 
-    /**
-     * 정적 리소스 없음 (Spring MVC 6)
-     * - 보통은 여기(basePackages 제한)에서 잡히지 않을 수 있으나,
-     *   요청하신 대로 핸들러는 추가합니다.
-     */
+    // 정적 리소스 없음
     @ExceptionHandler(NoResourceFoundException.class)
     public ResponseEntity<Void> handleNoResourceFound(
             NoResourceFoundException e,
             HttpServletRequest request
     ) {
-        // 정적 리소스 404는 서버 장애가 아니므로 과도한 로그를 남기지 않는 편이 낫습니다.
         return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
     }
 
-    /**
-     * 비즈니스 예외 처리 (AuctionException)
-     */
-    @ExceptionHandler(AuctionException.class)
-    public ResponseEntity<ErrorResponse> handleAuctionException(
-            AuctionException e,
+    // 비즈니스 예외 처리(ErrorCode 기반 응답 매핑)
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<ErrorResponse> handleBusinessException(
+            BusinessException e,
             HttpServletRequest request
     ) {
-        logWarn(request, e, "AuctionException");
+        logWarn(request, e, "BusinessException");
 
         ErrorCode errorCode = e.getErrorCode();
         ErrorResponse response = ErrorResponse.of(errorCode, e.getMessage());
@@ -59,9 +52,7 @@ public class GlobalExceptionHandler {
                 .body(response);
     }
 
-    /**
-     * Notification 비즈니스 예외
-     */
+    // Notification 비즈니스 예외
     @ExceptionHandler(NotificationException.class)
     public ResponseEntity<ErrorResponse> handleNotificationException(
             NotificationException e,
@@ -77,9 +68,7 @@ public class GlobalExceptionHandler {
                 .body(response);
     }
 
-    /**
-     * {@code @Valid} 검증 실패 ({@code @RequestBody})
-     */
+    // 검증 실패
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleMethodArgumentNotValidException(
             MethodArgumentNotValidException e,
@@ -104,9 +93,6 @@ public class GlobalExceptionHandler {
                 .body(response);
     }
 
-    /**
-     * {@code @ModelAttribute} 검증 실패
-     */
     @ExceptionHandler(BindException.class)
     public ResponseEntity<ErrorResponse> handleBindException(
             BindException e,
@@ -131,9 +117,6 @@ public class GlobalExceptionHandler {
                 .body(response);
     }
 
-    /**
-     * {@code @PathVariable}, {@code @RequestParam} 검증 실패
-     */
     @ExceptionHandler(HandlerMethodValidationException.class)
     public ResponseEntity<ErrorResponse> handleHandlerMethodValidationException(
             HandlerMethodValidationException e,
@@ -151,9 +134,7 @@ public class GlobalExceptionHandler {
                 .body(response);
     }
 
-    /**
-     * 타입 변환 실패 ({@code @PathVariable}, {@code @RequestParam})
-     */
+    // 타입 변환 실패
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ErrorResponse> handleMethodArgumentTypeMismatchException(
             MethodArgumentTypeMismatchException e,
@@ -175,9 +156,7 @@ public class GlobalExceptionHandler {
                 .body(response);
     }
 
-    /**
-     * JSON 파싱 실패
-     */
+    // JSON 파싱 실패
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorResponse> handleHttpMessageNotReadableException(
             HttpMessageNotReadableException e,
@@ -195,9 +174,7 @@ public class GlobalExceptionHandler {
                 .body(response);
     }
 
-    /**
-     * IllegalArgumentException 처리
-     */
+    // IllegalArgumentException 처리
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleIllegalArgumentException(
             IllegalArgumentException e,
@@ -212,9 +189,7 @@ public class GlobalExceptionHandler {
                 .body(response);
     }
 
-    /**
-     * IllegalStateException 처리
-     */
+    // IllegalStateException 처리
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<ErrorResponse> handleIllegalStateException(
             IllegalStateException e,
@@ -229,9 +204,7 @@ public class GlobalExceptionHandler {
                 .body(response);
     }
 
-    /**
-     * 인증 실패 (Spring Security)
-     */
+    // 인증 실패 (Spring Security)
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ErrorResponse> handleAuthenticationException(
             AuthenticationException e,
@@ -246,9 +219,7 @@ public class GlobalExceptionHandler {
                 .body(response);
     }
 
-    /**
-     * 권한 없음 (Spring Security)
-     */
+    // 권한 없음
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAccessDeniedException(
             AccessDeniedException e,
@@ -263,9 +234,7 @@ public class GlobalExceptionHandler {
                 .body(response);
     }
 
-    /**
-     * 그 외 모든 예외 처리
-     */
+    // 예외 처리
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleException(
             Exception e,
@@ -279,8 +248,6 @@ public class GlobalExceptionHandler {
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(response);
     }
-
-    // ===== 로깅 헬퍼 =====
 
     private void logWarn(HttpServletRequest request, Exception e, String errorType) {
         String method = request.getMethod();

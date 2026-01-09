@@ -1,15 +1,15 @@
 package kr.eolmago.dto.api.auction.request;
 
 import jakarta.validation.constraints.*;
-import kr.eolmago.domain.entity.auction.enums.AuctionStatus;
 import kr.eolmago.domain.entity.auction.enums.ItemCategory;
 import kr.eolmago.domain.entity.auction.enums.ItemCondition;
 
+import java.util.List;
 import java.util.Map;
 
-public record AuctionCreateRequest(
+public record AuctionDraftRequest(
         @NotBlank(message = "제목을 입력해주세요.")
-        @Max(value = 100, message = "제목은 100자 이하여야 합니다.")
+        @Size(max = 100, message = "제목은 100자 이하여야 합니다.")
         String title,
 
         String description,
@@ -36,16 +36,8 @@ public record AuctionCreateRequest(
 
         Map<String, Object> specs,
 
-        AuctionStatus status
+        @NotNull(message = "이미지를 1장 이상 등록해주세요.")
+        @Size(min = 1, message = "이미지를 1장 이상 등록해주세요.")
+        List<@NotBlank String> imageUrls
 ) {
-    public AuctionCreateRequest {
-        // status가 null이면 DRAFT로 기본 설정
-        if (status == null) {
-            status = AuctionStatus.DRAFT;
-        }
-        // DRAFT와 LIVE만 허용
-        if (status != AuctionStatus.DRAFT && status != AuctionStatus.LIVE) {
-            throw new IllegalArgumentException("경매 생성 시 상태는 DRAFT 또는 LIVE만 가능합니다.");
-        }
-    }
 }

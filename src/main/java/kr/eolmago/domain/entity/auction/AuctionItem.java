@@ -58,4 +58,12 @@ public class AuctionItem extends AuditableEntity {
 
         return item;
     }
+
+    // 임시저장 수정
+    public void updateDraft(String itemName, ItemCategory category, ItemCondition condition, Map<String, Object> specs) {
+        this.itemName = itemName;
+        this.category = category;
+        this.condition = condition;
+        this.specs = specs;
+    }
 }

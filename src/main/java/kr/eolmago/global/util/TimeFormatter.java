@@ -5,10 +5,6 @@ import java.time.OffsetDateTime;
 
 public class TimeFormatter {
 
-    private TimeFormatter() {
-        // 유틸리티 클래스는 인스턴스화 방지
-    }
-
     // 남은 시간 포맷팅 메서드
     public static String formatRemainingTime(OffsetDateTime endAt) {
         if (endAt == null) {
@@ -51,5 +47,9 @@ public class TimeFormatter {
 
         Duration duration = Duration.between(now, endAt);
         return duration.toMinutes();
+    }
+
+    private TimeFormatter() {
+        // 인스턴스화 방지
     }
 }

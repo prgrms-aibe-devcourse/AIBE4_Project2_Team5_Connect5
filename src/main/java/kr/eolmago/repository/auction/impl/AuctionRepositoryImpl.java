@@ -39,12 +39,14 @@ public class AuctionRepositoryImpl implements AuctionRepositoryCustom {
                         AuctionListDto.class,
                         auction.auctionId,
                         auctionItem.auctionItemId,
+                        auctionItem.itemName,
                         auction.title,
                         auctionImage.imageUrl,
                         userProfile.nickname,
+                        auction.startPrice,
                         auction.currentPrice,
+                        auction.finalPrice,
                         auction.bidCount,
-                        auction.viewCount,
                         auction.favoriteCount,
                         auction.endAt,
                         auction.status
@@ -97,8 +99,8 @@ public class AuctionRepositoryImpl implements AuctionRepositoryCustom {
             case "price_asc" -> orders.add(auction.currentPrice.asc());
             case "price_desc" -> orders.add(auction.currentPrice.desc());
             case "popular" -> {
-                orders.add(auction.viewCount.desc());
                 orders.add(auction.bidCount.desc());
+                orders.add(auction.favoriteCount.desc());
             }
             default -> orders.add(auction.createdAt.desc());
         }

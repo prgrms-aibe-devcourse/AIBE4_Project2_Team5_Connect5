@@ -10,26 +10,67 @@
 <div layout:fragment="content" class="bg-gray-50">
     <div class="mx-auto max-w-7xl px-6 py-10">
 
-        <!-- 페이지 헤더 -->
+        <!-- 페이지 헤더 (검색 모드 / 일반 모드) -->
         <div class="mb-8">
-            <h1 class="text-3xl font-extrabold tracking-tight text-gray-900">경매 목록</h1>
-            <p class="mt-2 text-sm text-gray-600">진행 중인 모든 경매를 확인하세요.</p>
+            <!-- 검색 모드 -->
+            <div th:if="${isSearchMode}">
+                <h1 class="text-3xl font-extrabold tracking-tight text-gray-900">
+                    "<span th:text="${keyword}"></span>" 검색 결과
+                </h1>
+                <p class="mt-2 text-sm text-gray-600">
+                    총 <span th:text="${auctions.pageInfo.totalElements}" class="font-semibold text-gray-900"></span>건의 경매가 있습니다
+                </p>
+            </div>
+
+            <!-- 일반 모드 -->
+            <div th:unless="${isSearchMode}">
+                <h1 class="text-3xl font-extrabold tracking-tight text-gray-900">경매 목록</h1>
+                <p class="mt-2 text-sm text-gray-600">진행 중인 모든 경매를 확인하세요.</p>
+            </div>
         </div>
 
         <!-- 카테고리 -->
 
         <!-- 필터 -->
 
+        <!-- 검색 결과 없음 (추천 키워드 포함) -->
+        <div th:if="${auctions.content.isEmpty() and isSearchMode}"
+             class="py-20 text-center">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+            <h3 class="mt-4 text-lg font-semibold text-gray-900">검색 결과가 없습니다</h3>
+            <p class="mt-2 text-sm text-gray-600">
+                "<span th:text="${keyword}"></span>"에 대한 경매를 찾을 수 없습니다
+            </p>
+
+            <!-- 추천 키워드 -->
+            <div th:if="${suggestedKeywords != null and !suggestedKeywords.isEmpty()}"
+                 class="mt-8">
+                <p class="text-sm text-gray-600 mb-4">혹시 이런 키워드를 찾으셨나요?</p>
+                <div class="flex flex-wrap gap-2 justify-center">
+                    <a th:each="suggested : ${suggestedKeywords}"
+                       th:href="@{/auctions(keyword=${suggested})}"
+                       class="px-4 py-2 rounded-full border border-gray-300 text-sm text-gray-700
+                              hover:bg-gray-50 hover:border-gray-400 transition-colors"
+                       th:text="${suggested}">
+                    </a>
+                </div>
+            </div>
+        </div>
+
         <!-- 경매 카드 그리드 -->
-        <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div th:if="${!auctions.content.isEmpty()}"
+             class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             <!-- 각 경매 카드 -->
             <th:block th:each="auction : ${auctions.content}">
                 <div th:replace="~{components/auction-card :: auctionCard(auction=${auction})}"></div>
             </th:block>
         </div>
 
-        <!-- 경매가 없을 때 -->
-        <div th:if="${auctions.content.isEmpty()}"
+        <!-- 경매가 없을 때 (일반 모드) -->
+        <div th:if="${auctions.content.isEmpty() and !isSearchMode}"
              class="py-20 text-center">
             <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -39,7 +80,7 @@
             <p class="mt-2 text-sm text-gray-600">나중에 다시 확인해주세요.</p>
         </div>
 
-        <!-- 페이지네이션 -->
+        <!-- 페이지네이션 (검색 keyword 파라미터 유지) -->
         <div th:if="${!auctions.content.isEmpty() and auctions.pageInfo.totalPages > 0}" class="mt-10">
             <nav class="flex items-center justify-center gap-2" aria-label="Pagination">
                 <!-- 이전 페이지 -->
@@ -54,7 +95,7 @@
                 <!-- 페이지 번호 -->
                 <div class="flex gap-1" th:if="${auctions.pageInfo.totalPages > 0}">
                     <a th:each="i : ${#numbers.sequence(0, auctions.pageInfo.totalPages - 1)}"
-                       th:href="@{/auctions(page=${i})}"
+                       th:href="@{/auctions(page=${i}, keyword=${keyword})}"
                        th:classappend="${i == auctions.pageInfo.currentPage} ? 'bg-slate-900 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'"
                        class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-gray-300 text-sm font-semibold">
                         <span th:text="${i + 1}">1</span>
@@ -63,7 +104,7 @@
 
                 <!-- 다음 페이지 -->
                 <a th:if="${auctions.pageInfo.hasNext}"
-                   th:href="@{/auctions(page=${auctions.pageInfo.currentPage + 1})}"
+                   th:href="@{/auctions(page=${auctions.pageInfo.currentPage + 1}, keyword=${keyword})}"
                    class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-gray-300 bg-white text-sm font-semibold text-gray-700 hover:bg-gray-50">
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
