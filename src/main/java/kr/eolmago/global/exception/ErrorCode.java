@@ -19,6 +19,10 @@ public enum ErrorCode {
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "U001", "사용자를 찾을 수 없습니다."),
     USER_UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "U002", "인증되지 않은 사용자입니다."),
     USER_FORBIDDEN(HttpStatus.FORBIDDEN, "U003", "권한이 없습니다."),
+    USER_BANNED(HttpStatus.FORBIDDEN, "U004", "영구 정지된 이용자입니다."),
+    USER_PROFILE_IMAGE_SIZE_EXCEEDED(HttpStatus.BAD_REQUEST, "U005", "프로필 이미지는 2MB 이하여야 합니다."),
+    USER_PROFILE_IMAGE_RESOLUTION_EXCEEDED(HttpStatus.BAD_REQUEST, "U006", "프로필 이미지는 400x400 해상도 이하여야 합니다."),
+    USER_PROFILE_IMAGE_INVALID_EXTENSION(HttpStatus.BAD_REQUEST, "U007", "프로필 이미지는 jpg, jpeg, png, webp 확장자만 가능합니다."),
 
     // Auction
     AUCTION_NOT_FOUND(HttpStatus.NOT_FOUND, "A001", "경매를 찾을 수 없습니다."),
@@ -49,12 +53,6 @@ public enum ErrorCode {
     BID_CANCEL_LIMIT_EXCEEDED(HttpStatus.CONFLICT, "B009", "해당 경매에서 이미 1회 취소했습니다."),
     BID_CANNOT_CANCEL_HIGHEST(HttpStatus.CONFLICT, "B010", "현재 최고가 입찰은 취소할 수 없습니다."),
     AUCTION_LOCK_BUSY(HttpStatus.CONFLICT, "B011", "요청이 많아 잠시 후 다시 시도해주세요."),
-
-    // User
-    USER_NOT_FOUND(HttpStatus.NOT_FOUND, "U001", "사용자를 찾을 수 없습니다."),
-    USER_UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "U002", "인증되지 않은 사용자입니다."),
-    USER_FORBIDDEN(HttpStatus.FORBIDDEN, "U003", "권한이 없습니다."),
-    USER_BANNED(HttpStatus.FORBIDDEN, "U004", "영구 정지된 이용자입니다."),
 
     // Chat
     CHAT_AUTH_REQUIRED(HttpStatus.UNAUTHORIZED, "CH001", "로그인이 필요합니다."),

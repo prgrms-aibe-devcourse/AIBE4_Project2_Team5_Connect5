@@ -26,12 +26,20 @@
             <!-- 프로필 헤더 -->
             <div class="flex items-center gap-6 pb-6 border-b border-gray-100">
                 <!-- 프로필 이미지 -->
-                <div class="h-20 w-20 rounded-full overflow-hidden bg-slate-200">
+                <div class="relative h-20 w-20 rounded-full overflow-hidden bg-slate-200 group cursor-pointer" onclick="document.getElementById('profileImageInput').click()">
                     <img id="profileImage"
                          src="/images/profile/base.png"
                          alt="프로필 이미지"
                          class="h-full w-full object-cover" />
+                    <div class="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                    </div>
                 </div>
+                <input type="file" id="profileImageInput" class="hidden" accept="image/jpeg,image/png,image/webp" />
+
                 <div class="flex-1">
                     <p class="text-sm text-gray-600">닉네임</p>
                     <h2 class="text-2xl font-bold text-gray-900" id="profileNickname">닉네임</h2>
@@ -108,13 +116,6 @@
                 <span class="text-xs text-gray-500 font-medium" id="verificationTimer"></span>
             </div>
 
-            <div class="space-y-2">
-                <label for="profileImageUrl" class="block text-sm font-semibold text-gray-900">프로필 이미지 URL</label>
-                <input type="text" id="profileImageUrl" name="profileImageUrl" placeholder="https://example.com/image.jpg"
-                       class="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm placeholder:text-gray-400 focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10" />
-                <span class="text-xs text-gray-500">TODO: 파일 업로드 기능 구현 예정</span>
-            </div>
-
             <div class="flex gap-3 pt-6 border-t border-gray-100">
                 <button type="submit"
                         class="flex-1 rounded-lg bg-slate-900 px-6 py-3 text-sm font-semibold text-white hover:bg-slate-800 transition">
@@ -138,6 +139,7 @@
     <script>
         let currentProfile = null;
         let timerInterval; // 타이머 인터벌 변수
+        let selectedImageFile = null; // 선택된 이미지 파일
 
         async function apiCall(url, options = {}) {
             try {
@@ -237,7 +239,6 @@
                 document.getElementById('name').value = profile.name;
                 document.getElementById('nickname').value = profile.nickname;
                 document.getElementById('phoneNumber').value = profile.phoneNumber || '';
-                document.getElementById('profileImageUrl').value = profile.profileImageUrl || '';
 
                 updatePhoneAuthUI(profile.phoneVerified);
 
@@ -251,6 +252,58 @@
                 errorMessage.classList.remove('hidden');
             }
         }
+
+        // 프로필 이미지 선택 시 미리보기
+        document.getElementById('profileImageInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                // 용량 체크 (2MB)
+                if (file.size > 2 * 1024 * 1024) {
+                    alert('이미지 용량은 2MB 이하여야 합니다.');
+                    this.value = ''; // 초기화
+                    return;
+                }
+
+                // 확장자 체크
+                const allowedExtensions = ['jpg', 'jpeg', 'png', 'webp'];
+                const extension = file.name.split('.').pop().toLowerCase();
+                if (!allowedExtensions.includes(extension)) {
+                    alert('jpg, jpeg, png, webp 확장자만 가능합니다.');
+                    this.value = ''; // 초기화
+                    return;
+                }
+
+                // 이미지 크기(가로/세로) 체크
+                const img = new Image();
+                const objectUrl = URL.createObjectURL(file);
+
+                img.onload = function() {
+                    URL.revokeObjectURL(objectUrl); // 메모리 해제
+
+                    if (this.width > 400 || this.height > 400) {
+                        alert('이미지 크기는 400x400 이하여야 합니다.');
+                        document.getElementById('profileImageInput').value = ''; // 초기화
+                        return;
+                    }
+
+                    // 모든 검증 통과 시 미리보기 적용
+                    selectedImageFile = file;
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        document.getElementById('profileImage').src = e.target.result;
+                    }
+                    reader.readAsDataURL(file);
+                };
+
+                img.onerror = function() {
+                    URL.revokeObjectURL(objectUrl);
+                    alert('이미지 파일을 읽을 수 없습니다.');
+                    document.getElementById('profileImageInput').value = '';
+                };
+
+                img.src = objectUrl;
+            }
+        });
 
         // 닉네임 중복 확인
         document.getElementById('checkNicknameBtn').addEventListener('click', async () => {
@@ -370,7 +423,6 @@
             const name = document.getElementById('name').value.trim();
             const nickname = document.getElementById('nickname').value.trim();
             const phoneNumber = currentProfile.phoneVerified ? currentProfile.phoneNumber : (document.getElementById('phoneNumber').value.trim() || null);
-            const profileImageUrl = document.getElementById('profileImageUrl').value.trim() || null;
 
             const nameError = document.getElementById('nameError');
             const nicknameError = document.getElementById('nicknameError');
@@ -391,11 +443,28 @@
             }
 
             try {
-                await apiCall('/api/users/me', {
+                const formData = new FormData();
+                const requestData = {
+                    name: name,
+                    nickname: nickname,
+                    phoneNumber: phoneNumber
+                };
+
+                formData.append('data', new Blob([JSON.stringify(requestData)], { type: 'application/json' }));
+
+                if (selectedImageFile) {
+                    formData.append('image', selectedImageFile);
+                }
+
+                const response = await fetch('/api/users/me', {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, nickname, phoneNumber, profileImageUrl })
+                    body: formData
                 });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.message || `HTTP ${response.status}`);
+                }
 
                 alert('프로필이 저장되었습니다');
                 location.reload();

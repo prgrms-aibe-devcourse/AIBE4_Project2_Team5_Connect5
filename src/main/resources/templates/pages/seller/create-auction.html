@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
       layout:decorate="~{layouts/base}">
 <head>
     <title layout:fragment="title">경매 등록</title>
@@ -392,18 +393,21 @@
 
                 <div class="mt-5 space-y-3">
                     <button type="button" id="saveDraftBtn"
-                            class="w-full rounded-xl bg-slate-900 py-3 text-sm font-bold text-white hover:bg-slate-800">
+                            class="w-full rounded-xl bg-slate-900 py-3 text-sm font-bold text-white hover:bg-slate-800"
+                            th:attr="disabled=${!#authorization.expression('hasAnyRole(''USER'', ''ADMIN'')') ? 'disabled' : null}">
                         임시 저장
                     </button>
 
                     <!-- ✅ 게시하기: 초기에도 가능(항상 enabled) -->
                     <button type="button" id="publishBtn"
-                            class="w-full rounded-xl border border-gray-300 bg-white py-3 text-sm font-bold text-gray-900 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
+                            class="w-full rounded-xl border border-gray-300 bg-white py-3 text-sm font-bold text-gray-900 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                            th:attr="disabled=${!#authorization.expression('hasAnyRole(''USER'', ''ADMIN'')') ? 'disabled' : null}">
                         게시하기
                     </button>
 
                     <button type="button" id="deleteBtn"
                             class="w-full rounded-xl border border-red-200 bg-white py-3 text-sm font-bold text-red-700 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                            th:attr="disabled=${!#authorization.expression('hasAnyRole(''USER'', ''ADMIN'')') ? 'disabled' : null}"
                             disabled>
                         삭제
                     </button>
