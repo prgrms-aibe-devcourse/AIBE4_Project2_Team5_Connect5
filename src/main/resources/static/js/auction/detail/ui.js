@@ -459,20 +459,22 @@ export class Ui {
         this.bidError.classList.add("hidden");
     }
 
-    renderPopularAuctions(auctions) {
+    renderPopularAuctions(auctions, currentAuctionId) {
         if (!this.popularAuctions) return;
 
         this.popularAuctions.innerHTML = "";
 
-        if (!auctions || auctions.length === 0) {
-            const msg = document.createElement("p");
-            msg.className = "w-full text-center text-sm text-slate-500";
-            msg.textContent = "현재 진행 중인 인기 경매가 없습니다.";
-            this.popularAuctions.appendChild(msg);
+        // 자기 자신을 제외
+        const filteredAuctions = (auctions || []).filter(
+            auction => auction.auctionId !== currentAuctionId
+        );
+
+        // 비슷한 경매가 없으면 빈 칸으로 둠
+        if (filteredAuctions.length === 0) {
             return;
         }
 
-        auctions.forEach((auction) => {
+        filteredAuctions.forEach((auction) => {
             const card = document.createElement("a");
             card.href = `/auctions/${auction.auctionId}`;
             card.className = "group block flex-shrink-0 w-40 overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-200 transition-all hover:shadow-md hover:ring-slate-300";

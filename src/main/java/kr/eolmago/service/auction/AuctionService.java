@@ -70,7 +70,7 @@ public class AuctionService {
         // 시작가 기준으로 입찰 단위를 자동 계산
         int bidIncrement = BidIncrementCalculator.calculate(request.startPrice());
 
-        // Auction 데이터 저장
+        // 3. Auction 데이터 저장
         Auction auction = Auction.create(
                 auctionItem,
                 sellerRef,

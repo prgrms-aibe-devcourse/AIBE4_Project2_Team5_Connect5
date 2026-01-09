@@ -29,14 +29,16 @@ import { calcBidIncrement } from "./util.js";
         ui.renderAll(data, serverNowMs);
         ui.bindInteractions(data, api);
 
-        // 실시간 인기 경매 로드
+        // 비슷한 경매 로드 (브랜드, 카테고리 기반)
         try {
-            const { data: popularData } = await api.getPopularAuctions(0, 6);
+            const brand = data?.specs?.brand || null;
+            const category = data?.category || null;
+            const { data: popularData } = await api.getPopularAuctions(0, 6, brand, category);
             const auctions = popularData?.content || [];
-            ui.renderPopularAuctions(auctions);
+            ui.renderPopularAuctions(auctions, auctionId);
         } catch (e) {
-            console.warn("실시간 인기 경매를 불러오지 못했습니다.", e);
-            ui.renderPopularAuctions([]);
+            console.warn("비슷한 경매를 불러오지 못했습니다.", e);
+            ui.renderPopularAuctions([], auctionId);
         }
     } catch (e) {
         console.error(e);

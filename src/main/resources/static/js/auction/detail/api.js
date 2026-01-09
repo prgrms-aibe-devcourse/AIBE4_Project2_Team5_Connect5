@@ -1,6 +1,5 @@
 export class Api {
     async getAuctionDetail(auctionId) {
-        // 프로젝트 실제 엔드포인트에 맞게 필요 시 수정
         const url = `/api/auctions/${encodeURIComponent(auctionId)}`;
 
         const response = await fetch(url, {
@@ -16,10 +15,6 @@ export class Api {
         return { data, response };
     }
 
-    /**
-     * 기존 코드(또는 다른 파일)에서 fetchDetailWithServerTime(...)를 호출하는 경우를 위한 하위 호환 메서드입니다.
-     * - 반환: { data, response, serverNowMs }
-     */
     async fetchDetailWithServerTime(auctionId) {
         const { data, response } = await this.getAuctionDetail(auctionId);
 
@@ -52,21 +47,23 @@ export class Api {
         return Number.isNaN(t) ? null : t;
     }
 
-    /**
-     * 실시간 인기 경매 목록 조회
-     * @param {number} page - 페이지 번호 (기본값: 0)
-     * @param {number} size - 페이지 크기 (기본값: 12)
-     * @returns {Promise<{data: any, response: Response}>}
-     */
-    async getPopularAuctions(page = 0, size = 12) {
+    async getPopularAuctions(page = 0, size = 12, brand = null, category = null) {
         const params = new URLSearchParams({
             page: String(page),
             size: String(size),
-            sort: "popular",
+            sortKey: "popular",
             status: "LIVE"
         });
 
-        const url = `/api/auctions?${params.toString()}`;
+        if (brand) {
+            params.set("brands", brand);
+        }
+
+        if (category) {
+            params.set("category", category);
+        }
+
+        const url = `/api/auctions/list?${params.toString()}`;
 
         const response = await fetch(url, {
             method: "GET",
