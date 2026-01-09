@@ -2,8 +2,10 @@ package kr.eolmago.controller.view.auction;
 
 import kr.eolmago.domain.entity.auction.enums.AuctionStatus;
 import kr.eolmago.domain.entity.auction.enums.ItemCategory;
+import kr.eolmago.dto.api.auction.request.AuctionSearchRequest;
 import kr.eolmago.dto.api.auction.response.AuctionListResponse;
 import kr.eolmago.dto.api.common.PageResponse;
+import kr.eolmago.dto.view.auction.AuctionListFilterRequest;
 import kr.eolmago.global.security.CustomUserDetails;
 import kr.eolmago.service.auction.AuctionSearchService;
 import kr.eolmago.service.auction.AuctionService;
@@ -26,7 +28,6 @@ import java.util.UUID;
 @Controller
 @RequestMapping("/auctions")
 @RequiredArgsConstructor
-@Slf4j
 public class AuctionViewController {
 
     private final AuctionService auctionService;
@@ -37,38 +38,33 @@ public class AuctionViewController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "8") int size,
             @RequestParam(defaultValue = "latest") String sort,
-//            @RequestParam(required = false) UUID sellerId,
-            @RequestParam(required = false) String keyword,  // 검색어
-            @RequestParam(required = false) ItemCategory category,
-            @RequestParam(required = false) List<String> brands,
-            @RequestParam(required = false) Integer minPrice,
-            @RequestParam(required = false) Integer maxPrice,
-            @AuthenticationPrincipal CustomUserDetails userDetails,  // (검색통계용) 사용자 정보
+            AuctionListFilterRequest filterRequest,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             Model model) {
 
-        log.info("경매 목록 조회 API: keyword={}, category={}, brands={}, minPrice={}, maxPrice={}, sort={}, page={}", keyword, category, brands, minPrice, maxPrice, sort, page);
+        String keyword = filterRequest.keyword();
+        var category = filterRequest.category();
+        List<String> brands = filterRequest.brands();
+        Integer minPrice = filterRequest.minPrice();
+        Integer maxPrice = filterRequest.maxPrice();
 
         // 경매 검색 및 목록은 LIVE 상태만 조회
         AuctionStatus searchStatus = AuctionStatus.LIVE;
 
-        // 사용자ID 추출(비로그인시 null, 검색 통계용)
         UUID userId = userDetails != null ? UUID.fromString(userDetails.getId()) : null;
-
-        // Pageable 생성
         Pageable pageable = PageRequest.of(page, size);
 
-        // 키워드 있으면 검색, 없으면 전체조회 (서비스단에서)
-        PageResponse<AuctionListResponse> auctions = auctionSearchService.search(
+        AuctionSearchRequest searchRequest = new AuctionSearchRequest(
+                searchStatus,
                 keyword,
                 category,
                 brands,
                 minPrice,
                 maxPrice,
-                sort,
-                searchStatus,
-                pageable,
                 userId
         );
+
+        PageResponse<AuctionListResponse> auctions = auctionSearchService.search(searchRequest, sort, pageable);
 
         // 검색 모드 분기 처리
         boolean isSearchMode = keyword != null && !keyword.trim().isEmpty();
@@ -77,12 +73,7 @@ public class AuctionViewController {
         if (isSearchMode && auctions.pageInfo().totalElements() == 0) {
             List<String> suggestedKeywords = auctionSearchService.getSuggestedKeywords();
             model.addAttribute("suggestedKeywords", suggestedKeywords);
-            log.info("검색 결과 없음, 추천 키워드: {}", suggestedKeywords);
         }
-
-        log.info("경매 목록 조회 - 총 {}개, 현재 페이지: {}",
-                auctions.pageInfo().totalElements(),
-                auctions.pageInfo().currentPage());
 
         // 정렬 옵션
         List<Map<String, Object>> sortOptions = List.of(

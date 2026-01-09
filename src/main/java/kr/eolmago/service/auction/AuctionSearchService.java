@@ -2,6 +2,7 @@ package kr.eolmago.service.auction;
 
 import kr.eolmago.domain.entity.auction.enums.AuctionStatus;
 import kr.eolmago.domain.entity.auction.enums.ItemCategory;
+import kr.eolmago.dto.api.auction.request.AuctionSearchRequest;
 import kr.eolmago.dto.api.auction.response.AuctionListDto;
 import kr.eolmago.dto.api.auction.response.AuctionListResponse;
 import kr.eolmago.dto.api.common.PageResponse;
@@ -64,30 +65,22 @@ public class AuctionSearchService {
      * 4. 결과 처리
      *    - 있으면: 검색어 통계 기록
      *    - 없으면: 빈 결과 (통계 기록 안 함)
-     *
-     * @param keyword 검색 키워드
-     * @param category 카테고리
-     * @param brands 브랜드
-     * @param minPrice 최소 가격
-     * @param maxPrice 최대 가격
-     * @param sort 정렬 옵션
-     * @param status 경매 상태
-     * @param pageable 페이지 정보
-     * @param userId 사용자 ID (통계 기록용, null 가능)
-     * @return 검색 결과
      */
     public PageResponse<AuctionListResponse> search(
-            String keyword,
-            ItemCategory category,
-            List<String> brands,
-            Integer minPrice,
-            Integer maxPrice,
+            AuctionSearchRequest searchRequest,
             String sort,
-            AuctionStatus status,
-            Pageable pageable,
-            UUID userId
+            Pageable pageable
     ) {
-        log.info("통합 검색 시작: keyword={}, category={}, minPrice={}, maxPrice={}, sort={}, status={}, page={}, userId={}", keyword, category, minPrice, maxPrice, sort, status, pageable.getPageNumber(), userId);
+        // 검색 조건 추출
+        String keyword = searchRequest.keyword();
+        ItemCategory category = searchRequest.category();
+        List<String> brands = searchRequest.brands();
+        Integer minPrice = searchRequest.minPrice();
+        Integer maxPrice = searchRequest.maxPrice();
+        AuctionStatus status = searchRequest.status();
+        UUID userId = searchRequest.userId();
+
+        log.info("통합 검색 시작: keyword={}, category={}, minPrice={}, maxPrice={}, sort={}, status={}, page={}", keyword, category, minPrice, maxPrice, sort, status, pageable.getPageNumber());
 
         // 1. 키워드 검증 및 처리
         boolean hasKeyword = keyword != null && !keyword.trim().isEmpty();
