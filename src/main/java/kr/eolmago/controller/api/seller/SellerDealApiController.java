@@ -6,6 +6,7 @@ import kr.eolmago.repository.deal.DealRepository;
 import kr.eolmago.repository.user.UserRepository;
 import kr.eolmago.repository.auction.AuctionRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -13,10 +14,13 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
- * DB 연결 테스트용 간단한 API 컨트롤러
+ * 판매자 거래 관리 API 컨트롤러
+ * JWT 인증 기반 - 로그인한 판매자의 거래만 반환
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/seller/deals")
 @RequiredArgsConstructor
@@ -27,8 +31,10 @@ public class SellerDealApiController {
     private final AuctionRepository auctionRepository;
 
     /**
-     * DB 연결 테스트 - 모든 데이터 조회
+     * 로그인한 판매자의 모든 거래 조회
      * GET /api/seller/deals
+     *
+     * JWT 토큰에서 사용자 정보를 추출하여 해당 판매자의 거래만 반환
      */
     @GetMapping
     public ResponseEntity<Map<String, Object>> getSellerDeals(
@@ -37,19 +43,30 @@ public class SellerDealApiController {
         Map<String, Object> response = new HashMap<>();
 
         try {
-            // 1. 현재 로그인한 사용자 정보
-            if (userDetails != null) {
-                response.put("currentUser", Map.of(
-                        "userId", userDetails.getUserId(),
-                        "email", userDetails.getUsername()
-                ));
+            // 로그인 확인
+            if (userDetails == null) {
+                log.warn("인증되지 않은 요청");
+                response.put("error", "로그인이 필요합니다.");
+                return ResponseEntity.status(401).body(response);
             }
 
-            // 2. Deal 테이블의 모든 데이터 (최대 10개)
-            List<Deal> allDeals = dealRepository.findAll();
-            response.put("totalDeals", allDeals.size());
-            response.put("deals", allDeals.stream()
-                    .limit(10)
+            // JWT에서 사용자 ID 추출
+            UUID sellerId = userDetails.getUserId();
+            log.info("판매자 거래 조회 요청 - sellerId: {}", sellerId);
+
+            // ⭐ 핵심: 현재 로그인한 사용자가 판매자인 거래만 조회
+            List<Deal> myDeals = dealRepository.findBySeller_UserId(sellerId);
+            log.info("조회된 거래 수: {}", myDeals.size());
+
+            // 현재 사용자 정보
+            response.put("currentUser", Map.of(
+                    "userId", sellerId,
+                    "email", userDetails.getEmail()
+            ));
+
+            // 내 거래 데이터
+            response.put("totalDeals", myDeals.size());
+            response.put("deals", myDeals.stream()
                     .map(deal -> Map.of(
                             "dealId", deal.getDealId(),
                             "finalPrice", deal.getFinalPrice(),
@@ -58,67 +75,76 @@ public class SellerDealApiController {
                     ))
                     .toList());
 
-            // 3. User 테이블 카운트
-            long userCount = userRepository.count();
-            response.put("totalUsers", userCount);
+            // 통계 정보 (전체)
+            long totalUsers = userRepository.count();
+            long totalAuctions = auctionRepository.count();
 
-            // 4. Auction 테이블 카운트
-            long auctionCount = auctionRepository.count();
-            response.put("totalAuctions", auctionCount);
-
-            // 5. DB 연결 상태
+            response.put("totalUsers", totalUsers);
+            response.put("totalAuctions", totalAuctions);
             response.put("dbConnected", true);
-            response.put("message", "DB 연결 성공! 데이터를 정상적으로 조회했습니다.");
+            response.put("message", "내 거래 데이터를 조회했습니다.");
 
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
+            log.error("거래 조회 중 오류 발생", e);
             response.put("dbConnected", false);
             response.put("error", e.getMessage());
-            response.put("message", "DB 연결 실패: " + e.getMessage());
-            return ResponseEntity.ok(response);
+            response.put("message", "데이터 조회 실패: " + e.getMessage());
+            return ResponseEntity.status(500).body(response);
         }
     }
 
     /**
-     * 특정 사용자의 거래만 조회 (테스트용)
-     * GET /api/seller/deals/my
+     * 특정 거래 상세 조회 (권한 검증)
+     * GET /api/seller/deals/{dealId}
      */
-    @GetMapping("/my")
-    public ResponseEntity<Map<String, Object>> getMyDeals(
+    @GetMapping("/{dealId}")
+    public ResponseEntity<Map<String, Object>> getDealDetail(
+            @PathVariable Long dealId,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         Map<String, Object> response = new HashMap<>();
 
-        if (userDetails == null) {
-            response.put("error", "로그인이 필요합니다.");
-            return ResponseEntity.ok(response);
-        }
-
         try {
-            // 현재 사용자의 거래 조회
-            List<Deal> myDeals = dealRepository.findBySeller_UserId(userDetails.getUserId());
+            if (userDetails == null) {
+                response.put("error", "로그인이 필요합니다.");
+                return ResponseEntity.status(401).body(response);
+            }
 
-            response.put("userId", userDetails.getUserId());
-            response.put("totalMyDeals", myDeals.size());
-            response.put("myDeals", myDeals.stream()
-                    .map(deal -> Map.of(
-                            "dealId", deal.getDealId(),
-                            "finalPrice", deal.getFinalPrice(),
-                            "status", deal.getStatus().name()
-                    ))
-                    .toList());
+            UUID sellerId = userDetails.getUserId();
+            log.info("거래 상세 조회 - dealId: {}, sellerId: {}", dealId, sellerId);
+
+            // 거래 조회
+            Deal deal = dealRepository.findById(dealId)
+                    .orElseThrow(() -> new RuntimeException("거래를 찾을 수 없습니다."));
+
+            // 권한 확인: 내가 판매자인 거래인지 검증
+            if (!deal.getSeller().getUserId().equals(sellerId)) {
+                log.warn("권한 없는 거래 접근 시도 - dealId: {}, userId: {}", dealId, sellerId);
+                response.put("error", "접근 권한이 없습니다.");
+                return ResponseEntity.status(403).body(response);
+            }
+
+            // 거래 상세 정보
+            response.put("deal", Map.of(
+                    "dealId", deal.getDealId(),
+                    "finalPrice", deal.getFinalPrice(),
+                    "status", deal.getStatus().name(),
+                    "createdAt", deal.getCreatedAt().toString()
+            ));
 
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
+            log.error("거래 상세 조회 실패 - dealId: {}", dealId, e);
             response.put("error", e.getMessage());
-            return ResponseEntity.ok(response);
+            return ResponseEntity.status(500).body(response);
         }
     }
 
     /**
-     * DB 연결 간단 테스트
+     * DB 연결 테스트
      * GET /api/seller/deals/test
      */
     @GetMapping("/test")
@@ -126,7 +152,6 @@ public class SellerDealApiController {
         Map<String, Object> response = new HashMap<>();
 
         try {
-            // 간단한 카운트 쿼리로 DB 연결 테스트
             long dealCount = dealRepository.count();
             long userCount = userRepository.count();
             long auctionCount = auctionRepository.count();
@@ -134,19 +159,23 @@ public class SellerDealApiController {
             response.put("success", true);
             response.put("message", "DB 연결 성공!");
             response.put("data", Map.of(
-                    "deals", dealCount,
-                    "users", userCount,
-                    "auctions", auctionCount
+                    "totalDeals", dealCount,
+                    "totalUsers", userCount,
+                    "totalAuctions", auctionCount
             ));
+
+            log.info("DB 연결 테스트 성공 - deals: {}, users: {}, auctions: {}",
+                    dealCount, userCount, auctionCount);
 
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
+            log.error("DB 연결 테스트 실패", e);
             response.put("success", false);
             response.put("message", "DB 연결 실패: " + e.getMessage());
             response.put("error", e.getClass().getSimpleName());
 
-            return ResponseEntity.ok(response);
+            return ResponseEntity.status(500).body(response);
         }
     }
 }
