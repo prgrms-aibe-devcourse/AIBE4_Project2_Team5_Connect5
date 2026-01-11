@@ -85,8 +85,7 @@
             pending: 0,
             ongoing: 0,
             completed: 0,
-            terminated: 0,
-            expired: 0
+            cancelled: 0  // 취소 + 만료
         };
 
         deals.forEach(deal => {
@@ -97,10 +96,8 @@
                 counts.ongoing++;
             } else if (status === 'COMPLETED') {
                 counts.completed++;
-            } else if (status === 'TERMINATED') {
-                counts.terminated++;
-            } else if (status === 'EXPIRED') {
-                counts.expired++;
+            } else if (status === 'TERMINATED' || status === 'EXPIRED') {
+                counts.cancelled++;  // 취소와 만료 합산
             }
         });
 
@@ -109,8 +106,7 @@
         document.getElementById('pending-count').textContent = counts.pending;
         document.getElementById('ongoing-count').textContent = counts.ongoing;
         document.getElementById('completed-count').textContent = counts.completed;
-        document.getElementById('terminated-count').textContent = counts.terminated;
-        document.getElementById('expired-count').textContent = counts.expired;
+        document.getElementById('cancelled-count').textContent = counts.cancelled;
     }
 
     // 탭에 맞는 거래 필터링 및 표시
@@ -141,15 +137,11 @@
                 containerSelector = '#tab-completed .space-y-4';
                 emptyMessage = '완료된 거래가 없습니다';
                 break;
-            case 'terminated':
-                filteredDeals = allDeals.filter(d => d.status === 'TERMINATED');
-                containerSelector = '#tab-terminated .space-y-4';
-                emptyMessage = '취소된 거래가 없습니다';
-                break;
-            case 'expired':
-                filteredDeals = allDeals.filter(d => d.status === 'EXPIRED');
-                containerSelector = '#tab-expired .space-y-4';
-                emptyMessage = '만료된 거래가 없습니다';
+            case 'cancelled':
+                // 취소와 만료 모두 포함
+                filteredDeals = allDeals.filter(d => d.status === 'TERMINATED' || d.status === 'EXPIRED');
+                containerSelector = '#tab-cancelled .space-y-4';
+                emptyMessage = '취소/만료된 거래가 없습니다';
                 break;
         }
 

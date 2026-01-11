@@ -24,7 +24,7 @@
                         data-tab="all">
                     전체 (<span id="all-count">0</span>)
                 </button>
-                <!-- 거래 대기 탭 (이전: 확정 대기) -->
+                <!-- 거래 대기 탭 -->
                 <button type="button"
                         class="seller-deal-tab-btn border-b-2 border-transparent pb-4 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700"
                         data-tab="pending">
@@ -42,17 +42,11 @@
                         data-tab="completed">
                     완료 (<span id="completed-count">0</span>)
                 </button>
-                <!-- 취소 탭 -->
+                <!-- 취소/만료 탭 (통합) -->
                 <button type="button"
                         class="seller-deal-tab-btn border-b-2 border-transparent pb-4 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700"
-                        data-tab="terminated">
-                    취소 (<span id="terminated-count">0</span>)
-                </button>
-                <!-- 만료 탭 -->
-                <button type="button"
-                        class="seller-deal-tab-btn border-b-2 border-transparent pb-4 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700"
-                        data-tab="expired">
-                    만료 (<span id="expired-count">0</span>)
+                        data-tab="cancelled">
+                    취소/만료 (<span id="cancelled-count">0</span>)
                 </button>
             </nav>
         </div>
@@ -72,7 +66,7 @@
             </div>
         </div>
 
-        <!-- 거래 대기 탭 (이전: 확정 대기) -->
+        <!-- 거래 대기 탭 -->
         <div id="tab-pending" class="seller-deal-tab-content hidden">
             <div class="space-y-4">
                 <!-- 빈 상태 -->
@@ -117,8 +111,8 @@
             </div>
         </div>
 
-        <!-- 취소 탭 -->
-        <div id="tab-terminated" class="seller-deal-tab-content hidden">
+        <!-- 취소/만료 탭 (통합) -->
+        <div id="tab-cancelled" class="seller-deal-tab-content hidden">
             <div class="space-y-4">
                 <!-- 빈 상태 -->
                 <div class="text-center py-12 bg-gray-50 rounded-lg">
@@ -126,23 +120,8 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                               d="M6 18L18 6M6 6l12 12"/>
                     </svg>
-                    <h3 class="mt-4 text-sm font-semibold text-gray-900">취소된 거래가 없습니다</h3>
-                    <p class="mt-2 text-sm text-gray-600">취소된 거래가 여기에 표시됩니다.</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- 만료 탭 -->
-        <div id="tab-expired" class="seller-deal-tab-content hidden">
-            <div class="space-y-4">
-                <!-- 빈 상태 -->
-                <div class="text-center py-12 bg-gray-50 rounded-lg">
-                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                    <h3 class="mt-4 text-sm font-semibold text-gray-900">만료된 거래가 없습니다</h3>
-                    <p class="mt-2 text-sm text-gray-600">만료된 거래가 여기에 표시됩니다.</p>
+                    <h3 class="mt-4 text-sm font-semibold text-gray-900">취소/만료된 거래가 없습니다</h3>
+                    <p class="mt-2 text-sm text-gray-600">취소되거나 만료된 거래가 여기에 표시됩니다.</p>
                 </div>
             </div>
         </div>
