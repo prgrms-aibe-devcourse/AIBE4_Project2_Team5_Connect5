@@ -36,7 +36,7 @@ public class AuctionItem extends AuditableEntity {
     private ItemCondition condition;
 
     // 카테고리별 추가 스펙을 담는 JSONB 컬럼
-    // {"brand": "Apple", "model": "iPhone 15 Pro", "network": "5G", "releaseYear": 2023, "storageGb": 256, "color": "Natural Titanium"}
+    // {"brand": "Apple", "storageGb": 256}
     @Type(JsonType.class)
     @Column(nullable = false, columnDefinition = "jsonb")
     private Map<String, Object> specs;
