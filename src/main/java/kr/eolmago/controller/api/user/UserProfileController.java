@@ -26,7 +26,6 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
-@Slf4j
 public class UserProfileController {
 
     private final UserProfileService userProfileService;
@@ -36,15 +35,12 @@ public class UserProfileController {
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         UUID userId = UUID.fromString(userDetails.getId());
-        log.info("프로필 조회 요청: userId={}", userId);
         try {
             UserProfileResponse response = userProfileService.getUserProfile(userId);
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
-            log.warn("프로필 조회 실패: {}", e.getMessage());
             return ResponseEntity.notFound().build();
         } catch (Exception e) {
-            log.error("프로필 조회 중 오류 발생", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
@@ -56,7 +52,6 @@ public class UserProfileController {
             @RequestPart(value = "image", required = false) MultipartFile image
     ) {
         UUID userId = UUID.fromString(userDetails.getId());
-        log.info("프로필 수정 요청: userId={}, hasImage={}", userId, image != null && !image.isEmpty());
 
         try {
             UserProfileResponse response = userProfileService.updateUserProfile(
@@ -66,10 +61,8 @@ public class UserProfileController {
             );
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
-            log.warn("프로필 수정 실패: {}", e.getMessage());
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         } catch (Exception e) {
-            log.error("프로필 수정 중 오류 발생", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
@@ -93,7 +86,6 @@ public class UserProfileController {
     public ResponseEntity<CheckNicknameResponse> checkNickname(
             @Valid @RequestBody CheckNicknameRequest request
     ) {
-        log.info("닉네임 중복 체크 요청: nickname={}", request.nickname());
         try {
             boolean available = userProfileService.isNicknameAvailable(request.nickname());
             CheckNicknameResponse response = available
@@ -101,7 +93,6 @@ public class UserProfileController {
                     : CheckNicknameResponse.duplicate(request.nickname());
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            log.error("닉네임 중복 체크 중 오류 발생", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
@@ -112,15 +103,12 @@ public class UserProfileController {
             @RequestParam String phoneNumber
     ) {
         UUID userId = UUID.fromString(userDetails.getId());
-        log.info("핸드폰 인증 코드 발송 요청: userId={}, phoneNumber={}", userId, phoneNumber);
         try {
             userProfileService.sendPhoneVerificationCode(userId, phoneNumber);
             return ResponseEntity.noContent().build();
         } catch (IllegalArgumentException e) {
-            log.warn("핸드폰 인증 코드 발송 실패: {}", e.getMessage());
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         } catch (Exception e) {
-            log.error("핸드폰 인증 코드 발송 중 오류 발생", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
@@ -131,16 +119,13 @@ public class UserProfileController {
             @Valid @RequestBody VerifyPhoneNumberRequest request
     ) {
         UUID userId = UUID.fromString(userDetails.getId());
-        log.info("핸드폰 인증 요청: userId={}, phoneNumber={}", userId, request.phoneNumber());
         try {
             userProfileService.verifyPhoneNumber(userId, request.phoneNumber(), request.verificationCode());
             VerifyPhoneNumberResponse response = VerifyPhoneNumberResponse.success(request.phoneNumber());
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
-            log.warn("핸드폰 인증 실패: {}", e.getMessage());
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         } catch (Exception e) {
-            log.error("핸드폰 인증 중 오류 발생", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }

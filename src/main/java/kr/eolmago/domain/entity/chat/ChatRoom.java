@@ -9,12 +9,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(
-        name = "chat_rooms",
-        uniqueConstraints = {
-                @UniqueConstraint(name = "uk_chat_rooms_auction", columnNames = {"auction_id"})
-        }
-)
+@Table(name = "chat_rooms")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ChatRoom extends AuditableEntity {

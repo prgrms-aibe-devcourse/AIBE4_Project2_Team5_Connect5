@@ -7,12 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(
-        name = "deal_documents",
-        uniqueConstraints = {
-                @UniqueConstraint(name = "uk_deal_documents_deal", columnNames = {"deal_id"})
-        }
-)
+@Table(name = "deal_documents")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class DealDocument extends CreatedAtEntity {
