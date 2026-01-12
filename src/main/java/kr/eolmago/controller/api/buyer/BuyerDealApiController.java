@@ -43,4 +43,14 @@ public class BuyerDealApiController {
         BuyerDealListResponse.DealDto response = buyerDealService.getDealDetail(dealId, buyerId);
         return ResponseEntity.ok(response);
     }
+
+    @Operation(summary = "구매자 거래 확정")
+    @PostMapping("/{dealId}/confirm")
+    public ResponseEntity<Void> confirmDeal(
+            @PathVariable Long dealId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        buyerDealService.confirmDeal(dealId, userDetails.getUserId());
+        return ResponseEntity.ok().build();
+    }
 }

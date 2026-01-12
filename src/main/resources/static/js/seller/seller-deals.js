@@ -1,6 +1,13 @@
 (function () {
     let allDeals = []; // 전체 거래 데이터
     let currentTab = 'all'; // 현재 선택된 탭 (기본: 전체)
+    let selectedDealId = null; // 모달에서 사용할 거래 ID
+
+    // 모달 요소
+    const modal = document.getElementById('seller-confirm-modal');
+    const confirmDealBtn = document.getElementById('confirm-deal-btn');
+    const cancelConfirmBtn = document.getElementById('cancel-confirm-btn');
+    const confirmCheckbox = document.getElementById('seller-confirm-checkbox');
 
     // 탭 전환
     const tabButtons = document.querySelectorAll('.seller-deal-tab-btn');
@@ -200,6 +207,26 @@
             color: 'bg-gray-100 text-gray-800 border-gray-300'
         };
 
+        let actionButtons = '';
+        if (deal.status === 'PENDING_CONFIRMATION') {
+            if (deal.sellerConfirmedAt) {
+                // 판매자가 이미 확정한 경우
+                actionButtons = `
+                    <div class="flex-1 text-center text-sm font-medium text-green-600">
+                        판매 확정됨
+                    </div>
+                `;
+            } else {
+                // 판매자가 아직 확정하지 않은 경우
+                actionButtons = `
+                    <button onclick="openConfirmModal(${deal.dealId})"
+                            class="flex-1 inline-flex justify-center items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        판매자 확정
+                    </button>
+                `;
+            }
+        }
+
         return `
             <div class="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow duration-200">
                 <!-- 헤더 -->
@@ -236,6 +263,7 @@
                             class="flex-1 inline-flex justify-center items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                         상세보기
                     </button>
+                    ${actionButtons}
                 </div>
             </div>
         `;
@@ -274,6 +302,75 @@
         console.log('거래 상세보기:', dealId);
         alert(`거래 #${dealId} 상세 정보\n\n(상세 페이지는 추후 구현 예정)`);
     };
+
+    // 전역 함수: 모달 열기
+    window.openConfirmModal = function(dealId) {
+        selectedDealId = dealId;
+        confirmCheckbox.checked = false;
+        confirmDealBtn.disabled = true;
+        modal.classList.remove('hidden');
+    };
+
+    // 모달 닫기
+    function closeConfirmModal() {
+        modal.classList.add('hidden');
+        selectedDealId = null;
+    }
+
+    // 체크박스 상태에 따라 확인 버튼 활성화/비활성화
+    confirmCheckbox.addEventListener('change', () => {
+        confirmDealBtn.disabled = !confirmCheckbox.checked;
+    });
+
+    // 모달 취소 버튼
+    cancelConfirmBtn.addEventListener('click', closeConfirmModal);
+
+    // 모달 확인 버튼 (API 호출)
+    confirmDealBtn.addEventListener('click', async () => {
+        if (!selectedDealId || !confirmCheckbox.checked) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/seller/deals/${selectedDealId}/confirm`, {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || '판매자 확정에 실패했습니다.');
+            }
+
+            // 성공 시
+            closeConfirmModal();
+            showSuccess('판매자 확정이 완료되었습니다.');
+            
+            // 1.5초 후 페이지 새로고침
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+
+        } catch (error) {
+            console.error('판매자 확정 API 호출 실패:', error);
+            showError(error.message);
+        }
+    });
+
+    // 성공 메시지 표시
+    function showSuccess(message) {
+        const successDiv = document.createElement('div');
+        successDiv.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+        successDiv.textContent = message;
+        document.body.appendChild(successDiv);
+
+        setTimeout(() => {
+            successDiv.remove();
+        }, 3000);
+    }
 
     // 페이지 로드 시 데이터 로드
     console.log('=== seller-deals.js 로드됨 ===');

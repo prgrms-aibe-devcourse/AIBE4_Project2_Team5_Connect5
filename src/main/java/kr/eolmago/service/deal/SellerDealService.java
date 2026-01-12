@@ -33,7 +33,8 @@ public class SellerDealService {
                         deal.getDealId(),
                         deal.getFinalPrice(),
                         deal.getStatus().name(),
-                        deal.getCreatedAt() != null ? deal.getCreatedAt().toString() : null
+                        deal.getCreatedAt() != null ? deal.getCreatedAt().toString() : null,
+                        deal.getSellerConfirmedAt() != null ? deal.getSellerConfirmedAt().toString() : null // 값 추가
                 ))
                 .toList();
         
@@ -60,7 +61,29 @@ public class SellerDealService {
                 deal.getDealId(),
                 deal.getFinalPrice(),
                 deal.getStatus().name(),
-                deal.getCreatedAt() != null ? deal.getCreatedAt().toString() : null
+                deal.getCreatedAt() != null ? deal.getCreatedAt().toString() : null,
+                deal.getSellerConfirmedAt() != null ? deal.getSellerConfirmedAt().toString() : null // 값 추가
         );
+    }
+
+    /**
+     * 판매자 거래 확정
+     */
+    @Transactional
+    public void confirmDeal(Long dealId, UUID sellerId) {
+        Deal deal = dealRepository.findById(dealId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.DEAL_NOT_FOUND));
+
+        // 권한 검증: 내가 판매자인 거래인지 확인
+        if (!deal.getSeller().getUserId().equals(sellerId)) {
+            throw new BusinessException(ErrorCode.DEAL_UNAUTHORIZED);
+        }
+
+        // 이미 확정된 경우 예외 처리
+        if (deal.getSellerConfirmedAt() != null) {
+            throw new IllegalStateException("이미 판매자 확인이 완료된 거래입니다.");
+        }
+
+        deal.confirmBySeller();
     }
 }
