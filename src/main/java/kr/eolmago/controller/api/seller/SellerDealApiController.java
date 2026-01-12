@@ -2,8 +2,10 @@ package kr.eolmago.controller.api.seller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import kr.eolmago.dto.api.deal.response.SellerDealDetailResponse;
 import kr.eolmago.dto.api.deal.response.SellerDealListResponse;
 import kr.eolmago.global.security.CustomUserDetails;
+import kr.eolmago.service.deal.SellerDealDetailService;
 import kr.eolmago.service.deal.SellerDealService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -22,6 +24,7 @@ import java.util.UUID;
 public class SellerDealApiController {
 
     private final SellerDealService sellerDealService;
+    private final SellerDealDetailService sellerDealDetailService;
 
     @Operation(summary = "판매자 거래 목록 조회")
     @GetMapping
@@ -33,14 +36,36 @@ public class SellerDealApiController {
         return ResponseEntity.ok(response);
     }
 
-    @Operation(summary = "판매자 거래 상세 조회")
-    @GetMapping("/{dealId}")
-    public ResponseEntity<SellerDealListResponse.DealDto> getDealDetail(
+    @Operation(summary = "판매자 거래 상세 조회 (목록용)")
+    @GetMapping("/list/{dealId}")
+    public ResponseEntity<SellerDealListResponse.DealDto> getDealListDetail(
             @PathVariable Long dealId,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         UUID sellerId = userDetails.getUserId();
         SellerDealListResponse.DealDto response = sellerDealService.getDealDetail(dealId, sellerId);
         return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "판매자 거래 상세 조회 (상세 페이지용)")
+    @GetMapping("/{dealId}")
+    public ResponseEntity<SellerDealDetailResponse> getDealDetail(
+            @PathVariable Long dealId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        UUID sellerId = userDetails.getUserId();
+        SellerDealDetailResponse response = sellerDealDetailService.getDealDetail(dealId, sellerId);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "판매자 확정")
+    @PostMapping("/{dealId}/confirm")
+    public ResponseEntity<Void> confirmBySeller(
+            @PathVariable Long dealId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        UUID sellerId = userDetails.getUserId();
+        sellerDealDetailService.confirmBySeller(dealId, sellerId);
+        return ResponseEntity.ok().build();
     }
 }

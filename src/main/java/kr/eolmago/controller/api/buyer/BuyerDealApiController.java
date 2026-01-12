@@ -2,8 +2,10 @@ package kr.eolmago.controller.api.buyer;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import kr.eolmago.dto.api.deal.response.BuyerDealDetailResponse;
 import kr.eolmago.dto.api.deal.response.BuyerDealListResponse;
 import kr.eolmago.global.security.CustomUserDetails;
+import kr.eolmago.service.deal.BuyerDealDetailService;
 import kr.eolmago.service.deal.BuyerDealService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -22,6 +24,7 @@ import java.util.UUID;
 public class BuyerDealApiController {
 
     private final BuyerDealService buyerDealService;
+    private final BuyerDealDetailService buyerDealDetailService;
 
     @Operation(summary = "구매자 거래 목록 조회")
     @GetMapping
@@ -33,14 +36,36 @@ public class BuyerDealApiController {
         return ResponseEntity.ok(response);
     }
 
-    @Operation(summary = "구매자 거래 상세 조회")
-    @GetMapping("/{dealId}")
-    public ResponseEntity<BuyerDealListResponse.DealDto> getDealDetail(
+    @Operation(summary = "구매자 거래 상세 조회 (목록용)")
+    @GetMapping("/list/{dealId}")
+    public ResponseEntity<BuyerDealListResponse.DealDto> getDealListDetail(
             @PathVariable Long dealId,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         UUID buyerId = userDetails.getUserId();
         BuyerDealListResponse.DealDto response = buyerDealService.getDealDetail(dealId, buyerId);
         return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "구매자 거래 상세 조회 (상세 페이지용)")
+    @GetMapping("/{dealId}")
+    public ResponseEntity<BuyerDealDetailResponse> getDealDetail(
+            @PathVariable Long dealId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        UUID buyerId = userDetails.getUserId();
+        BuyerDealDetailResponse response = buyerDealDetailService.getDealDetail(dealId, buyerId);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "구매자 확정")
+    @PostMapping("/{dealId}/confirm")
+    public ResponseEntity<Void> confirmByBuyer(
+            @PathVariable Long dealId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        UUID buyerId = userDetails.getUserId();
+        buyerDealDetailService.confirmByBuyer(dealId, buyerId);
+        return ResponseEntity.ok().build();
     }
 }

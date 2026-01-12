@@ -29,9 +29,7 @@ public class SellerViewController {
         applyCommonModel(model);
 
         model.addAttribute("mode", "create");
-
         model.addAttribute("auctionId", null);
-
         model.addAttribute("statusText", "작성 중");
 
         return "pages/seller/create-auction";
@@ -62,7 +60,9 @@ public class SellerViewController {
 
     // 내 경매 페이지
     @GetMapping("/auctions")
-    public String sellerAuctions() { return "pages/seller/seller-auctions"; }
+    public String sellerAuctions() {
+        return "pages/seller/seller-auctions";
+    }
 
     // 판매 거래 관리 페이지
     @GetMapping("/deals")
@@ -70,7 +70,14 @@ public class SellerViewController {
         return "pages/seller/seller-deals";
     }
 
-    // 유찰된 경매 상세 페이지
+    // ✅ 판매 거래 상세 페이지
+    @GetMapping("/deals/{dealId}")
+    public String sellerDealDetail(@PathVariable Long dealId, Model model) {
+        model.addAttribute("dealId", dealId);
+        return "pages/seller/seller-deal-detail";
+    }
+
+//    // 유찰된 경매 상세 페이지 (예전 주석 예시)
 //    @GetMapping("/auctions/{auctionId}/failed")
 //    public String auctionFailed(@PathVariable UUID auctionId) {
 //        return "pages/seller/auction-failed-detail";

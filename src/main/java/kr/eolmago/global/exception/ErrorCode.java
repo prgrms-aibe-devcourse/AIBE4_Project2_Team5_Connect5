@@ -70,7 +70,8 @@ public enum ErrorCode {
     DEAL_NOT_FOUND(HttpStatus.NOT_FOUND, "D001", "거래를 찾을 수 없습니다."),
     DEAL_UNAUTHORIZED(HttpStatus.FORBIDDEN, "D002", "해당 거래에 접근 권한이 없습니다."),
     DEAL_ALREADY_EXISTS(HttpStatus.CONFLICT, "D003", "이미 해당 경매로 거래가 생성되었습니다."),
-    AUCTION_ID_MISMATCH(HttpStatus.BAD_REQUEST, "D004", "경매 ID가 일치하지 않습니다.");
+    AUCTION_ID_MISMATCH(HttpStatus.BAD_REQUEST, "D004", "경매 ID가 일치하지 않습니다."),
+    DEAL_ALREADY_CONFIRMED(HttpStatus.BAD_REQUEST, "D005", "이미 확정된 거래입니다.");
 
 
 

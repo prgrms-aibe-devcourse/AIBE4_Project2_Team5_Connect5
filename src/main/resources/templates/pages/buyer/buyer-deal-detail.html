@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/base}">
+<head>
+    <title layout:fragment="title">구매 거래 상세</title>
+</head>
+
+<body>
+<div layout:fragment="content">
+    <div class="space-y-6" id="buyer-deal-detail-root"
+         th:data-deal-id="${dealId}">
+
+        <!-- 헤더 -->
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-extrabold tracking-tight text-gray-900">
+                    거래 상세
+                </h1>
+                <p class="mt-2 text-sm text-gray-600">
+                    낙찰받은 거래의 상세 정보를 확인하고, 거래 확정을 진행할 수 있습니다.
+                </p>
+            </div>
+
+            <div class="flex gap-2">
+                <a href="/buyer/deals"
+                   class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                    목록으로
+                </a>
+            </div>
+        </div>
+
+        <!-- 카드 영역 -->
+        <div id="deal-detail-card"
+             class="bg-white border border-gray-200 rounded-lg p-6 shadow-sm space-y-6">
+
+            <!-- 상단 정보 -->
+            <div class="flex items-start justify-between">
+                <div>
+                    <div class="flex items-center gap-3 mb-2">
+                        <span id="deal-id"
+                              class="text-lg font-bold text-gray-900">거래 #</span>
+                        <span id="deal-status-badge"
+                              class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border bg-gray-100 text-gray-800 border-gray-300">
+                            상태
+                        </span>
+                    </div>
+                    <p class="text-xs text-gray-500">
+                        생성일:
+                        <span id="deal-created-at">-</span>
+                    </p>
+                </div>
+                <div class="text-right">
+                    <p class="text-xs text-gray-500 mb-1">거래 금액</p>
+                    <p id="deal-final-price" class="text-2xl font-bold text-gray-900">
+                        -
+                    </p>
+                </div>
+            </div>
+
+            <!-- 판매자 정보 + 기한 정보 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- 판매자 정보 -->
+                <div class="space-y-2">
+                    <h2 class="text-sm font-semibold text-gray-900">판매자 정보</h2>
+                    <div class="bg-gray-50 rounded-md p-4 space-y-1 text-sm">
+                        <p>
+                            <span class="text-gray-500">판매자 닉네임:</span>
+                            <span id="seller-nickname" class="ml-2 font-medium text-gray-900">-</span>
+                        </p>
+                        <p>
+                            <span class="text-gray-500">판매자 ID:</span>
+                            <span id="seller-id" class="ml-2 text-gray-800 text-xs break-all">-</span>
+                        </p>
+                    </div>
+                </div>
+
+                <!-- 기한 정보 -->
+                <div class="space-y-2">
+                    <h2 class="text-sm font-semibold text-gray-900">기한 정보</h2>
+                    <div class="bg-gray-50 rounded-md p-4 space-y-1 text-sm">
+                        <p>
+                            <span class="text-gray-500">확정 기한:</span>
+                            <span id="confirm-by-at" class="ml-2 text-gray-900">-</span>
+                        </p>
+                        <p>
+                            <span class="text-gray-500">배송 기한:</span>
+                            <span id="ship-by-at" class="ml-2 text-gray-900">-</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 확정/완료 정보 -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+                <div class="bg-gray-50 rounded-md p-4 space-y-1">
+                    <h3 class="text-sm font-semibold text-gray-900 mb-2">확정 상태</h3>
+                    <p>
+                        <span class="text-gray-500">판매자 확정:</span>
+                        <span id="seller-confirmed" class="ml-2">-</span>
+                    </p>
+                    <p>
+                        <span class="text-gray-500">구매자 확정:</span>
+                        <span id="buyer-confirmed" class="ml-2">-</span>
+                    </p>
+                    <p>
+                        <span class="text-gray-500">확정 완료 시간:</span>
+                        <span id="confirmed-at" class="ml-2">-</span>
+                    </p>
+                </div>
+
+                <div class="bg-gray-50 rounded-md p-4 space-y-1">
+                    <h3 class="text-sm font-semibold text-gray-900 mb-2">세부 시간</h3>
+                    <p>
+                        <span class="text-gray-500">판매자 확정 시간:</span>
+                        <span id="seller-confirmed-at" class="ml-2">-</span>
+                    </p>
+                    <p>
+                        <span class="text-gray-500">구매자 확정 시간:</span>
+                        <span id="buyer-confirmed-at" class="ml-2">-</span>
+                    </p>
+                    <p>
+                        <span class="text-gray-500">거래 완료 시간:</span>
+                        <span id="completed-at" class="ml-2">-</span>
+                    </p>
+                </div>
+
+                <!-- 액션 영역 -->
+                <div class="flex flex-col justify-between gap-3">
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-900 mb-2">구매자 액션</h3>
+                        <p class="text-xs text-gray-600">
+                            거래가 <span class="font-medium">확정 대기</span> 상태일 때만
+                            구매자 확정을 할 수 있습니다.
+                        </p>
+                        <p class="text-xs text-gray-600 mt-1">
+                            판매자와 구매자 모두 확정하면 거래 상태가 변경됩니다.
+                        </p>
+                    </div>
+
+                    <button id="btn-buyer-confirm"
+                            class="inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed">
+                        구매자 확정하기
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<th:block layout:fragment="scripts">
+    <script src="/js/buyer/buyer-deal-detail.js"></script>
+</th:block>
+</body>
+</html>

@@ -271,8 +271,7 @@
 
     // 전역 함수: 거래 상세보기
     window.viewDealDetail = function(dealId) {
-        console.log('거래 상세보기:', dealId);
-        alert(`거래 #${dealId} 상세 정보\n\n(상세 페이지는 추후 구현 예정)`);
+        window.location.href = `/seller/deals/${dealId}`;
     };
 
     // 페이지 로드 시 데이터 로드
