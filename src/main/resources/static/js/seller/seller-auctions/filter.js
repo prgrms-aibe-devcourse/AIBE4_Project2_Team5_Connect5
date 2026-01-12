@@ -93,7 +93,7 @@
 
     // ===== Loaders =====
     const loadCountsAndSummary = async () => {
-        const [all, live, closed, ended, draft] = await Promise.all([
+        const [all, live, closed, endedUnsoldCount, draft] = await Promise.all([
             api.fetchCount({ sellerId, status: null }),
             api.fetchCount({ sellerId, status: 'LIVE' }),
             api.fetchCount({ sellerId, status: 'ENDED_SOLD' }),
@@ -101,11 +101,21 @@
             api.fetchCount({ sellerId, status: 'DRAFT' }),
         ]);
 
+        const endedData = await api.getAuctions({
+            sellerId,
+            page: 0,
+            size: 200,
+            sort: 'latest',
+            status: 'ENDED_UNSOLD',
+        });
+        const endedUnsoldItems = Array.isArray(endedData?.content) ? endedData.content : [];
+        const endedNoBidsCount = endedUnsoldItems.filter((it) => it?.endReason === 'NO_BIDS').length;
+
         // 탭 카운트
         $tabAllCount.textContent = String(all);
         $tabLiveCount.textContent = String(live);
         $tabClosedCount.textContent = String(closed);
-        $tabEndedCount.textContent = String(ended);
+        $tabEndedCount.textContent = String(endedNoBidsCount);
         $tabDraftCount.textContent = String(draft);
 
         // 요약 카드
@@ -134,7 +144,12 @@
 
                 const raw = Array.isArray(data?.content) ? data.content : [];
                 const q = state.search.trim().toLowerCase();
-                const filtered = raw.filter((it) => String(it?.title ?? '').toLowerCase().includes(q));
+                let filtered = raw.filter((it) => String(it?.title ?? '').toLowerCase().includes(q));
+
+                // 유찰 탭일 경우 NO_BIDS만 필터링
+                if (state.activeTab === 'ended') {
+                    filtered = filtered.filter((it) => it?.endReason === 'NO_BIDS');
+                }
 
                 const total = filtered.length;
                 if (total === 0) {
@@ -188,7 +203,12 @@
                 status,
             });
 
-            const items = Array.isArray(data?.content) ? data.content : [];
+            let items = Array.isArray(data?.content) ? data.content : [];
+
+            // 유찰 탭일 경우 NO_BIDS만 필터링
+            if (state.activeTab === 'ended') {
+                items = items.filter((it) => it?.endReason === 'NO_BIDS');
+            }
             const pageInfo = data?.pageInfo ?? {};
             const total = Number(pageInfo?.totalElements ?? 0);
 

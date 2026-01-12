@@ -25,7 +25,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/auctions")
-@Tag(name = "Auction")
+@Tag(name = "Auction", description = "경매")
 @RequiredArgsConstructor
 public class AuctionApiController {
 
@@ -55,15 +55,14 @@ public class AuctionApiController {
         return ResponseEntity.ok(response);
     }
 
-    @Operation(summary = "경매 게시")
-    @PostMapping("/{auctionId}/publish")
-    public ResponseEntity<AuctionDraftResponse> publish (
-            @PathVariable UUID auctionId,
+    @Operation(summary = "경매 임시저장 초기화")
+    @PostMapping("/drafts/init")
+    public ResponseEntity<AuctionDraftResponse> initDraft (
             @AuthenticationPrincipal CustomUserDetails principal
     ) {
         UUID sellerId = UUID.fromString(principal.getId());
-        AuctionDraftResponse response = auctionService.publishAuction(auctionId, sellerId);
-        return ResponseEntity.ok(response);
+        AuctionDraftResponse response = auctionService.initDraft(sellerId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @Operation(summary = "경매 삭제")
@@ -77,14 +76,28 @@ public class AuctionApiController {
         return ResponseEntity.noContent().build();
     }
 
-    @Operation(summary = "경매 임시저장 초기화")
-    @PostMapping("/drafts/init")
-    public ResponseEntity<AuctionDraftResponse> initDraft(
+
+    @Operation(summary = "경매 게시")
+    @PostMapping("/{auctionId}/publish")
+    public ResponseEntity<AuctionDraftResponse> publish (
+            @PathVariable UUID auctionId,
             @AuthenticationPrincipal CustomUserDetails principal
     ) {
         UUID sellerId = UUID.fromString(principal.getId());
-        AuctionDraftResponse response = auctionService.initDraft(sellerId);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        AuctionDraftResponse response = auctionService.publishAuction(auctionId, sellerId);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "경매 목록 조회")
+    @GetMapping("/list")
+    public ResponseEntity<PageResponse<AuctionListResponse>> getAuctionList (
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "12") int size,
+            @RequestParam(defaultValue = "latest") String sortKey,
+            AuctionSearchRequest searchRequest
+    ) {
+        PageResponse<AuctionListResponse> response = auctionService.getAuction(page, size, sortKey, searchRequest);
+        return ResponseEntity.ok(response);
     }
 
     @Operation(summary = "경매 목록 조회 - 필터 적용")
@@ -98,18 +111,6 @@ public class AuctionApiController {
         Pageable pageable = PageRequest.of(page, size);
         PageResponse<AuctionListResponse> response = auctionSearchService.search(searchRequest, sort, pageable);
 
-        return ResponseEntity.ok(response);
-    }
-
-    @Operation(summary = "경매 목록 조회")
-    @GetMapping("/list")
-    public ResponseEntity<PageResponse<AuctionListResponse>> getAuctionList (
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "12") int size,
-            @RequestParam(defaultValue = "latest") String sortKey,
-            AuctionSearchRequest searchRequest
-    ) {
-        PageResponse<AuctionListResponse> response = auctionService.getAuction(page, size, sortKey, searchRequest);
         return ResponseEntity.ok(response);
     }
 

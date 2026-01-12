@@ -5,13 +5,12 @@ import kr.eolmago.domain.entity.auction.enums.AuctionStatus;
 import kr.eolmago.domain.entity.auction.enums.ItemCategory;
 import kr.eolmago.domain.entity.auction.enums.ItemCondition;
 
-import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.UUID;
 
 public record AuctionDetailDto(
-        // 경매 기본 정보
+        // auction
         UUID auctionId,
         String title,
         String description,
@@ -30,19 +29,53 @@ public record AuctionDetailDto(
         Long finalPrice,
         OffsetDateTime createdAt,
 
-        // 상품 정보
+        // auction_item
         Long auctionItemId,
         String itemName,
         ItemCategory category,
         ItemCondition condition,
         Map<String, Object> specs,
 
-        // 판매자 정보
+        // user_profile
         UUID sellerId,
         String sellerNickname,
         int sellerTradeCount,
 
-        // 이미지 URL (첫 번째만)
-        String thumbnailUrl
+        // auction_image
+        String thumbnailUrl,
+
+        // bid
+        UUID highestBidderId
 ) {
+    public AuctionDetailDto withHighestBidderId(UUID highestBidderId) {
+        return new AuctionDetailDto(
+                auctionId(),
+                title(),
+                description(),
+                status(),
+                startPrice(),
+                currentPrice(),
+                bidIncrement(),
+                bidCount(),
+                favoriteCount(),
+                startAt(),
+                endAt(),
+                originalEndAt(),
+                durationHours(),
+                extendCount(),
+                endReason(),
+                finalPrice(),
+                createdAt(),
+                auctionItemId(),
+                itemName(),
+                category(),
+                condition(),
+                specs(),
+                sellerId(),
+                sellerNickname(),
+                sellerTradeCount(),
+                thumbnailUrl(),
+                highestBidderId // 현재 최고 입찰자의 user_id
+        );
+    }
 }

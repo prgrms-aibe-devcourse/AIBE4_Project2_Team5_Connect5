@@ -34,12 +34,11 @@
                     <a th:href="@{/seller/auctions}" class="hover:text-gray-900">판매 관리</a>
                     <span class="px-1">/</span>
                     <span class="text-gray-900 font-medium"
-                          th:text="${mode} == 'edit' ? '임시 저장 수정' : '경매 등록'">경매 등록</span>
+                          th:text="'경매 등록'">경매 등록</span>
                 </div>
 
                 <h1 class="mt-2 text-3xl font-bold tracking-tight text-gray-900">
-                    <span th:text="${mode} == 'edit' ? '임시 저장' : '새'">새</span>
-                    <span th:text="${mode} == 'edit' ? ' 경매 수정' : ' 경매 등록'"> 경매 등록</span>
+                    새 경매 등록
                 </h1>
 
                 <p class="mt-2 text-sm text-gray-600">
@@ -185,7 +184,7 @@
                             <!-- Brand -->
                             <div>
                                 <label for="brandSelect" class="block text-sm font-semibold text-gray-900">브랜드 <span class="text-red-600">*</span></label>
-                                <!-- ✅ 용량과 줄 맞추기 위해 한 줄 확보 -->
+                                <!-- 용량과 줄 맞추기 위해 한 줄 확보 -->
                                 <p class="mt-1 text-xs text-gray-500">&nbsp;</p>
 
                                 <select id="brandSelect"
@@ -398,7 +397,7 @@
                         임시 저장
                     </button>
 
-                    <!-- ✅ 게시하기: 초기에도 가능(항상 enabled) -->
+                    <!-- 게시하기: 초기에도 가능(항상 enabled) -->
                     <button type="button" id="publishBtn"
                             class="w-full rounded-xl border border-gray-300 bg-white py-3 text-sm font-bold text-gray-900 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                             th:attr="disabled=${!#authorization.expression('hasAnyRole(''USER'', ''ADMIN'')') ? 'disabled' : null}">
@@ -412,7 +411,7 @@
                         삭제
                     </button>
 
-                    <!-- ✅ 게시 실패 재시도 UI -->
+                    <!-- 게시 실패 재시도 UI -->
                     <div id="publishRetryBox"
                          class="hidden rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
                         게시에 실패했습니다. 네트워크/서버 상태를 확인한 뒤 다시 시도해주세요.

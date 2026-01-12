@@ -3,6 +3,7 @@ package kr.eolmago.service.auction;
 import kr.eolmago.domain.entity.auction.Auction;
 import kr.eolmago.domain.entity.auction.AuctionImage;
 import kr.eolmago.domain.entity.auction.AuctionItem;
+import kr.eolmago.domain.entity.auction.Bid;
 import kr.eolmago.domain.entity.auction.enums.AuctionStatus;
 import kr.eolmago.domain.entity.auction.enums.ItemCategory;
 import kr.eolmago.domain.entity.auction.enums.ItemCondition;
@@ -17,8 +18,11 @@ import kr.eolmago.global.util.BidIncrementCalculator;
 import kr.eolmago.repository.auction.AuctionImageRepository;
 import kr.eolmago.repository.auction.AuctionItemRepository;
 import kr.eolmago.repository.auction.AuctionRepository;
+import kr.eolmago.repository.auction.BidRepository;
 import kr.eolmago.repository.user.UserRepository;
+import kr.eolmago.service.auction.event.AuctionEndAtChangedEvent;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -39,7 +43,11 @@ public class AuctionService {
     private final AuctionRepository auctionRepository;
     private final AuctionItemRepository auctionItemRepository;
     private final AuctionImageRepository auctionImageRepository;
+    private final BidRepository bidRepository;
     private final UserRepository userRepository;
+
+    private final AuctionCloseService auctionCloseService;
+    private final ApplicationEventPublisher eventPublisher;
 
     // 임시저장 생성
     @Transactional
@@ -129,37 +137,6 @@ public class AuctionService {
         return new AuctionDraftResponse(sellerId, auction.getAuctionId(), auction.getStatus());
     }
 
-    // 경매 게시
-    @Transactional
-    public AuctionDraftResponse publishAuction(UUID auctionId, UUID sellerId) {
-
-        Auction auction = loadDraftOwnedAuction(auctionId, sellerId, ErrorCode.AUCTION_PUBLISH_ONLY_DRAFT);
-
-        Integer durationHours = auction.getDurationHours();
-        if (durationHours == null) {
-            throw new BusinessException(ErrorCode.AUCTION_INVALID_DURATION);
-        }
-
-        // startAt, endAt, originalEndAt 갱신
-        OffsetDateTime startAt = OffsetDateTime.now();
-        OffsetDateTime endAt = startAt.plusHours(durationHours);
-        auction.publish(startAt, endAt);
-
-        return new AuctionDraftResponse(sellerId, auction.getAuctionId(), auction.getStatus());
-    }
-
-    // 경매 삭제
-    @Transactional
-    public void deleteAuction(UUID auctionId, UUID sellerId) {
-
-        Auction auction = loadDraftOwnedAuction(auctionId, sellerId, ErrorCode.AUCTION_DELETE_ONLY_DRAFT);
-
-        AuctionItem item = auction.getAuctionItem();
-        auctionImageRepository.deleteByAuctionItem(item);
-        auctionRepository.delete(auction);
-        auctionItemRepository.delete(item);
-    }
-
     // 경매 임시저장 초기화
     @Transactional
     public AuctionDraftResponse initDraft(UUID sellerId) {
@@ -197,6 +174,39 @@ public class AuctionService {
                 null
         );
         auctionRepository.save(auction);
+
+        return new AuctionDraftResponse(sellerId, auction.getAuctionId(), auction.getStatus());
+    }
+
+    // 경매 삭제
+    @Transactional
+    public void deleteAuction(UUID auctionId, UUID sellerId) {
+
+        Auction auction = loadDraftOwnedAuction(auctionId, sellerId, ErrorCode.AUCTION_DELETE_ONLY_DRAFT);
+
+        AuctionItem item = auction.getAuctionItem();
+        auctionImageRepository.deleteByAuctionItem(item);
+        auctionRepository.delete(auction);
+        auctionItemRepository.delete(item);
+    }
+
+    // 경매 게시
+    @Transactional
+    public AuctionDraftResponse publishAuction(UUID auctionId, UUID sellerId) {
+
+        Auction auction = loadDraftOwnedAuction(auctionId, sellerId, ErrorCode.AUCTION_PUBLISH_ONLY_DRAFT);
+
+        Integer durationHours = auction.getDurationHours();
+        if (durationHours == null) {
+            throw new BusinessException(ErrorCode.AUCTION_INVALID_DURATION);
+        }
+
+        // startAt, endAt, originalEndAt 갱신
+        OffsetDateTime startAt = OffsetDateTime.now();
+        OffsetDateTime endAt = startAt.plusHours(durationHours);
+        auction.publish(startAt, endAt);
+
+        eventPublisher.publishEvent(new AuctionEndAtChangedEvent(auction.getAuctionId(), endAt));
 
         return new AuctionDraftResponse(sellerId, auction.getAuctionId(), auction.getStatus());
     }
@@ -257,7 +267,17 @@ public class AuctionService {
                 .map(AuctionImage::getImageUrl)
                 .toList();
 
-        return AuctionDetailResponse.from(dto, imageUrls);
+        // 최고 입찰자 ID 조회
+        Auction auctionRef = auctionRepository.getReferenceById(auctionId);
+        UUID highestBidderId = bidRepository.findTopBidderIdByAuction(auctionRef).orElse(null);
+
+        AuctionDetailDto dtoWithHighestBidder = dto.withHighestBidderId(highestBidderId);
+
+        return AuctionDetailResponse.from(dtoWithHighestBidder, imageUrls);
+    }
+
+    public void closeAuction(UUID auctionId) {
+        auctionCloseService.closeAuction(auctionId);
     }
 
     // 경매 조회, 소유자 검증, DRAFT 상태 검증

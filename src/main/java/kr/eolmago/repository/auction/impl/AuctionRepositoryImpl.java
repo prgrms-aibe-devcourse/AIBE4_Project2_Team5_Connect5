@@ -143,7 +143,8 @@ public class AuctionRepositoryImpl implements AuctionRepositoryCustom {
                         user.userId,
                         userProfile.nickname,
                         userProfile.tradeCount,
-                        auctionImage.imageUrl
+                        auctionImage.imageUrl,
+                        Expressions.nullExpression(UUID.class) // highestBidderId
                 ))
                 .from(auction)
                 .innerJoin(auction.auctionItem, auctionItem)
@@ -218,5 +219,4 @@ public class AuctionRepositoryImpl implements AuctionRepositoryCustom {
             return brand.in(selectedBrands);
         }
     }
-
 }

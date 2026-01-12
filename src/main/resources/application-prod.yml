@@ -86,3 +86,9 @@ logging:
     kr.eolmago: INFO
     org.springframework.web: WARN
     org.hibernate.SQL: WARN
+
+# 경매 종료 스케줄러 설정
+auction:
+  close:
+    sweep:
+      delay-ms: 60000

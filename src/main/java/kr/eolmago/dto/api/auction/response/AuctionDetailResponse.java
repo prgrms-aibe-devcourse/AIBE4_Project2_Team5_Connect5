@@ -13,7 +13,7 @@ import java.util.Map;
 import java.util.UUID;
 
 public record AuctionDetailResponse(
-        // 경매 정보
+        // auction
         UUID auctionId,
         String title,
         String description,
@@ -33,20 +33,23 @@ public record AuctionDetailResponse(
         Long finalPrice,
         OffsetDateTime createdAt,
 
-        // 상품 정보
+        // auction_item
         Long auctionItemId,
         String itemName,
         ItemCategory category,
         ItemCondition condition,
         Map<String, Object> specs,
 
-        // 판매자 정보
+        // user_profile
         UUID sellerId,
         String sellerNickname,
         int sellerTradeCount,
 
-        // 이미지 정보
-        List<String> imageUrls
+        // auction_image
+        List<String> imageUrls,
+
+        // bid
+        UUID highestBidderId
 ) {
     public static AuctionDetailResponse from(AuctionDetailDto dto, List<String> imageUrls) {
         return new AuctionDetailResponse(
@@ -76,7 +79,8 @@ public record AuctionDetailResponse(
                 dto.sellerId(),
                 dto.sellerNickname(),
                 dto.sellerTradeCount(),
-                imageUrls
+                imageUrls,
+                dto.highestBidderId()
         );
     }
 }

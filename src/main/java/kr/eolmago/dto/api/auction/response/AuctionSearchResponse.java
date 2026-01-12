@@ -5,10 +5,6 @@ import kr.eolmago.domain.entity.auction.enums.AuctionStatus;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
-/**
- * 경매 검색 결과 응답 DTO
- *  - AuctionListResponse와 동일한 구조이나 검색 특화 필드로 명시하기 위해 생성함.
- */
 public record AuctionSearchResponse(
         UUID auctionId,         // 경매 ID
         Long auctionItemId,     // 경매 아이템 ID

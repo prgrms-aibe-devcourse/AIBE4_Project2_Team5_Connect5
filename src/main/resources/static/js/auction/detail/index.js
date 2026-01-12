@@ -18,7 +18,6 @@ import { calcBidIncrement } from "./util.js";
     try {
         ui.setLoading(true);
 
-        // 하위호환 메서드 사용 (현재 프로젝트에서 이 이름을 호출하고 있어도 안전)
         const { data, serverNowMs } = await api.fetchDetailWithServerTime(auctionId);
 
         // 서버에서 bidIncrement가 안 오면 프론트에서 계산(방어)
@@ -26,7 +25,7 @@ import { calcBidIncrement } from "./util.js";
             data.bidIncrement = calcBidIncrement(Number(data.currentPrice ?? 0));
         }
 
-        ui.renderAll(data, serverNowMs);
+        ui.renderAll(data, serverNowMs, api);
         ui.bindInteractions(data, api);
 
         // 비슷한 경매 로드 (브랜드, 카테고리 기반)

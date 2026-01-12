@@ -72,7 +72,10 @@
     </svg>`;
 
     // ===== Rendering helpers =====
-    const statusBadge = (status) => {
+    const statusBadge = (item) => {
+        const status = item?.status;
+        const endReason = item?.endReason;
+
         switch (status) {
             case 'LIVE':
                 return {
@@ -96,6 +99,14 @@
                         'border-slate-300 bg-slate-100 text-slate-900',
                 };
             case 'ENDED_UNSOLD':
+                if (endReason === 'SELLER_STOPPED') {
+                    return {
+                        label: '경매 취소',
+                        cls:
+                            'inline-flex items-center rounded-full border px-3 py-1 text-xs font-black ' +
+                            'border-slate-300 bg-slate-100 text-slate-700',
+                    };
+                }
                 return {
                     label: '유찰',
                     cls:
@@ -138,7 +149,7 @@
             const favoriteCount = Number(it?.favoriteCount ?? 0);
             const bidCount = Number(it?.bidCount ?? 0);
 
-            const st = statusBadge(it?.status);
+            const st = statusBadge(it);
             const priceMain = resolvePriceMain(it);
 
             const endAtText = formatKstYmdHm(it?.endAt);
@@ -168,7 +179,8 @@
                 : `<div class="grid h-full w-full place-items-center text-[10px] font-black tracking-widest text-slate-400">IMAGE</div>`;
 
             let rightCellHtml = `<td class="w-28 px-4 py-4 align-middle text-right"></td>`;
-            if (it?.status === 'ENDED_UNSOLD' && auctionId) {
+            // 재등록 버튼은 유찰(NO_BIDS)일 때만 표시
+            if (it?.status === 'ENDED_UNSOLD' && it?.endReason === 'NO_BIDS' && auctionId) {
                 rightCellHtml = `
           <td class="w-28 px-4 py-4 align-middle text-right">
             <button type="button"
