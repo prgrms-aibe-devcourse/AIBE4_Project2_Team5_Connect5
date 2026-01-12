@@ -54,6 +54,8 @@ public class SellerDealApiController {
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         sellerDealService.confirmDeal(dealId, userDetails.getUserId());
+        return ResponseEntity.ok().build();
+    }
 
     @Operation(summary = "판매자 거래 상세 조회 (상세 페이지용)")
     @GetMapping("/{dealId}")
@@ -64,7 +66,5 @@ public class SellerDealApiController {
         UUID sellerId = userDetails.getUserId();
         SellerDealDetailResponse response = sellerDealDetailService.getDealDetail(dealId, sellerId);
         return ResponseEntity.ok(response);
-    }
-        return ResponseEntity.ok().build();
     }
 }

@@ -210,14 +210,8 @@
         let actionButtons = '';
         if (deal.status === 'PENDING_CONFIRMATION') {
             if (deal.sellerConfirmedAt) {
-                // 판매자가 이미 확정한 경우
-                actionButtons = `
-                    <div class="flex-1 text-center text-sm font-medium text-green-600">
-                        판매 확정됨
-                    </div>
-                `;
+                actionButtons = `<div class="flex-1 text-center text-sm font-medium text-green-600">판매 확정됨</div>`;
             } else {
-                // 판매자가 아직 확정하지 않은 경우
                 actionButtons = `
                     <button onclick="openConfirmModal(${deal.dealId})"
                             class="flex-1 inline-flex justify-center items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
@@ -225,6 +219,8 @@
                     </button>
                 `;
             }
+        } else if (deal.status === 'CONFIRMED') {
+             actionButtons = `<div class="flex-1 text-center text-sm font-medium text-green-600">판매 확정됨</div>`;
         }
 
         return `

@@ -83,18 +83,16 @@
         // 구매자 정보
         document.getElementById('buyer-nickname').textContent =
             data.buyerNickname || '-';
-        document.getElementById('buyer-id').textContent =
-            data.buyerId || '-';
-
+        
         // 기한 정보
         document.getElementById('confirm-by-at').textContent = formatDate(data.confirmByAt);
         document.getElementById('ship-by-at').textContent = formatDate(data.shipByAt);
 
         // 확정/완료 정보
         document.getElementById('seller-confirmed').textContent =
-            data.sellerConfirmed ? '예' : '아니오';
+            data.sellerConfirmedAt ? '완료' : '대기';
         document.getElementById('buyer-confirmed').textContent =
-            data.buyerConfirmed ? '예' : '아니오';
+            data.buyerConfirmedAt ? '완료' : '대기';
         document.getElementById('confirmed-at').textContent = formatDate(data.confirmedAt);
         document.getElementById('seller-confirmed-at').textContent = formatDate(data.sellerConfirmedAt);
         document.getElementById('buyer-confirmed-at').textContent = formatDate(data.buyerConfirmedAt);
@@ -103,10 +101,14 @@
         // 판매자 확정 버튼 활성/비활성
         const btn = document.getElementById('btn-seller-confirm');
         const canConfirm =
-            data.status === 'PENDING_CONFIRMATION' && !data.sellerConfirmed;
+            data.status === 'PENDING_CONFIRMATION' && !data.sellerConfirmedAt;
 
         btn.disabled = !canConfirm;
-        btn.textContent = canConfirm ? '판매자 확정하기' : '판매자 확정 완료';
+        if (!canConfirm && data.status === 'PENDING_CONFIRMATION') {
+            btn.textContent = '판매자 확정 완료';
+        } else {
+            btn.textContent = '판매자 확정하기';
+        }
     }
 
     // 상세 데이터 호출
@@ -125,7 +127,8 @@
                     window.location.href = '/login';
                     return;
                 }
-                throw new Error('상세 조회 실패: ' + res.status);
+                const errorData = await res.json();
+                throw new Error(errorData.message || '상세 조회 실패');
             }
 
             const data = await res.json();
@@ -134,43 +137,6 @@
             console.error(e);
             showToast(e.message, 'error');
         }
-    }
-
-    // 판매자 확정
-    async function confirmBySeller() {
-        if (!confirm('이 거래를 판매자 확정하시겠습니까?')) {
-            return;
-        }
-
-        try {
-            const res = await fetch(`/api/seller/deals/${dealId}/confirm`, {
-                method: 'POST',
-                credentials: 'include',
-                headers: {
-                    Accept: 'application/json'
-                }
-            });
-
-            if (!res.ok) {
-                if (res.status === 401) {
-                    window.location.href = '/login';
-                    return;
-                }
-                throw new Error('판매자 확정 실패: ' + res.status);
-            }
-
-            showToast('판매자 확정이 완료되었습니다.');
-            await loadDetail(); // 상태 다시 로딩
-        } catch (e) {
-            console.error(e);
-            showToast(e.message, 'error');
-        }
-    }
-
-    // 이벤트 바인딩
-    const confirmBtn = document.getElementById('btn-seller-confirm');
-    if (confirmBtn) {
-        confirmBtn.addEventListener('click', confirmBySeller);
     }
 
     // 초기 로딩

@@ -115,6 +115,11 @@
         }
         
         const container = document.querySelector(containerSelector);
+        if (!container) {
+            console.error('컨테이너를 찾을 수 없습니다:', containerSelector);
+            return;
+        }
+        
         if (filteredDeals.length === 0) {
             container.innerHTML = `<div class="text-center py-12 bg-gray-50 rounded-lg"><p>${emptyMessage}</p></div>`;
             return;
@@ -125,44 +130,61 @@
     // 거래 카드 생성
     function createDealCard(deal) {
         const statusConfig = {
-            'PENDING_CONFIRMATION': { label: '거래 대기', color: 'bg-yellow-100 text-yellow-800' },
-            'CONFIRMED': { label: '진행 중', color: 'bg-blue-100 text-blue-800' },
-            'COMPLETED': { label: '완료', color: 'bg-green-100 text-green-800' },
-            'TERMINATED': { label: '취소', color: 'bg-red-100 text-red-800' },
-            'EXPIRED': { label: '만료', color: 'bg-gray-100 text-gray-800' }
+            'PENDING_CONFIRMATION': { label: '거래 대기', color: 'bg-yellow-100 text-yellow-800 border-yellow-300' },
+            'CONFIRMED': { label: '진행 중', color: 'bg-blue-100 text-blue-800 border-blue-300' },
+            'COMPLETED': { label: '완료', color: 'bg-green-100 text-green-800 border-green-300' },
+            'TERMINATED': { label: '취소', color: 'bg-red-100 text-red-800 border-red-300' },
+            'EXPIRED': { label: '만료', color: 'bg-gray-100 text-gray-800 border-gray-300' }
         };
-        const status = statusConfig[deal.status] || { label: deal.status, color: 'bg-gray-100' };
+        const status = statusConfig[deal.status] || { label: deal.status, color: 'bg-gray-100 text-gray-800 border-gray-300' };
 
         let actionButtons = '';
         if (deal.status === 'PENDING_CONFIRMATION') {
             if (deal.buyerConfirmedAt) {
-                // 구매자가 이미 확정한 경우
-                actionButtons = `
-                    <div class="flex-1 text-center text-sm font-medium text-green-600">
-                        구매 확정됨
-                    </div>
-                `;
+                actionButtons = `<div class="flex-1 text-center text-sm font-medium text-green-600">구매 확정됨</div>`;
             } else {
-                // 구매자가 아직 확정하지 않은 경우
                 actionButtons = `
                     <button onclick="openConfirmModal(${deal.dealId})"
                             class="flex-1 inline-flex justify-center items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                        구매자 확정
+                        구매 확정
                     </button>
                 `;
             }
+        } else if (deal.status === 'CONFIRMED') {
+            actionButtons = `<div class="flex-1 text-center text-sm font-medium text-green-600">구매 확정됨</div>`;
         }
 
         return `
-            <div class="bg-white border rounded-lg p-4 mb-4">
-                <div class="flex justify-between items-center mb-2">
-                    <span class="font-bold">거래 #${deal.dealId}</span>
-                    <span class="px-2 py-1 text-xs rounded-full ${status.color}">${status.label}</span>
+            <div class="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow duration-200">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-3 mb-2">
+                            <span class="text-lg font-bold text-gray-900">거래 #${deal.dealId}</span>
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${status.color}">
+                                ${status.label}
+                            </span>
+                        </div>
+                    </div>
                 </div>
-                <p>금액: ${Number(deal.finalPrice).toLocaleString()}원</p>
-                <p>생성일: ${formatDate(deal.createdAt)}</p>
-                <div class="flex gap-2 mt-4">
-                    <button onclick="viewDealDetail(${deal.dealId})" class="flex-1 btn-secondary">상세보기</button>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <p class="text-xs text-gray-500 mb-1">거래 금액</p>
+                        <p class="text-xl font-bold text-gray-900">
+                            ${Number(deal.finalPrice).toLocaleString('ko-KR')}원
+                        </p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500 mb-1">생성일</p>
+                        <p class="text-sm font-medium text-gray-700">
+                            ${formatDate(deal.createdAt)}
+                        </p>
+                    </div>
+                </div>
+                <div class="flex gap-2 pt-4 border-t border-gray-100">
+                    <button onclick="viewDealDetail(${deal.dealId})" 
+                            class="flex-1 inline-flex justify-center items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        상세보기
+                    </button>
                     ${actionButtons}
                 </div>
             </div>
@@ -171,8 +193,17 @@
 
     function formatDate(dateString) {
         if (!dateString) return 'N/A';
-        const date = new Date(dateString);
-        return date.toLocaleString('ko-KR');
+        try {
+            const date = new Date(dateString);
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            return `${year}-${month}-${day} ${hours}:${minutes}`;
+        } catch (e) {
+            return dateString;
+        }
     }
 
     function showError(message) {
@@ -183,16 +214,16 @@
         alert('성공: ' + message);
     }
 
-    window.viewDealDetail = (dealId) => alert(`거래 #${dealId} 상세 보기 (구현 예정)`);
+    // 전역 함수: 거래 상세보기
+    window.viewDealDetail = function(dealId) {
+        window.location.href = `/buyer/deals/${dealId}`;
+    };
+    
     window.openConfirmModal = (dealId) => {
         selectedDealId = dealId;
         confirmCheckbox.checked = false;
         confirmDealBtn.disabled = true;
         modal.classList.remove('hidden');
-        
-    // 전역 함수: 거래 상세보기
-    window.viewDealDetail = function(dealId) {
-        window.location.href = `/buyer/deals/${dealId}`;
     };
 
     function closeConfirmModal() {
