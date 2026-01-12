@@ -1,6 +1,6 @@
 (function () {
     let allDeals = []; // 전체 거래 데이터
-    let currentTab = 'pending'; // 현재 선택된 탭
+    let currentTab = 'all'; // 현재 선택된 탭 (기본: 전체)
 
     // 탭 전환
     const tabButtons = document.querySelectorAll('.seller-deal-tab-btn');
@@ -81,10 +81,11 @@
     // 탭별 거래 개수 업데이트
     function updateTabCounts(deals) {
         const counts = {
+            all: deals.length,
             pending: 0,
             ongoing: 0,
             completed: 0,
-            cancelled: 0
+            cancelled: 0  // 취소 + 만료
         };
 
         deals.forEach(deal => {
@@ -96,11 +97,12 @@
             } else if (status === 'COMPLETED') {
                 counts.completed++;
             } else if (status === 'TERMINATED' || status === 'EXPIRED') {
-                counts.cancelled++;
+                counts.cancelled++;  // 취소와 만료 합산
             }
         });
 
         // 카운트 업데이트
+        document.getElementById('all-count').textContent = counts.all;
         document.getElementById('pending-count').textContent = counts.pending;
         document.getElementById('ongoing-count').textContent = counts.ongoing;
         document.getElementById('completed-count').textContent = counts.completed;
@@ -115,10 +117,15 @@
 
         // 탭별 필터링
         switch(tabName) {
+            case 'all':
+                filteredDeals = allDeals; // 전체
+                containerSelector = '#tab-all .space-y-4';
+                emptyMessage = '거래가 없습니다';
+                break;
             case 'pending':
                 filteredDeals = allDeals.filter(d => d.status === 'PENDING_CONFIRMATION');
                 containerSelector = '#tab-pending .space-y-4';
-                emptyMessage = '확정 대기 중인 거래가 없습니다';
+                emptyMessage = '거래 대기 중인 거래가 없습니다';
                 break;
             case 'ongoing':
                 filteredDeals = allDeals.filter(d => d.status === 'CONFIRMED');
@@ -131,6 +138,7 @@
                 emptyMessage = '완료된 거래가 없습니다';
                 break;
             case 'cancelled':
+                // 취소와 만료 모두 포함
                 filteredDeals = allDeals.filter(d => d.status === 'TERMINATED' || d.status === 'EXPIRED');
                 containerSelector = '#tab-cancelled .space-y-4';
                 emptyMessage = '취소/만료된 거래가 없습니다';
@@ -166,7 +174,7 @@
     function createDealCard(deal) {
         const statusConfig = {
             'PENDING_CONFIRMATION': {
-                label: '확정 대기',
+                label: '거래 대기',
                 color: 'bg-yellow-100 text-yellow-800 border-yellow-300'
             },
             'CONFIRMED': {

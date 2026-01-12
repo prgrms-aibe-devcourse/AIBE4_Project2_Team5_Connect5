@@ -9,15 +9,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(
-        name = "reviews",
-        uniqueConstraints = {
-                @UniqueConstraint(name = "uk_reviews_deal", columnNames = {"deal_id"})
-        },
-        indexes = {
-                @Index(name = "idx_reviews_seller", columnList = "seller_id")
-        }
-)
+@Table(name = "reviews")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Review extends AuditableEntity {

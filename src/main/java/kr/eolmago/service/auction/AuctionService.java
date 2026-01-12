@@ -8,10 +8,8 @@ import kr.eolmago.domain.entity.auction.enums.ItemCategory;
 import kr.eolmago.domain.entity.auction.enums.ItemCondition;
 import kr.eolmago.domain.entity.user.User;
 import kr.eolmago.dto.api.auction.request.AuctionDraftRequest;
-import kr.eolmago.dto.api.auction.response.AuctionDraftDetailResponse;
-import kr.eolmago.dto.api.auction.response.AuctionDraftResponse;
-import kr.eolmago.dto.api.auction.response.AuctionListDto;
-import kr.eolmago.dto.api.auction.response.AuctionListResponse;
+import kr.eolmago.dto.api.auction.request.AuctionSearchRequest;
+import kr.eolmago.dto.api.auction.response.*;
 import kr.eolmago.dto.api.common.PageResponse;
 import kr.eolmago.global.exception.BusinessException;
 import kr.eolmago.global.exception.ErrorCode;
@@ -72,7 +70,7 @@ public class AuctionService {
         // 시작가 기준으로 입찰 단위를 자동 계산
         int bidIncrement = BidIncrementCalculator.calculate(request.startPrice());
 
-        // Auction 데이터 저장
+        // 3. Auction 데이터 저장
         Auction auction = Auction.create(
                 auctionItem,
                 sellerRef,
@@ -205,19 +203,14 @@ public class AuctionService {
 
     // 경매 목록 조회
     public PageResponse<AuctionListResponse> getAuction(
-        int page,
-        int size,
-        String sortKey,
-        AuctionStatus status,
-        UUID sellerId,
-        ItemCategory category,
-        List<String> brands,
-        Integer minPrice,
-        Integer maxPrice
+            int page,
+            int size,
+            String sortKey,
+            AuctionSearchRequest searchRequest
     ) {
         Pageable pageable = PageRequest.of(page, size);
 
-        Page<AuctionListDto> dtoPage = auctionRepository.searchList(pageable, sortKey, status, sellerId, category, brands, minPrice, maxPrice);
+        Page<AuctionListDto> dtoPage = auctionRepository.searchList(pageable, sortKey, searchRequest);
         Page<AuctionListResponse> responsePage = dtoPage.map(AuctionListResponse::from);
 
         return PageResponse.of(responsePage);
@@ -251,7 +244,23 @@ public class AuctionService {
         );
     }
 
-    // 경매 조회 + 소유자 검증 + DRAFT 상태 검증
+    // 경매 상세 조회
+    public AuctionDetailResponse getAuctionDetail(UUID auctionId) {
+
+        AuctionDetailDto dto = auctionRepository.findDetailById(auctionId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.AUCTION_NOT_FOUND));
+
+        // 모든 이미지 URL 조회
+        AuctionItem itemRef = auctionItemRepository.getReferenceById(dto.auctionItemId());
+        List<String> imageUrls = auctionImageRepository.findByAuctionItemOrderByDisplayOrder(itemRef)
+                .stream()
+                .map(AuctionImage::getImageUrl)
+                .toList();
+
+        return AuctionDetailResponse.from(dto, imageUrls);
+    }
+
+    // 경매 조회, 소유자 검증, DRAFT 상태 검증
     private Auction loadDraftOwnedAuction(UUID auctionId, UUID sellerId, ErrorCode notDraftError) {
         Auction auction = auctionRepository.findById(auctionId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.AUCTION_NOT_FOUND));

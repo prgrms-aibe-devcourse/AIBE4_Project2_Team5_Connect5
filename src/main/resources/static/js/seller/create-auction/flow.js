@@ -7,9 +7,6 @@
     const root = $("#draftPage");
     if (!root) return;
 
-    // -------------------------
-    // cfg from dataset
-    // -------------------------
     const cfg = {
         apiBase: (root.dataset.apiBase || "/api/auctions").trim(),
         auctionId: (root.dataset.auctionId || "").trim(),
@@ -26,17 +23,11 @@
 
     ns.cfg = cfg;
 
-    // -------------------------
-    // UI
-    // -------------------------
     const ui = ns.ui.createUI(root);
 
     function setButtonsState() {
-        // 삭제만 auctionId 있을 때 활성
         ui.el.deleteBtn.disabled = !cfg.auctionId;
 
-        // 게시하기는 "처음 글이어도 가능"이므로 기본적으로 disabled 하지 않음
-        // 다만 저장/게시 중에는 클릭 방지
         if (ui.state.isSaving || ui.state.isPublishing) {
             ui.el.publishBtn.disabled = true;
             ui.el.saveBtn.disabled = true;
@@ -56,9 +47,6 @@
         setButtonsState();
     }
 
-    // -------------------------
-    // Load draft if exists
-    // -------------------------
     async function loadDraftIfNeeded() {
         setButtonsState();
         if (!cfg.auctionId) return;
@@ -72,9 +60,6 @@
         }
     }
 
-    // -------------------------
-    // Save draft
-    // -------------------------
     async function saveDraft() {
         if (ui.state.isSaving) return;
         ui.state.isSaving = true;
@@ -170,9 +155,6 @@
         }
     }
 
-    // -------------------------
-    // Publish
-    // -------------------------
     async function publishOnly() {
         if (!cfg.auctionId) {
             ui.showAlert("게시 전에 경매 ID가 필요합니다. 자동 저장 후 다시 시도해주세요.");
@@ -192,8 +174,8 @@
 
             await api.publish(cfg.apiBase, cfg.auctionId);
 
-            ui.setToast("게시 완료", "경매가 게시되었습니다. 목록으로 이동합니다.");
-            window.setTimeout(() => (window.location.href = cfg.redirectAfterPublish), 600);
+            ui.setToast("게시 완료", "경매가 게시되었습니다. 상세 페이지로 이동합니다.");
+            window.setTimeout(() => (window.location.href = `/auctions/${cfg.auctionId}`), 600);
         } catch (e) {
             ui.showPublishRetryBox();
             ui.showAlert(e?.message || "게시에 실패했습니다.");
@@ -204,11 +186,6 @@
         }
     }
 
-    /**
-     * 요구사항(명령3) 반영:
-     * - 임시 저장이 없어서 처음 작성이어도 "게시하기" 가능
-     * - 흐름: (이미지 업로드 포함) saveDraft()로 auctionId 생성/업데이트 → publishOnly()
-     */
     async function publishFlow() {
         // draft가 없거나, 수정 중이거나, 파일이 남아있으면 저장을 먼저 수행
         const needSave = !cfg.auctionId || ui.state.isDirty || ui.hasPendingFileUploads();

@@ -9,6 +9,8 @@ import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import kr.eolmago.domain.entity.auction.enums.AuctionStatus;
 import kr.eolmago.domain.entity.auction.enums.ItemCategory;
+import kr.eolmago.dto.api.auction.request.AuctionSearchRequest;
+import kr.eolmago.dto.api.auction.response.AuctionDetailDto;
 import kr.eolmago.dto.api.auction.response.AuctionListDto;
 import kr.eolmago.repository.auction.AuctionRepositoryCustom;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +21,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static kr.eolmago.domain.entity.auction.QAuction.auction;
@@ -33,21 +36,24 @@ public class AuctionRepositoryImpl implements AuctionRepositoryCustom {
 
     private final JPAQueryFactory queryFactory;
 
+    // 경매 목록 조회
     @Override
     public Page<AuctionListDto> searchList(
             Pageable pageable,
             String sortKey,
-            AuctionStatus status,
-            UUID userId,
-            ItemCategory category,
-            List<String> brands,
-            Integer minPrice,
-            Integer maxPrice
+            AuctionSearchRequest searchRequest
     ) {
+        AuctionStatus status = searchRequest != null ? searchRequest.status() : null;
+        UUID userId = searchRequest != null ? searchRequest.userId() : null;
+        ItemCategory category = searchRequest != null ? searchRequest.category() : null;
+        List<String> brands = searchRequest != null ? searchRequest.brands() : null;
+        Integer minPrice = searchRequest != null ? searchRequest.minPrice() : null;
+        Integer maxPrice = searchRequest != null ? searchRequest.maxPrice() : null;
+
         OrderSpecifier<?>[] orderSpecifiers = createOrderSpecifiers(sortKey);
 
         List<AuctionListDto> content = queryFactory
-                .select(Projections.constructor(
+                .select(com.querydsl.core.types.Projections.constructor(
                         AuctionListDto.class,
                         auction.auctionId,
                         auctionItem.auctionItemId,
@@ -106,10 +112,52 @@ public class AuctionRepositoryImpl implements AuctionRepositoryCustom {
         return PageableExecutionUtils.getPage(content, pageable, countQuery::fetchOne);
     }
 
+    // 경매 상세 조회
+    @Override
+    public Optional<AuctionDetailDto> findDetailById(UUID auctionId) {
+        AuctionDetailDto result = queryFactory
+                .select(Projections.constructor(
+                        AuctionDetailDto.class,
+                        auction.auctionId,
+                        auction.title,
+                        auction.description,
+                        auction.status,
+                        auction.startPrice,
+                        auction.currentPrice,
+                        auction.bidIncrement,
+                        auction.bidCount,
+                        auction.favoriteCount,
+                        auction.startAt,
+                        auction.endAt,
+                        auction.originalEndAt,
+                        auction.durationHours,
+                        auction.extendCount,
+                        auction.endReason,
+                        auction.finalPrice,
+                        auction.createdAt,
+                        auctionItem.auctionItemId,
+                        auctionItem.itemName,
+                        auctionItem.category,
+                        auctionItem.condition,
+                        auctionItem.specs,
+                        user.userId,
+                        userProfile.nickname,
+                        userProfile.tradeCount,
+                        auctionImage.imageUrl
+                ))
+                .from(auction)
+                .innerJoin(auction.auctionItem, auctionItem)
+                .innerJoin(auction.seller, user)
+                .innerJoin(userProfile)
+                .on(userProfile.user.eq(user))
+                .leftJoin(auctionImage)
+                .on(auctionImage.auctionItem.eq(auctionItem)
+                        .and(auctionImage.displayOrder.eq(0)))
+                .where(auction.auctionId.eq(auctionId))
+                .fetchOne();
 
-    // ================
-    // 헬페 메서드
-    // ================
+        return Optional.ofNullable(result);
+    }
 
     private OrderSpecifier<?>[] createOrderSpecifiers(String sortKey) {
         if (sortKey == null || sortKey.isEmpty()) {

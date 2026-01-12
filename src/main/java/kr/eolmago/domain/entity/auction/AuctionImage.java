@@ -7,12 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(
-        name = "auction_images",
-        indexes = {
-                @Index(name = "idx_auction_images_item_order", columnList = "auction_item_id,display_order")
-        }
-)
+@Table(name = "auction_images")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class AuctionImage extends CreatedAtEntity {

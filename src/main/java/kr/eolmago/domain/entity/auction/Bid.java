@@ -8,13 +8,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(
-        name = "bids",
-        indexes = {
-                @Index(name = "idx_bids_auction_created", columnList = "auction_id,created_at"),
-                @Index(name = "idx_bids_bidder", columnList = "bidder_id")
-        }
-)
+@Table(name = "bids")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Bid extends CreatedAtEntity {
@@ -35,15 +29,21 @@ public class Bid extends CreatedAtEntity {
     @Column(nullable = false)
     private int amount;
 
+    // 중복 입찰 방지 - 요청 고유번호
+    @Column(nullable = false, length = 64, unique = true)
+    private String clientRequestId;
+
     public static Bid create(
             Auction auction,
             User bidder,
-            int amount
+            int amount,
+            String clientRequestId
     ) {
         Bid bid = new Bid();
         bid.auction = auction;
         bid.bidder = bidder;
         bid.amount = amount;
+        bid.clientRequestId = clientRequestId;
         return bid;
     }
 }

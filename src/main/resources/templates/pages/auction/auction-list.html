@@ -181,6 +181,13 @@
             </div>
         </div>
 
+        <!-- 경매 개수 -->
+        <div th:if="${!auctions.content.isEmpty()}" class="mb-6">
+            <p class="text-sm text-slate-600">
+                총 <span class="font-semibold text-gray-900" th:text="${auctions.pageInfo.totalElements}">0</span>개
+            </p>
+        </div>
+
         <!-- 경매 카드 그리드 -->
         <div th:if="${!auctions.content.isEmpty()}"
              class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">

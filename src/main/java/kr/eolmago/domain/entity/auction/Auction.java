@@ -13,13 +13,7 @@ import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(
-        name = "auctions",
-        indexes = {
-                @Index(name = "idx_auctions_status_end_at", columnList = "status,end_at"),
-                @Index(name = "idx_auctions_seller", columnList = "seller_id")
-        }
-)
+@Table(name = "auctions")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Auction extends CreatedAtEntity {
@@ -136,5 +130,40 @@ public class Auction extends CreatedAtEntity {
         this.endAt = endAt;
         this.originalEndAt = endAt;
         this.currentPrice = this.startPrice;
+    }
+
+    // 입찰
+    public void updateBid(int newAmount) {
+        this.currentPrice = newAmount;
+        this.bidCount++;
+    }
+
+    // 경매 종료 시간 연장
+    public void extendEndTime(OffsetDateTime newEndAt, int newDurationHours) {
+        this.endAt = newEndAt;
+        this.extendCount++;
+        this.durationHours = newDurationHours;
+    }
+
+    // 낙찰
+    public void closeAsSold(User buyer, Long finalPrice) {
+        this.status = AuctionStatus.ENDED_SOLD;
+        this.buyer = buyer;
+        this.finalPrice = finalPrice;
+        this.endReason = AuctionEndReason.SOLD;
+    }
+
+    // 유찰
+    public void closeAsUnsold() {
+        this.status = AuctionStatus.ENDED_UNSOLD;
+        this.endReason = AuctionEndReason.NO_BIDS;
+        this.finalPrice = 0L;
+    }
+
+    // 판매자 경매 중지
+    public void stopBySeller() {
+        this.status = AuctionStatus.ENDED_UNSOLD;
+        this.endReason = AuctionEndReason.SELLER_STOPPED;
+        this.finalPrice = 0L;
     }
 }

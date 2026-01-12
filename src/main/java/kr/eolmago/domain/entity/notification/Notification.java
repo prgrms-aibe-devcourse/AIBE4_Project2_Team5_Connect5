@@ -12,13 +12,7 @@ import lombok.NoArgsConstructor;
 import java.time.OffsetDateTime;
 
 @Entity
-@Table(
-        name = "notifications",
-        indexes = {
-                @Index(name = "idx_notifications_user_created", columnList = "user_id,created_at"),
-                @Index(name = "idx_notifications_user_is_read", columnList = "user_id,is_read")
-        }
-)
+@Table(name = "notifications")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Notification extends AuditableEntity {

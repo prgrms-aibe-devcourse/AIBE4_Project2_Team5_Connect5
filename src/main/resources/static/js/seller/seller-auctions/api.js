@@ -14,11 +14,11 @@
         const params = new URLSearchParams();
         params.set('page', String(page));
         params.set('size', String(size));
-        params.set('sort', sort || 'latest');
-        params.set('sellerId', sellerId);
+        params.set('sortKey', sort || 'latest');
+        params.set('userId', sellerId);
         if (status) params.set('status', status);
 
-        const res = await fetch(`/api/auctions?${params.toString()}`, {
+        const res = await fetch(`/api/auctions/list?${params.toString()}`, {
             method: 'GET',
             credentials: 'same-origin',
             headers: { Accept: 'application/json' },

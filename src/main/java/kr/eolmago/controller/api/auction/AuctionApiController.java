@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import kr.eolmago.dto.api.auction.request.AuctionDraftRequest;
 import kr.eolmago.dto.api.auction.request.AuctionSearchRequest;
+import kr.eolmago.dto.api.auction.response.AuctionDetailResponse;
 import kr.eolmago.dto.api.auction.response.AuctionDraftDetailResponse;
 import kr.eolmago.dto.api.auction.response.AuctionDraftResponse;
 import kr.eolmago.dto.api.auction.response.AuctionListResponse;
@@ -86,7 +87,7 @@ public class AuctionApiController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @Operation(summary = "경매 목록 조회")
+    @Operation(summary = "경매 목록 조회 - 필터 적용")
     @GetMapping
     public ResponseEntity<PageResponse<AuctionListResponse>> getAuctions (
             @RequestParam(defaultValue = "0") int page,
@@ -95,9 +96,20 @@ public class AuctionApiController {
             AuctionSearchRequest searchRequest
     ) {
         Pageable pageable = PageRequest.of(page, size);
-
         PageResponse<AuctionListResponse> response = auctionSearchService.search(searchRequest, sort, pageable);
 
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "경매 목록 조회")
+    @GetMapping("/list")
+    public ResponseEntity<PageResponse<AuctionListResponse>> getAuctionList (
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "12") int size,
+            @RequestParam(defaultValue = "latest") String sortKey,
+            AuctionSearchRequest searchRequest
+    ) {
+        PageResponse<AuctionListResponse> response = auctionService.getAuction(page, size, sortKey, searchRequest);
         return ResponseEntity.ok(response);
     }
 
@@ -109,6 +121,15 @@ public class AuctionApiController {
     ) {
         UUID sellerId = UUID.fromString(principal.getId());
         AuctionDraftDetailResponse response = auctionService.getDraft(auctionId, sellerId);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "경매 상세 조회")
+    @GetMapping("/{auctionId}")
+    public ResponseEntity<AuctionDetailResponse> getAuctionDetail (
+            @PathVariable UUID auctionId
+    ) {
+        AuctionDetailResponse response = auctionService.getAuctionDetail(auctionId);
         return ResponseEntity.ok(response);
     }
 }
