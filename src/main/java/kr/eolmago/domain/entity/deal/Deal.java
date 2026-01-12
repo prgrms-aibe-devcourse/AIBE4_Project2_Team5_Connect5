@@ -13,7 +13,9 @@ import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "deals")
+@Table(name = "deals", indexes = {
+        @Index(name = "idx_deal_status_confirm_by_at", columnList = "status, confirmByAt")
+})
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Deal extends AuditableEntity {
