@@ -8,22 +8,39 @@ import {
     formatRemainingHms,
     startCountdown,
     resolveLabel,
-    normalizeOrderedImages
+    normalizeOrderedImages,
+    calcBidIncrement
 } from "./util.js";
 
 export class Ui {
     constructor(root) {
         this.root = root;
 
+        // root dataset
+        this.auctionId = root?.dataset?.auctionId ?? null;
+        this.meUserId = this.#normalizeUuid(root?.dataset?.meUserId ?? null);
+
         // overlay
         this.loadingOverlay = root.querySelector("#loading-overlay");
+
+        // toast
+        this.toast = root.querySelector("#toast");
+        this.toastTitle = root.querySelector("#toastTitle");
+        this.toastMsg = root.querySelector("#toastMsg");
 
         // header/title
         this.auctionTitle = root.querySelector("#auction-title");
         this.itemName = root.querySelector("#item-name");
 
+        // unsold banner
+        this.unsoldBanner = root.querySelector("#unsold-banner");
+
         // gallery
         this.mainImage = root.querySelector("#main-image");
+        this.mainImageWrap = root.querySelector("#main-image-wrap");
+        this.unsoldBadge = root.querySelector("#unsold-badge");
+        this.myAuctionBadge = root.querySelector("#my-auction-badge");
+
         this.thumbs = root.querySelector("#thumbs");
         this.thumbPrevBtn = root.querySelector("#thumb-prev");
         this.thumbNextBtn = root.querySelector("#thumb-next");
@@ -36,6 +53,7 @@ export class Ui {
         this.contentImages = root.querySelector("#content-images");
 
         // right panel
+        this.priceCard = root.querySelector("#price-card");
         this.currentPrice = root.querySelector("#current-price");
         this.startPrice = root.querySelector("#start-price");
 
@@ -45,6 +63,25 @@ export class Ui {
         this.bidCount = root.querySelector("#bid-count");
         this.bidIncrement = root.querySelector("#bid-increment");
 
+        // A) highest badge
+        this.highestBadge = root.querySelector("#highest-badge");
+
+        // my highest bid display
+        this.myHighestBidAmount = root.querySelector("#my-highest-bid-amount");
+        this.myBidValue = root.querySelector("#my-bid-value");
+
+        // republish (seller action)
+        this.republishBox = root.querySelector("#republish-box");
+        this.republishButton = root.querySelector("#republish-button");
+        this.republishHint = root.querySelector("#republish-hint");
+
+        // cancel (seller action)
+        this.cancelBox = root.querySelector("#cancel-box");
+        this.cancelButton = root.querySelector("#cancel-button");
+
+        // bid section wrapper
+        this.bidFormSection = root.querySelector("#bid-form-section");
+
         // bid
         this.bidHint = root.querySelector("#bid-hint");
         this.bidInput = root.querySelector("#bid-input");
@@ -53,6 +90,21 @@ export class Ui {
         this.bidQuickBtns = root.querySelectorAll(".bid-quick");
         this.bidError = root.querySelector("#bid-error");
         this.bidSubmit = root.querySelector("#bid-submit");
+
+        // not highest warning
+        this.notHighestWarning = root.querySelector("#not-highest-warning");
+        this.minBidWarning = root.querySelector("#min-bid-warning");
+
+        // C) highest hint
+        this.highestHint = root.querySelector("#highest-hint");
+
+        // confirmation toast
+        this.confirmToast = root.querySelector("#confirm-toast");
+        this.confirmToastTitle = root.querySelector("#confirmToastTitle");
+        this.confirmToastMsg = root.querySelector("#confirmToastMsg");
+        this.confirmToastOk = root.querySelector("#confirm-toast-ok");
+        this.confirmToastCancel = root.querySelector("#confirm-toast-cancel");
+        this.confirmToastOverlay = root.querySelector("#confirm-toast-overlay");
 
         // seller
         this.sellerAvatar = root.querySelector("#seller-avatar");
@@ -73,6 +125,18 @@ export class Ui {
 
         // bind once
         this._thumbNavBound = false;
+
+        // latest data state
+        this.data = null;
+
+        // flash timer
+        this._flashTimer = null;
+
+        // previous highest bidder state (for detecting status change)
+        this.wasHighestBidder = null;
+
+        // prevent close refresh duplication
+        this._closingLock = false;
     }
 
     setLoading(isLoading) {
@@ -81,11 +145,25 @@ export class Ui {
         this.loadingOverlay.classList.toggle("flex", isLoading);
     }
 
-    toastError(message) {
-        alert(message);
+    setToast(title, message) {
+        if (!this.toast) return;
+        if (this.toastTitle) this.toastTitle.textContent = title || "알림";
+        if (this.toastMsg) this.toastMsg.textContent = message || "";
+
+        this.toast.classList.remove("hidden");
+
+        setTimeout(() => {
+            this.toast.classList.add("hidden");
+        }, 3000);
     }
 
-    renderAll(data, serverNowMs) {
+    toastError(message) {
+        this.setToast("오류", message);
+    }
+
+    renderAll(data, serverNowMs, api) {
+        this.data = data;
+
         this.renderHeader(data);
         this.renderGallery(data);
 
@@ -93,14 +171,20 @@ export class Ui {
         this.renderDetail(data);
         this.renderSeller(data);
 
-        this.startAccurateCountdown(data, serverNowMs);
+        // 상태별 UI (유찰 포함) 먼저 반영
+        this.applyAuctionStateUi(data);
+
+        // countdown
+        this.startAccurateCountdown(data, serverNowMs, api);
+
+        // bid defaults (유찰이면 숨김이므로 내부에서 방어)
         this.prepareBidDefaults(data);
 
-        // 모달(추후) 자리: 현재는 아무 동작 안 함
+        // highest UI (LIVE가 아니거나 유찰이면 내부에서 숨김 처리)
+        this.applyHighestUi(data);
+
         if (this.sellerCard && !this.sellerCard.dataset.bound) {
-            this.sellerCard.addEventListener("click", () => {
-                // placeholder
-            });
+            this.sellerCard.addEventListener("click", () => {});
             this.sellerCard.dataset.bound = "1";
         }
     }
@@ -110,19 +194,9 @@ export class Ui {
         if (this.itemName) this.itemName.textContent = safeText(data.itemName);
     }
 
-    /**
-     * 썸네일 규칙
-     * - 썸네일은 "최대 5개 창"으로 보여주되, 실제 이미지 개수만 렌더(빈칸 금지)
-     * - 이미지가 6장 이상일 때만 <, > 버튼 노출/이동
-     * - 끝에 도달하면 버튼은 흐리게(비활성처럼)만 보이게 하고, disabled 속성은 사용하지 않음(금지 커서 방지)
-     */
     renderGallery(data) {
-        // 상단 갤러리용 URL 우선순위:
-        // 1) data.imageUrls(문자열 배열)
-        // 2) normalizeOrderedImages()로 추출한 url 목록
         const directUrls = Array.isArray(data.imageUrls) ? data.imageUrls.filter(Boolean) : [];
         const normalized = normalizeOrderedImages(data).map((x) => x.url).filter(Boolean);
-
         const urls = directUrls.length ? directUrls : normalized;
 
         this.galleryUrls = urls;
@@ -154,15 +228,12 @@ export class Ui {
 
         const navEnabled = urls.length > windowSize;
 
-        // 버튼은 "6장 이상"일 때만 노출
         if (this.thumbPrevBtn) this.thumbPrevBtn.classList.toggle("hidden", !navEnabled);
         if (this.thumbNextBtn) this.thumbNextBtn.classList.toggle("hidden", !navEnabled);
 
-        // start 보정
         const maxStart = navEnabled ? Math.max(0, urls.length - windowSize) : 0;
         this.thumbWindowStart = Math.min(Math.max(0, this.thumbWindowStart), maxStart);
 
-        // 끝에서 비활성처럼 보이게 (disabled 속성 금지)
         if (navEnabled) {
             const atStart = this.thumbWindowStart <= 0;
             const atEnd = (this.thumbWindowStart + windowSize) >= urls.length;
@@ -174,7 +245,6 @@ export class Ui {
             this.setNavVisualState(this.thumbNextBtn, false);
         }
 
-        // 실제 존재하는 썸네일만 렌더(빈칸 X)
         this.thumbs.innerHTML = "";
 
         if (urls.length === 0) {
@@ -225,8 +295,6 @@ export class Ui {
 
     setNavVisualState(buttonEl, enabled) {
         if (!buttonEl) return;
-
-        // enabled=false면 흐리게 + 클릭 무시되도록 dataset으로만 제어(disabled 사용 X)
         buttonEl.dataset.enabled = enabled ? "1" : "0";
         buttonEl.classList.toggle("opacity-40", !enabled);
     }
@@ -240,7 +308,6 @@ export class Ui {
         const maxStart = Math.max(0, urls.length - windowSize);
         const nextStart = Math.min(Math.max(0, this.thumbWindowStart + delta), maxStart);
 
-        // 버튼이 흐린 상태(끝)에서 클릭해도 이동하지 않도록(스무스)
         if (nextStart === this.thumbWindowStart) return;
 
         this.thumbWindowStart = nextStart;
@@ -280,18 +347,10 @@ export class Ui {
         if (this.detailItemName) this.detailItemName.textContent = safeText(data.itemName);
         if (this.detailCondition) this.detailCondition.textContent = resolveLabel("condition", data.condition);
 
-        // 설명이 있을 때만 섹션 표시
         const hasDescription = data.description && String(data.description).trim();
-        if (this.descSection) {
-            this.descSection.classList.toggle("hidden", !hasDescription);
-        }
-        if (this.desc && hasDescription) {
-            this.desc.textContent = safeText(data.description);
-        }
+        if (this.descSection) this.descSection.classList.toggle("hidden", !hasDescription);
+        if (this.desc && hasDescription) this.desc.textContent = safeText(data.description);
 
-        // 하단 “사진 쭈루룩”
-        // - imageUrls 문자열 배열이 있으면 그대로 사용
-        // - 없으면 normalizeOrderedImages로 추출/정렬된 목록 사용
         const directUrls = Array.isArray(data.imageUrls) ? data.imageUrls.filter(Boolean) : [];
         const ordered = normalizeOrderedImages(data).map((x) => x.url).filter(Boolean);
         const urls = directUrls.length ? directUrls : ordered;
@@ -320,7 +379,7 @@ export class Ui {
         if (this.sellerTradeCount) this.sellerTradeCount.textContent = String(data.sellerTradeCount ?? 0);
     }
 
-    startAccurateCountdown(data, serverNowMs) {
+    startAccurateCountdown(data, serverNowMs, api) {
         if (!this.remainingTime) return;
 
         const endAtMs = parseOffsetDateTimeToMs(data.endAt);
@@ -341,18 +400,266 @@ export class Ui {
                 this.remainingTime.textContent = formatRemainingHms(diffMs);
             },
             onDone: () => {
-                this.remainingTime.textContent = "경매 종료";
+                // 0초 도달 시 서버 마감 확정 후 최신 상태 반영(유찰 포함)
+                this.handleCountdownDone(api);
             }
         });
     }
 
+    async handleCountdownDone(api) {
+        const d = this.data ?? {};
+        if (!this.remainingTime) return;
+
+        // 즉시 UI 표시(이후 서버 확정으로 갱신)
+        this.remainingTime.textContent = "경매 종료";
+
+        if (!api || this._closingLock) {
+            this.updateBidButtonUi(d);
+            this.applyAuctionStateUi(d);
+            return;
+        }
+
+        this._closingLock = true;
+        try {
+            // 서버 마감 호출(멱등)
+            await api.closeAuction(d.auctionId);
+
+            // 최신 상태 재조회
+            const { data: fresh, serverNowMs } = await api.fetchDetailWithServerTime(d.auctionId);
+
+            if (fresh && (fresh.bidIncrement === null || fresh.bidIncrement === undefined)) {
+                fresh.bidIncrement = calcBidIncrement(Number(fresh.currentPrice ?? 0));
+            }
+
+            this.data = fresh;
+
+            // 주요 영역 갱신
+            this.renderHeader(fresh);
+            this.renderRightPanel(fresh);
+            this.applyAuctionStateUi(fresh);
+            this.applyHighestUi(fresh);
+
+            // 만약 서버에서 연장 등으로 아직 LIVE라면, 새 endAt 기준으로 카운트다운 재시작
+            if (String(fresh.status ?? "") === "LIVE") {
+                this.prepareBidDefaults(fresh);
+                this.startAccurateCountdown(fresh, serverNowMs, api);
+                return;
+            }
+
+            // 종료 상태 라벨
+            if (this.isUnsoldAuction(fresh)) {
+                this.remainingTime.textContent = "유찰";
+            } else if (this.isCancelledAuction(fresh)) {
+                this.remainingTime.textContent = "경매 취소";
+            } else {
+                this.remainingTime.textContent = "경매 종료";
+            }
+            this.updateBidButtonUi(fresh);
+        } catch (e) {
+            console.warn("마감 확정/재조회 실패:", e);
+            this.updateBidButtonUi(d);
+            this.applyAuctionStateUi(d);
+        } finally {
+            this._closingLock = false;
+        }
+    }
+
     prepareBidDefaults(data) {
+        // 유찰/취소이면 입찰 섹션 자체가 숨김이므로 여기서 종료
+        if (this.isUnsoldAuction(data) || this.isCancelledAuction(data)) return;
+
         const minBid = this.computeMinBid(data);
         if (this.bidHint) this.bidHint.textContent = `(최소 ${formatNumber(minBid)}원 이상)`;
-        this.setBidInputValue(minBid);
 
-        const canBid = data.status === "LIVE";
-        if (this.bidSubmit) this.bidSubmit.disabled = !canBid;
+        this.setBidInputValue(minBid);
+        this.updateBidButtonUi(data);
+    }
+
+    applyAuctionStateUi(data) {
+        const unsold = this.isUnsoldAuction(data);
+        const cancelled = this.isCancelledAuction(data);
+        const isLive = String(data.status ?? "") === "LIVE";
+        const isSeller = this.isSeller(data);
+
+        // banner (유찰 또는 취소)
+        if (this.unsoldBanner) {
+            const showBanner = unsold || cancelled;
+            this.unsoldBanner.classList.toggle("hidden", !showBanner);
+            if (showBanner) {
+                const bannerTitle = this.unsoldBanner.querySelector("p.font-extrabold");
+                const bannerDesc = this.unsoldBanner.querySelector("p.mt-1");
+                if (cancelled) {
+                    if (bannerTitle) bannerTitle.textContent = "경매가 취소되었습니다";
+                    if (bannerDesc) bannerDesc.textContent = "판매자가 경매를 취소했습니다.";
+                } else {
+                    if (bannerTitle) bannerTitle.textContent = "유찰된 경매입니다";
+                    if (bannerDesc) bannerDesc.textContent = "이 경매는 입찰자가 없어 종료되었습니다.";
+                }
+            }
+        }
+
+        // gallery badge (유찰 또는 취소)
+        if (this.unsoldBadge) {
+            const showBadge = unsold || cancelled;
+            this.unsoldBadge.classList.toggle("hidden", !showBadge);
+            if (showBadge) {
+                this.unsoldBadge.textContent = cancelled ? "경매 취소" : "유찰";
+            }
+        }
+
+        // my auction badge (LIVE && isSeller)
+        if (this.myAuctionBadge) {
+            const showMyBadge = isLive && isSeller && !unsold && !cancelled;
+            this.myAuctionBadge.classList.toggle("hidden", !showMyBadge);
+        }
+
+        // bid section: 판매자이거나 유찰/취소 시 숨김
+        if (this.bidFormSection) {
+            const hideBidSection = isSeller || unsold || cancelled;
+            this.bidFormSection.classList.toggle("hidden", hideBidSection);
+        }
+
+        // republish button: seller & (unsold or cancelled)
+        const canRepublish = isSeller && (unsold || cancelled);
+        if (this.republishBox) {
+            this.republishBox.classList.toggle("hidden", !canRepublish);
+            // 힌트 문구: NO_BIDS일 때만 표시
+            if (this.republishHint) {
+                if (unsold) {
+                    this.republishHint.classList.remove("hidden");
+                    this.republishHint.textContent = "유찰된 경매를 수정해 다시 게시할 수 있습니다.";
+                } else {
+                    this.republishHint.classList.add("hidden");
+                }
+            }
+        }
+
+        // cancel button: seller & LIVE & bidCount === 0
+        const canCancel = isSeller && isLive && (data.bidCount ?? 0) === 0;
+        if (this.cancelBox) this.cancelBox.classList.toggle("hidden", !canCancel);
+
+        // 종료 상태에서 최고입찰 UI들 정리
+        if (unsold || cancelled) {
+            this.hideBidErrorsAndWarnings();
+            this.hideHighestUi();
+        }
+    }
+
+    hideHighestUi() {
+        this.highestBadge?.classList.add("hidden");
+        this.highestHint?.classList.add("hidden");
+        this.myHighestBidAmount?.classList.add("hidden");
+        this.hideNotHighestWarning();
+    }
+
+    hideBidErrorsAndWarnings() {
+        this.hideBidError();
+        this.hideNotHighestWarning();
+    }
+
+    updateBidButtonUi(data) {
+        if (!this.bidSubmit) return;
+
+        // 유찰 또는 취소
+        if (this.isUnsoldAuction(data)) {
+            this.bidSubmit.disabled = true;
+            this.bidSubmit.textContent = "유찰";
+            return;
+        }
+
+        if (this.isCancelledAuction(data)) {
+            this.bidSubmit.disabled = true;
+            this.bidSubmit.textContent = "경매 취소";
+            return;
+        }
+
+        const isLive = String(data.status ?? "") === "LIVE";
+        this.bidSubmit.disabled = !isLive;
+
+        if (!isLive) {
+            this.bidSubmit.textContent = "경매 종료";
+            this.hideHighestUi();
+            return;
+        }
+
+        const isHighest = this.isHighestBidder(data);
+        this.bidSubmit.textContent = isHighest ? "추가 입찰하기" : "입찰하기";
+    }
+
+    applyHighestUi(data) {
+        // LIVE가 아니거나 유찰/취소이면 최고입찰 관련 UI 모두 숨김
+        if (String(data.status ?? "") !== "LIVE" || this.isUnsoldAuction(data) || this.isCancelledAuction(data)) {
+            this.hideHighestUi();
+            return;
+        }
+
+        const isHighest = this.isHighestBidder(data);
+
+        if (this.highestBadge) {
+            this.highestBadge.classList.toggle("hidden", !isHighest);
+        }
+
+        if (this.highestHint) {
+            this.highestHint.classList.toggle("hidden", !isHighest);
+        }
+
+        if (this.myHighestBidAmount && this.myBidValue) {
+            if (isHighest) {
+                this.myBidValue.textContent = formatNumber(data.currentPrice);
+                this.myHighestBidAmount.classList.remove("hidden");
+            } else {
+                this.myHighestBidAmount.classList.add("hidden");
+            }
+        }
+
+        if (this.wasHighestBidder === true && isHighest === false) {
+            this.showNotHighestWarning(data);
+            this.setToast("알림", "다른 사용자가 더 높은 금액을 입찰했습니다.");
+        } else if (isHighest) {
+            this.hideNotHighestWarning();
+        }
+
+        this.wasHighestBidder = isHighest;
+        this.updateBidButtonUi(data);
+    }
+
+    isHighestBidder(data) {
+        const me = this.meUserId;
+        const highest = this.#normalizeUuid(data?.highestBidderId ?? null);
+        if (!me || !highest) return false;
+        return me === highest;
+    }
+
+    // 유찰 판정: status + endReason
+    isUnsoldAuction(data) {
+        const status = String(data?.status ?? "");
+        const reason = String(data?.endReason ?? "");
+        return status === "ENDED_UNSOLD" && reason === "NO_BIDS";
+    }
+
+    // 판매자 취소 판정: status + endReason
+    isCancelledAuction(data) {
+        const status = String(data?.status ?? "");
+        const reason = String(data?.endReason ?? "");
+        return status === "ENDED_UNSOLD" && reason === "SELLER_STOPPED";
+    }
+
+    // 판매자 판정(백엔드 필드명 차이 방어)
+    isSeller(data) {
+        const me = this.meUserId;
+        if (!me) return false;
+
+        const sellerId =
+            data?.sellerId ??
+            data?.sellerUserId ??
+            data?.seller?.id ??
+            data?.seller?.userId ??
+            null;
+
+        const s = this.#normalizeUuid(sellerId);
+        if (!s) return false;
+
+        return me === s;
     }
 
     computeMinBid(data) {
@@ -363,45 +670,245 @@ export class Ui {
     }
 
     bindInteractions(data, api) {
-        // bid +/- 버튼
+        this.data = data;
+
+        // republish 버튼 바인딩(한 번만)
+        if (this.republishButton && !this.republishButton.dataset.bound) {
+            this.republishButton.addEventListener("click", async () => {
+                const d = this.data ?? {};
+                const unsold = this.isUnsoldAuction(d);
+                const cancelled = this.isCancelledAuction(d);
+                if (!unsold && !cancelled) return;
+                if (!this.isSeller(d)) return;
+
+                const confirmMsg = cancelled
+                    ? "취소된 경매를 재등록하시겠습니까?"
+                    : "유찰 경매를 재등록하시겠습니까?";
+                const ok = window.confirm(confirmMsg);
+                if (!ok) return;
+
+                try {
+                    this.setLoading(true);
+
+                    const { data: repub } = await api.republishUnsoldAuction(d.auctionId);
+
+                    // 응답 필드명 방어: newAuctionId(백엔드 실제 필드) 우선
+                    const newId =
+                        repub?.newAuctionId ??
+                        repub?.auctionId ??
+                        repub?.draftAuctionId ??
+                        repub?.draftId ??
+                        repub?.id ??
+                        "";
+
+                    if (!newId) {
+                        throw new Error("재등록 응답에 이동할 ID가 없습니다.");
+                    }
+
+                    // 임시저장 수정 페이지로 이동
+                    window.location.href = `/seller/auctions/drafts/${encodeURIComponent(newId)}`;
+                } catch (e) {
+                    this.toastError(e?.message || "재등록에 실패했습니다.");
+                } finally {
+                    this.setLoading(false);
+                }
+            });
+
+            this.republishButton.dataset.bound = "1";
+        }
+
+        // cancel 버튼 바인딩(한 번만)
+        if (this.cancelButton && !this.cancelButton.dataset.bound) {
+            this.cancelButton.addEventListener("click", async () => {
+                const d = this.data ?? {};
+                const isLive = String(d.status ?? "") === "LIVE";
+                const bidCount = d.bidCount ?? 0;
+
+                if (!isLive) return;
+                if (bidCount > 0) return;
+                if (!this.isSeller(d)) return;
+
+                const ok = window.confirm("경매를 취소하시겠습니까?");
+                if (!ok) return;
+
+                try {
+                    this.setLoading(true);
+
+                    await api.cancelAuctionBySeller(d.auctionId);
+
+                    // 최신 상태 재조회
+                    const { data: fresh, serverNowMs } = await api.fetchDetailWithServerTime(d.auctionId);
+
+                    if (fresh && (fresh.bidIncrement === null || fresh.bidIncrement === undefined)) {
+                        fresh.bidIncrement = calcBidIncrement(Number(fresh.currentPrice ?? 0));
+                    }
+
+                    this.data = fresh;
+
+                    // UI 갱신
+                    this.renderHeader(fresh);
+                    this.renderRightPanel(fresh);
+                    this.applyAuctionStateUi(fresh);
+                    this.applyHighestUi(fresh);
+
+                    this.setToast("경매 취소", "경매가 취소되었습니다. 재등록할 수 있습니다.");
+                } catch (e) {
+                    this.toastError(e?.message || "경매 취소에 실패했습니다.");
+                } finally {
+                    this.setLoading(false);
+                }
+            });
+
+            this.cancelButton.dataset.bound = "1";
+        }
+
+        // 유찰/취소이면 입찰 인터랙션 자체가 필요 없으므로, 아래 바인딩은 유지하되 실행 전 validate에서 방어
         this.bidMinus?.addEventListener("click", () => {
-            this.adjustBidBy(-Number(data.bidIncrement ?? 0), data);
-        });
-        this.bidPlus?.addEventListener("click", () => {
-            this.adjustBidBy(Number(data.bidIncrement ?? 0), data);
+            const d = this.data ?? {};
+            if (this.isUnsoldAuction(d) || this.isCancelledAuction(d)) return;
+            this.adjustBidBy(-Number(d.bidIncrement ?? 0), d);
         });
 
-        // quick add
+        this.bidPlus?.addEventListener("click", () => {
+            const d = this.data ?? {};
+            if (this.isUnsoldAuction(d) || this.isCancelledAuction(d)) return;
+            this.adjustBidBy(Number(d.bidIncrement ?? 0), d);
+        });
+
         this.bidQuickBtns?.forEach((btn) => {
             btn.addEventListener("click", () => {
+                const d = this.data ?? {};
+                if (this.isUnsoldAuction(d) || this.isCancelledAuction(d)) return;
                 const add = Number(btn.dataset.add ?? 0);
-                this.adjustBidBy(add, data);
+                this.adjustBidBy(add, d);
             });
         });
 
-        // 입력 포맷팅
         this.bidInput?.addEventListener("input", () => {
+            const d = this.data ?? {};
+            if (this.isUnsoldAuction(d) || this.isCancelledAuction(d)) return;
+
             const n = this.readBidInputNumber();
             if (n === null) {
                 this.bidInput.value = "";
                 return;
             }
             this.setBidInputValue(n);
-            this.validateBid(n, data);
+            this.validateBid(n, d);
         });
 
-        // 입찰하기(현재는 UI만)
-        this.bidSubmit?.addEventListener("click", () => {
+        // 입찰하기
+        this.bidSubmit?.addEventListener("click", async () => {
+            const d = this.data ?? {};
+            if (this.isUnsoldAuction(d) || this.isCancelledAuction(d)) return;
+
             const n = this.readBidInputNumber();
+
             if (n === null) {
                 this.showBidError("입찰 금액을 입력해 주세요.");
                 return;
             }
-            const ok = this.validateBid(n, data);
+
+            const ok = this.validateBid(n, d);
             if (!ok) return;
 
-            alert("입찰 API 연결 전입니다. (UI 구성 완료)");
+            const isHighest = this.isHighestBidder(d);
+            if (isHighest) {
+                const confirmed = await this.showConfirmToast(
+                    "현재 최고 입찰자입니다",
+                    "더 높은 금액으로 추가 입찰하시겠습니까?"
+                );
+                if (!confirmed) return;
+            }
+
+            const originalText = this.bidSubmit.textContent;
+            const oldEndAtMs = parseOffsetDateTimeToMs(d.endAt);
+
+            this.bidSubmit.disabled = true;
+            this.bidSubmit.textContent = "입찰 중...";
+            this.hideBidError();
+            this.hideNotHighestWarning();
+
+            try {
+                const clientRequestId = crypto.randomUUID();
+                await api.createBid(d.auctionId, n, clientRequestId);
+
+                const { data: fresh, serverNowMs } = await api.fetchDetailWithServerTime(d.auctionId);
+
+                if (fresh && (fresh.bidIncrement === null || fresh.bidIncrement === undefined)) {
+                    fresh.bidIncrement = calcBidIncrement(Number(fresh.currentPrice ?? 0));
+                }
+
+                const newEndAtMs = parseOffsetDateTimeToMs(fresh.endAt);
+                const extended = (oldEndAtMs && newEndAtMs && newEndAtMs > oldEndAtMs);
+
+                this.setToast(
+                    "입찰 성공",
+                    extended
+                        ? "입찰이 반영되었고 종료 시간이 연장되었습니다."
+                        : "입찰이 반영되었습니다."
+                );
+
+                this.flashPriceCard();
+                await this.temporarilySetBidButtonText("입찰 완료", 900);
+
+                this.data = fresh;
+
+                this.renderRightPanel(fresh);
+                this.applyAuctionStateUi(fresh);
+                this.startAccurateCountdown(fresh, serverNowMs, api);
+                this.prepareBidDefaults(fresh);
+                this.applyHighestUi(fresh);
+            } catch (e) {
+                this.toastError(e.message || "입찰에 실패했습니다.");
+            } finally {
+                const latest = this.data ?? data;
+
+                if (String(latest.status ?? "") === "LIVE" && !this.isUnsoldAuction(latest) && !this.isCancelledAuction(latest)) {
+                    this.updateBidButtonUi(latest);
+                } else if (this.bidSubmit) {
+                    if (this.isUnsoldAuction(latest)) {
+                        this.bidSubmit.textContent = "유찰";
+                    } else if (this.isCancelledAuction(latest)) {
+                        this.bidSubmit.textContent = "경매 취소";
+                    } else {
+                        this.bidSubmit.textContent = "경매 종료";
+                    }
+                }
+
+                this.updateBidButtonUi(this.data ?? data);
+
+                if (this.bidSubmit && this.bidSubmit.textContent === "입찰 중...") {
+                    this.bidSubmit.textContent = originalText;
+                }
+            }
         });
+    }
+
+    async temporarilySetBidButtonText(text, durationMs) {
+        if (!this.bidSubmit) return;
+        const prev = this.bidSubmit.textContent;
+
+        this.bidSubmit.textContent = text;
+        await new Promise((r) => setTimeout(r, Math.max(0, Number(durationMs ?? 0))));
+        this.bidSubmit.textContent = prev;
+    }
+
+    flashPriceCard() {
+        if (!this.priceCard) return;
+
+        if (this._flashTimer) {
+            clearTimeout(this._flashTimer);
+            this._flashTimer = null;
+        }
+
+        this.priceCard.classList.add("ring-2", "ring-slate-900", "animate-pulse");
+
+        this._flashTimer = setTimeout(() => {
+            this.priceCard.classList.remove("animate-pulse");
+            this.priceCard.classList.remove("ring-2", "ring-slate-900");
+            this._flashTimer = null;
+        }, 1500);
     }
 
     adjustBidBy(delta, data) {
@@ -414,6 +921,17 @@ export class Ui {
     }
 
     validateBid(amount, data) {
+        // 유찰/취소이면 항상 false
+        if (this.isUnsoldAuction(data)) {
+            this.showBidError("유찰된 경매는 입찰할 수 없습니다.");
+            return false;
+        }
+
+        if (this.isCancelledAuction(data)) {
+            this.showBidError("취소된 경매는 입찰할 수 없습니다.");
+            return false;
+        }
+
         const minBid = this.computeMinBid(data);
         const inc = Number(data.bidIncrement ?? 0);
 
@@ -459,27 +977,77 @@ export class Ui {
         this.bidError.classList.add("hidden");
     }
 
+    showNotHighestWarning(data) {
+        if (!this.notHighestWarning || !this.minBidWarning) return;
+        const minBid = this.computeMinBid(data);
+        this.minBidWarning.textContent = formatNumber(minBid);
+        this.notHighestWarning.classList.remove("hidden");
+    }
+
+    hideNotHighestWarning() {
+        if (!this.notHighestWarning) return;
+        this.notHighestWarning.classList.add("hidden");
+    }
+
+    showConfirmToast(title, message) {
+        return new Promise((resolve) => {
+            if (!this.confirmToast || !this.confirmToastOverlay) {
+                resolve(false);
+                return;
+            }
+
+            if (this.confirmToastTitle) this.confirmToastTitle.textContent = title || "확인";
+            if (this.confirmToastMsg) this.confirmToastMsg.textContent = message || "";
+
+            this.confirmToastOverlay.classList.remove("hidden");
+            this.confirmToast.classList.remove("hidden");
+
+            const onOk = () => {
+                this.hideConfirmToast();
+                cleanup();
+                resolve(true);
+            };
+
+            const onCancel = () => {
+                this.hideConfirmToast();
+                cleanup();
+                resolve(false);
+            };
+
+            const cleanup = () => {
+                this.confirmToastOk?.removeEventListener("click", onOk);
+                this.confirmToastCancel?.removeEventListener("click", onCancel);
+                this.confirmToastOverlay?.removeEventListener("click", onCancel);
+            };
+
+            this.confirmToastOk?.addEventListener("click", onOk);
+            this.confirmToastCancel?.addEventListener("click", onCancel);
+            this.confirmToastOverlay?.addEventListener("click", onCancel);
+        });
+    }
+
+    hideConfirmToast() {
+        if (!this.confirmToast || !this.confirmToastOverlay) return;
+        this.confirmToast.classList.add("hidden");
+        this.confirmToastOverlay.classList.add("hidden");
+    }
+
     renderPopularAuctions(auctions, currentAuctionId) {
         if (!this.popularAuctions) return;
 
         this.popularAuctions.innerHTML = "";
 
-        // 자기 자신을 제외
         const filteredAuctions = (auctions || []).filter(
             auction => auction.auctionId !== currentAuctionId
         );
 
-        // 비슷한 경매가 없으면 빈 칸으로 둠
-        if (filteredAuctions.length === 0) {
-            return;
-        }
+        if (filteredAuctions.length === 0) return;
 
         filteredAuctions.forEach((auction) => {
             const card = document.createElement("a");
             card.href = `/auctions/${auction.auctionId}`;
             card.className = "group block flex-shrink-0 w-40 overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-200 transition-all hover:shadow-md hover:ring-slate-300";
 
-            // 이미지
             const imgWrap = document.createElement("div");
             imgWrap.className = "aspect-square overflow-hidden bg-slate-50";
 
@@ -491,7 +1059,6 @@ export class Ui {
             imgWrap.appendChild(img);
             card.appendChild(imgWrap);
 
-            // 정보
             const info = document.createElement("div");
             info.className = "p-3";
 
@@ -509,5 +1076,12 @@ export class Ui {
             card.appendChild(info);
             this.popularAuctions.appendChild(card);
         });
+    }
+
+    #normalizeUuid(v) {
+        if (v === null || v === undefined) return null;
+        const s = String(v).trim();
+        if (!s) return null;
+        return s.toLowerCase();
     }
 }

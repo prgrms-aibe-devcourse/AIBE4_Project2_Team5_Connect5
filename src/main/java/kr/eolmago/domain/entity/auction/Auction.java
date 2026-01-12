@@ -160,8 +160,8 @@ public class Auction extends CreatedAtEntity {
         this.finalPrice = 0L;
     }
 
-    // 판매자 경매 중지
-    public void stopBySeller() {
+    // 판매자 경매 취소
+    public void cancelBySeller() {
         this.status = AuctionStatus.ENDED_UNSOLD;
         this.endReason = AuctionEndReason.SELLER_STOPPED;
         this.finalPrice = 0L;

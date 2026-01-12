@@ -54,7 +54,6 @@
         try {
             const data = await api.getDraft(cfg.apiBase, cfg.auctionId);
             ui.loadDraftToUI(data, storage.parsePathFromPublicUrl);
-            ui.setToast("불러오기 완료", "임시 저장 내용을 불러왔습니다.");
         } catch (e) {
             ui.showAlert(e?.message || "임시 저장 내용을 불러오지 못했습니다.");
         }
@@ -114,8 +113,6 @@
                 // 서버 기준으로 다시 로드(정합성)
                 const loaded = await api.getDraft(cfg.apiBase, cfg.auctionId);
                 ui.loadDraftToUI(loaded, storage.parsePathFromPublicUrl);
-
-                ui.setToast("저장 완료", "임시 저장이 생성되었습니다.");
                 ui.setDirty(false);
                 return;
             }
@@ -142,8 +139,6 @@
 
             const loaded = await api.getDraft(cfg.apiBase, cfg.auctionId);
             ui.loadDraftToUI(loaded, storage.parsePathFromPublicUrl);
-
-            ui.setToast("저장 완료", "임시 저장이 완료되었습니다.");
             ui.setDirty(false);
         } catch (e) {
             api.applyServerFieldErrors(e, ui.showFieldError);
@@ -174,8 +169,7 @@
 
             await api.publish(cfg.apiBase, cfg.auctionId);
 
-            ui.setToast("게시 완료", "경매가 게시되었습니다. 상세 페이지로 이동합니다.");
-            window.setTimeout(() => (window.location.href = `/auctions/${cfg.auctionId}`), 600);
+            window.location.href = `/auctions/${cfg.auctionId}`;
         } catch (e) {
             ui.showPublishRetryBox();
             ui.showAlert(e?.message || "게시에 실패했습니다.");
@@ -217,8 +211,6 @@
 
             ui.el.deleteBtn.textContent = "삭제 중...";
             await api.deleteAuction(cfg.apiBase, cfg.auctionId);
-
-            ui.setToast("삭제 완료", "삭제되었습니다. 목록으로 이동합니다.");
             window.setTimeout(() => (window.location.href = cfg.redirectAfterDelete), 600);
         } catch (e) {
             ui.showAlert(e?.message || "삭제에 실패했습니다.");

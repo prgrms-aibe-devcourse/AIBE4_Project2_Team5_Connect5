@@ -55,13 +55,8 @@ export class Api {
             status: "LIVE"
         });
 
-        if (brand) {
-            params.set("brands", brand);
-        }
-
-        if (category) {
-            params.set("category", category);
-        }
+        if (brand) params.set("brands", brand);
+        if (category) params.set("category", category);
 
         const url = `/api/auctions/list?${params.toString()}`;
 
@@ -72,6 +67,106 @@ export class Api {
 
         if (!response.ok) {
             throw new Error(`GET ${url} failed: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return { data, response };
+    }
+
+    /**
+     * 경매 마감 API 호출
+     */
+    async closeAuction(auctionId) {
+        const url = `/api/auctions/${encodeURIComponent(auctionId)}/close`;
+
+        const response = await fetch(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Accept: "application/json"
+            },
+            credentials: "same-origin"
+        });
+
+        if (!response.ok) {
+            if (response.status === 409 || response.status === 404) {
+                console.log(`Auction ${auctionId} already closed or not found`);
+                return { success: true };
+            }
+            throw new Error(`POST ${url} failed: ${response.status}`);
+        }
+
+        return { success: true };
+    }
+
+    /**
+     * 유찰 경매 재등록
+     */
+    async republishUnsoldAuction(auctionId) {
+        const url = `/api/auctions/${encodeURIComponent(auctionId)}/republish`;
+
+        const response = await fetch(url, {
+            method: "POST",
+            headers: { Accept: "application/json" },
+            credentials: "same-origin"
+        });
+
+        if (!response.ok) {
+            let msg = `재등록에 실패했습니다 (${response.status})`;
+            const data = await response.json().catch(() => null);
+            if (data?.message) msg = data.message;
+            throw new Error(msg);
+        }
+
+        const data = await response.json().catch(() => null);
+        return { data, response };
+    }
+
+    /**
+     * 판매자 경매 취소
+     */
+    async cancelAuctionBySeller(auctionId) {
+        const url = `/api/auctions/${encodeURIComponent(auctionId)}/stop`;
+
+        const response = await fetch(url, {
+            method: "POST",
+            headers: { Accept: "application/json" },
+            credentials: "same-origin"
+        });
+
+        if (!response.ok) {
+            let msg = `경매 취소에 실패했습니다 (${response.status})`;
+            const data = await response.json().catch(() => null);
+            if (data?.message) msg = data.message;
+            throw new Error(msg);
+        }
+
+        return { success: true };
+    }
+
+    /**
+     * 입찰 생성
+     */
+    async createBid(auctionId, amount, clientRequestId) {
+        const url = `/api/auctions/${encodeURIComponent(auctionId)}/bids`;
+
+        const response = await fetch(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Accept: "application/json"
+            },
+            credentials: "same-origin",
+            body: JSON.stringify({
+                amount: amount,
+                clientRequestId: clientRequestId
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => null);
+            const errorMessage = errorData?.message || `입찰에 실패했습니다 (${response.status})`;
+            throw new Error(errorMessage);
         }
 
         const data = await response.json();

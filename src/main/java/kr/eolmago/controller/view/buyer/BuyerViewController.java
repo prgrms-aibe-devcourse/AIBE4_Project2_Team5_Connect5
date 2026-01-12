@@ -23,7 +23,7 @@ public class BuyerViewController {
         return "pages/buyer/buyer-deals";
     }
 
-    // ✅ 거래 상세 페이지
+    // 거래 상세 페이지
     @GetMapping("/deals/{dealId}")
     public String buyerDealDetail(@PathVariable Long dealId, Model model) {
         model.addAttribute("dealId", dealId);
