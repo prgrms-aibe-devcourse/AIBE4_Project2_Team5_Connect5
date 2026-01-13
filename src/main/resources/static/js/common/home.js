@@ -153,6 +153,20 @@
         });
     }
 
+    // 물품 등록 버튼 이벤트 처리
+    function handleCreateAuctionClick() {
+        const createAuctionBtn = document.getElementById("create-auction-btn");
+        if (createAuctionBtn) {
+            createAuctionBtn.addEventListener("click", function(event) {
+                const userRole = this.getAttribute("data-user-role");
+                if (userRole === "GUEST") {
+                    event.preventDefault();
+                    alert("전화번호 미인증 계정입니다. 전화번호 인증 후 이용 가능합니다.");
+                }
+            });
+        }
+    }
+
     // 초기화
     try {
         // 인기 경매 로드
@@ -168,6 +182,10 @@
             const closingAuctions = await fetchAuctions("deadline", 4);
             renderAuctions(closingContainer, closingAuctions);
         }
+
+        // 물품 등록 버튼 이벤트 리스너 추가
+        handleCreateAuctionClick();
+
     } catch (error) {
         console.error("경매 목록을 불러오는데 실패했습니다:", error);
     }

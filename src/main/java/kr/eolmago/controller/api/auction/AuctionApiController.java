@@ -18,6 +18,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -34,6 +35,7 @@ public class AuctionApiController {
 
     @Operation(summary = "경매 임시저장 생성")
     @PostMapping("/drafts")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public ResponseEntity<AuctionDraftResponse> createDraft (
             @Valid @RequestBody AuctionDraftRequest request,
             @AuthenticationPrincipal CustomUserDetails principal
@@ -45,6 +47,7 @@ public class AuctionApiController {
 
     @Operation(summary = "경매 임시저장 수정")
     @PutMapping("/drafts/{auctionId}")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public ResponseEntity<AuctionDraftResponse> updateDraft (
             @PathVariable UUID auctionId,
             @Valid @RequestBody AuctionDraftRequest request,
@@ -57,6 +60,7 @@ public class AuctionApiController {
 
     @Operation(summary = "경매 임시저장 초기화")
     @PostMapping("/drafts/init")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public ResponseEntity<AuctionDraftResponse> initDraft (
             @AuthenticationPrincipal CustomUserDetails principal
     ) {
@@ -67,6 +71,7 @@ public class AuctionApiController {
 
     @Operation(summary = "경매 삭제")
     @DeleteMapping("/{auctionId}")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public ResponseEntity<Void> deleteAuction (
             @PathVariable UUID auctionId,
             @AuthenticationPrincipal CustomUserDetails principal
@@ -79,6 +84,7 @@ public class AuctionApiController {
 
     @Operation(summary = "경매 게시")
     @PostMapping("/{auctionId}/publish")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public ResponseEntity<AuctionDraftResponse> publish (
             @PathVariable UUID auctionId,
             @AuthenticationPrincipal CustomUserDetails principal
