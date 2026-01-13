@@ -172,4 +172,30 @@ export class Api {
         const data = await response.json();
         return { data, response };
     }
+
+    /**
+     * 신고 생성
+     */
+    async createReport(reportData) {
+        const url = `/api/reports`;
+
+        const response = await fetch(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Accept: "application/json"
+            },
+            credentials: "same-origin",
+            body: JSON.stringify(reportData)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => null);
+            const errorMessage = errorData?.message || `신고 접수에 실패했습니다 (${response.status})`;
+            throw new Error(errorMessage);
+        }
+
+        const data = await response.json();
+        return { data, response };
+    }
 }
