@@ -1,5 +1,6 @@
 package kr.eolmago.domain.entity.chat;
 
+import java.util.UUID;
 import kr.eolmago.domain.entity.common.AuditableEntity;
 import kr.eolmago.domain.entity.auction.Auction;
 import kr.eolmago.domain.entity.user.User;
@@ -19,8 +20,17 @@ public class ChatRoom extends AuditableEntity {
     @Column(nullable = false, updatable = false)
     private Long chatRoomId;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "auction_id", nullable = false)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "room_type", nullable = false, length = 20)
+    private ChatRoomType roomType;
+
+    // NOTIFICATION 방에서만 사용 (유저당 1개)
+    @Column(name = "target_user_id")
+    private UUID targetUserId;
+
+    // AUCTION 방에서만 사용 (NOTIFICATION은 null)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "auction_id")
     private Auction auction;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -37,15 +47,23 @@ public class ChatRoom extends AuditableEntity {
 
     private Long lastMessageId;
 
-    public static ChatRoom create(
-            Auction auction,
-            User seller,
-            User buyer
-    ) {
+    public static ChatRoom createAuctionRoom(Auction auction, User seller, User buyer) {
         ChatRoom room = new ChatRoom();
+        room.roomType = ChatRoomType.AUCTION;
+        room.targetUserId = null;
         room.auction = auction;
         room.seller = seller;
         room.buyer = buyer;
+        return room;
+    }
+
+    public static ChatRoom createNotificationRoom(User botUser, User targetUser) {
+        ChatRoom room = new ChatRoom();
+        room.roomType = ChatRoomType.NOTIFICATION;
+        room.targetUserId = targetUser.getUserId();
+        room.auction = null;
+        room.seller = botUser; // 봇이 sender가 되게 seller로 둠
+        room.buyer = targetUser; // 유저는 buyer
         return room;
     }
 
@@ -53,4 +71,3 @@ public class ChatRoom extends AuditableEntity {
         this.lastMessageId = messageId;
     }
 }
-
