@@ -3,7 +3,6 @@ package kr.eolmago.dto.api.deal.response;
 import kr.eolmago.domain.entity.auction.enums.ItemCategory;
 import kr.eolmago.domain.entity.auction.enums.ItemCondition;
 
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -38,8 +37,8 @@ public record DealDetailDto(
         String sellerNickname,
         String buyerNickname,
 
-        // 이미지 URL 리스트
-        List<String> imageUrls
+        // 이미지 URL
+        String thumbnailUrl
 ) {
     /**
      * 카테고리 한글명 반환

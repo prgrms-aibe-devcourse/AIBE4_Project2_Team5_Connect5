@@ -68,69 +68,6 @@
         setTimeout(() => div.remove(), 3000);
     }
 
-    /**
-     * 이미지 갤러리 초기화
-     */
-    function initializeImageGallery(imageUrls, itemName) {
-        const mainImage = document.getElementById('main-image');
-        const thumbnailsContainer = document.getElementById('image-thumbnails');
-
-        // 이미지가 없는 경우
-        if (!imageUrls || imageUrls.length === 0) {
-            mainImage.src = '/images/placeholder.png';
-            mainImage.alt = '이미지 없음';
-            thumbnailsContainer.style.display = 'none';
-            return;
-        }
-
-        // 메인 이미지 설정
-        mainImage.src = imageUrls[0];
-        mainImage.alt = itemName || '상품 이미지';
-
-        // 이미지가 1개만 있으면 썸네일 목록 숨김
-        if (imageUrls.length === 1) {
-            thumbnailsContainer.style.display = 'none';
-            return;
-        }
-
-        // 썸네일 목록 생성
-        thumbnailsContainer.innerHTML = '';
-        thumbnailsContainer.style.display = 'flex';
-
-        imageUrls.forEach((imageUrl, index) => {
-            const thumbnailWrapper = document.createElement('div');
-            thumbnailWrapper.className =
-                'flex-shrink-0 w-20 h-20 rounded-md overflow-hidden border-2 cursor-pointer hover:border-indigo-500 transition-colors ' +
-                (index === 0 ? 'border-indigo-500' : 'border-gray-300');
-            thumbnailWrapper.dataset.index = index;
-
-            const thumbnail = document.createElement('img');
-            thumbnail.src = imageUrl;
-            thumbnail.alt = `썸네일 ${index + 1}`;
-            thumbnail.className = 'w-full h-full object-cover';
-
-            thumbnailWrapper.appendChild(thumbnail);
-            thumbnailsContainer.appendChild(thumbnailWrapper);
-
-            // 클릭 이벤트
-            thumbnailWrapper.addEventListener('click', () => {
-                // 메인 이미지 변경
-                mainImage.src = imageUrl;
-
-                // 썸네일 테두리 업데이트
-                thumbnailsContainer.querySelectorAll('div').forEach((div, i) => {
-                    if (i === index) {
-                        div.classList.remove('border-gray-300');
-                        div.classList.add('border-indigo-500');
-                    } else {
-                        div.classList.remove('border-indigo-500');
-                        div.classList.add('border-gray-300');
-                    }
-                });
-            });
-        });
-    }
-
     // ========================================
     // 초기 로드 및 UI 업데이트
     // ========================================
@@ -173,8 +110,12 @@
      */
     function updateUI(deal) {
 
-        // 이미지 갤러리 초기화
-        initializeImageGallery(deal.imageUrls, deal.itemName);
+        // 썸네일 이미지
+        const thumbnailImg = document.getElementById('thumbnail-image');
+        if (deal.thumbnailUrl) {
+            thumbnailImg.src = deal.thumbnailUrl;
+            thumbnailImg.alt = deal.itemName || '상품 이미지';
+        }
 
         // 기본 정보
         document.getElementById('item-name').textContent = deal.itemName || '상품명';
