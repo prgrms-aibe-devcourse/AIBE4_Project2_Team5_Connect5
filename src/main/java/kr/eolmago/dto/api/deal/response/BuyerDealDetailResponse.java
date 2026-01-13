@@ -60,8 +60,7 @@ public record BuyerDealDetailResponse(
         String sellerNickname,
         String buyerNickname,
 
-        @Schema(description = "이미지 URL 리스트")
-        java.util.List<String> imageUrls
+        String thumbnailUrl
 ) {
         /**
          * DealDetailDto로부터 BuyerDealDetailResponse 생성
@@ -91,7 +90,7 @@ public record BuyerDealDetailResponse(
                         dto.buyerId(),
                         dto.sellerNickname(),
                         dto.buyerNickname(),
-                        dto.imageUrls()
+                        dto.thumbnailUrl()
                 );
         }
 }
