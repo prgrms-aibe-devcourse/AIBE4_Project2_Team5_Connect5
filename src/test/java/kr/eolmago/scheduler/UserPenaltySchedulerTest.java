@@ -19,6 +19,7 @@ import kr.eolmago.repository.auction.AuctionRepository;
 import kr.eolmago.repository.report.ReportRepository;
 import kr.eolmago.repository.user.UserPenaltyRepository;
 import kr.eolmago.repository.user.UserRepository;
+import kr.eolmago.service.user.UserPenaltyScheduler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

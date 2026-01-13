@@ -16,10 +16,6 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-/**
- * Review Service
- * 비즈니스 로직과 검증 담당
- */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -30,35 +26,55 @@ public class ReviewService {
     private final UserRepository userRepository;
 
     /**
-     * 후기 작성
+     * 구매자가 완료된 거래에 대해 판매자에게 리뷰를 작성하는 메서드.
      */
     @Transactional
     public ReviewResponse createReview(
             Long dealId,
-            UUID sellerId,
-            UUID buyerId,
+            UUID userId,
             int rating,
             String content
     ) {
-        // 비즈니스 검증: Entity 존재 확인
-        Deal deal = dealRepository.findById(dealId)
-                .orElseThrow(() -> new IllegalArgumentException("거래를 찾을 수 없습니다"));
-        User seller = userRepository.findByUserId(sellerId)
-                .orElseThrow(() -> new IllegalArgumentException("판매자를 찾을 수 없습니다"));
-        User buyer = userRepository.findByUserId(buyerId)
-                .orElseThrow(() -> new IllegalArgumentException("구매자를 찾을 수 없습니다"));
-
-        // 비즈니스 검증: 거래 완료 확인
-        if (deal.getStatus() != DealStatus.COMPLETED) {
-            throw new IllegalStateException("완료된 거래만 후기를 작성할 수 있습니다");
-        }
-
-        // 비즈니스 검증: 평점 범위
         if (rating < 1 || rating > 5) {
-            throw new IllegalArgumentException("평점은 1~5 사이여야 합니다");
+            throw new IllegalArgumentException("평점은 1에서 5 사이여야 합니다.");
         }
 
-        // 정적 팩토리 메서드로 생성
+        Deal deal = dealRepository.findById(dealId)
+                .orElseThrow(() -> new IllegalArgumentException("거래를 찾을 수 없습니다."));
+
+        // 완료된 거래만 리뷰 작성 가능
+        if (deal.getStatus() != DealStatus.COMPLETED) {
+            throw new IllegalStateException("완료된 거래에만 리뷰를 작성할 수 있습니다.");
+        }
+
+        if (deal.getBuyer() == null || deal.getBuyer().getUserId() == null) {
+            throw new IllegalStateException("구매자 정보가 없습니다.");
+        }
+        if (deal.getSeller() == null || deal.getSeller().getUserId() == null) {
+            throw new IllegalStateException("판매자 정보가 없습니다.");
+        }
+
+        // 현재 로그인 유저가 이 거래의 구매자인지 검증
+        if (!deal.getBuyer().getUserId().equals(userId)) {
+            throw new IllegalArgumentException("해당 거래의 구매자만 리뷰를 작성할 수 있습니다.");
+        }
+
+        // 동일 거래에 동일 구매자가 이미 리뷰 작성했는지 체크
+        List<Review> existing = reviewRepository.findByDeal_DealId(dealId);
+        boolean alreadyExists = existing.stream()
+                .anyMatch(review -> review.getBuyer() != null
+                        && userId.equals(review.getBuyer().getUserId()));
+
+        if (alreadyExists) {
+            throw new IllegalStateException("이미 이 거래에 대한 리뷰를 작성하였습니다.");
+        }
+
+        // User 엔티티 로드 (일관성 및 지연 로딩 방지)
+        User buyer = userRepository.findByUserId(deal.getBuyer().getUserId())
+                .orElseThrow(() -> new IllegalArgumentException("구매자 회원 정보를 찾을 수 없습니다."));
+        User seller = userRepository.findByUserId(deal.getSeller().getUserId())
+                .orElseThrow(() -> new IllegalArgumentException("판매자 회원 정보를 찾을 수 없습니다."));
+
         Review review = Review.create(
                 deal,
                 seller,
@@ -71,72 +87,52 @@ public class ReviewService {
         return ReviewResponse.from(saved);
     }
 
-    /**
-     * 후기 조회
-     */
     public ReviewResponse getReview(Long reviewId) {
         Review review = findReviewById(reviewId);
         return ReviewResponse.from(review);
     }
 
-    /**
-     * 전체 후기 목록
-     */
     public List<ReviewResponse> getAllReviews() {
         return reviewRepository.findAll().stream()
                 .map(ReviewResponse::from)
                 .collect(Collectors.toList());
     }
 
-    /**
-     * 거래별 후기 목록
-     */
-    public List<ReviewResponse> getReviewsByDeal(Long dealId) {
-        return reviewRepository.findByDeal_DealId(dealId).stream()
-                .map(ReviewResponse::from)
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * 판매자별 후기 목록
-     */
     public List<ReviewResponse> getReviewsBySeller(UUID sellerId) {
-        return reviewRepository.findBySeller_UserId(sellerId).stream()
+        List<Review> reviews = reviewRepository.findBySeller_UserId(sellerId);
+        return reviews.stream()
                 .map(ReviewResponse::from)
                 .collect(Collectors.toList());
     }
 
-    /**
-     * 구매자별 후기 목록
-     */
     public List<ReviewResponse> getReviewsByBuyer(UUID buyerId) {
-        return reviewRepository.findByBuyer_UserId(buyerId).stream()
+        List<Review> reviews = reviewRepository.findByBuyer_UserId(buyerId);
+        return reviews.stream()
                 .map(ReviewResponse::from)
                 .collect(Collectors.toList());
     }
 
-    /**
-     * 후기 삭제
-     */
     @Transactional
     public void deleteReview(Long reviewId, UUID userId) {
         Review review = findReviewById(reviewId);
 
-        // 비즈니스 검증: 작성자 확인
-        if (!review.getSeller().getUserId().equals(userId) &&
-            !review.getBuyer().getUserId().equals(userId)) {
-            throw new IllegalArgumentException("후기 관련자만 삭제할 수 있습니다");
+        boolean isSeller = review.getSeller() != null
+                && review.getSeller().getUserId() != null
+                && review.getSeller().getUserId().equals(userId);
+
+        boolean isBuyer = review.getBuyer() != null
+                && review.getBuyer().getUserId() != null
+                && review.getBuyer().getUserId().equals(userId);
+
+        if (!isSeller && !isBuyer) {
+            throw new IllegalArgumentException("리뷰를 삭제할 권한이 없습니다.");
         }
 
         reviewRepository.delete(review);
     }
 
-    // ========================================
-    // Private Helper
-    // ========================================
-
     private Review findReviewById(Long reviewId) {
         return reviewRepository.findById(reviewId)
-                .orElseThrow(() -> new IllegalArgumentException("후기를 찾을 수 없습니다"));
+                .orElseThrow(() -> new IllegalArgumentException("리뷰를 찾을 수 없습니다."));
     }
 }

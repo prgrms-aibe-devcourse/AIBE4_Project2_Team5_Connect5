@@ -1,0 +1,25 @@
+package kr.eolmago.dto.api.favorite.response;
+
+import kr.eolmago.domain.entity.auction.enums.AuctionStatus;
+
+import java.time.OffsetDateTime;
+import java.util.UUID;
+
+public record FavoriteAuctionDto(
+        UUID auctionId,
+        Long auctionItemId,
+        String itemName,
+        String title,
+        String thumbnailUrl,
+        String sellerNickname,
+        Integer startPrice,
+        Integer currentPrice,
+        Long finalPrice,
+        int bidCount,
+        int favoriteCount,
+        OffsetDateTime endAt,
+        AuctionStatus status,
+        OffsetDateTime favoritedAt
+
+) {
+}

@@ -2,8 +2,6 @@ package kr.eolmago.repository.deal.impl;
 
 import com.querydsl.core.types.Projections;
 import com.querydsl.jpa.impl.JPAQueryFactory;
-import kr.eolmago.domain.entity.auction.enums.ItemCategory;
-import kr.eolmago.domain.entity.auction.enums.ItemCondition;
 import kr.eolmago.domain.entity.user.QSocialLogin;
 import kr.eolmago.domain.entity.user.QUser;
 import kr.eolmago.domain.entity.user.QUserProfile;
@@ -39,9 +37,9 @@ public class DealRepositoryImpl implements DealRepositoryCustom {
         var sellerProfile = userProfile;
         var buyerProfile = new QUserProfile("buyerProfile");
 
-        // 1. Deal 기본 정보 조회 (이미지 제외)
-        var dealInfo = queryFactory
-                .select(
+        DealDetailDto result = queryFactory
+                .select(Projections.constructor(
+                        DealDetailDto.class,
                         deal.dealId,
                         deal.finalPrice,
                         deal.status.stringValue(),
@@ -64,8 +62,8 @@ public class DealRepositoryImpl implements DealRepositoryCustom {
                         deal.buyer.userId,
                         sellerProfile.nickname,
                         buyerProfile.nickname,
-                        auctionItem.auctionItemId  // 이미지 조회를 위해 필요
-                )
+                        auctionImage.imageUrl                               // 썸네일 이미지 URL
+                ))
                 .from(deal)
                 .innerJoin(deal.auction, auction)
                 .innerJoin(auction.auctionItem, auctionItem)
@@ -73,49 +71,12 @@ public class DealRepositoryImpl implements DealRepositoryCustom {
                 .innerJoin(deal.buyer, buyer)
                 .innerJoin(sellerProfile).on(sellerProfile.user.eq(seller))
                 .innerJoin(buyerProfile).on(buyerProfile.user.eq(buyer))
+                .leftJoin(auctionImage).on(auctionImage.auctionItem.eq(auctionItem)
+                        .and(auctionImage.displayOrder.eq(0)))
                 .where(deal.dealId.eq(dealId))
                 .fetchOne();
 
-        if (dealInfo == null) {
-            return Optional.empty();
-        }
-
-        // 2. 이미지 URL 리스트 조회 (displayOrder 순서대로)
-        var imageUrls = queryFactory
-                .select(auctionImage.imageUrl)
-                .from(auctionImage)
-                .where(auctionImage.auctionItem.auctionItemId.eq(dealInfo.get(22, Long.class)))
-                .orderBy(auctionImage.displayOrder.asc())
-                .fetch();
-
-        // 3. DealDetailDto 생성
-        DealDetailDto result = new DealDetailDto(
-                dealInfo.get(0, Long.class),
-                dealInfo.get(1, Long.class),
-                dealInfo.get(2, String.class),
-                dealInfo.get(3, String.class),
-                dealInfo.get(4, Boolean.class),
-                dealInfo.get(5, Boolean.class),
-                dealInfo.get(6, String.class),
-                dealInfo.get(7, String.class),
-                dealInfo.get(8, String.class),
-                dealInfo.get(9, String.class),
-                dealInfo.get(10, String.class),
-                dealInfo.get(11, String.class),
-                dealInfo.get(12, java.util.UUID.class),
-                dealInfo.get(13, String.class),
-                dealInfo.get(14, String.class),
-                dealInfo.get(15, ItemCategory.class),
-                dealInfo.get(16, ItemCondition.class),
-                dealInfo.get(17, java.util.Map.class),
-                dealInfo.get(18, java.util.UUID.class),
-                dealInfo.get(19, java.util.UUID.class),
-                dealInfo.get(20, String.class),
-                dealInfo.get(21, String.class),
-                imageUrls  // 이미지 URL 리스트
-        );
-
-        return Optional.of(result);
+        return Optional.ofNullable(result);
     }
 
     /**

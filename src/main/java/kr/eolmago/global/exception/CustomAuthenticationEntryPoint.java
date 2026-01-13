@@ -9,6 +9,7 @@ import kr.eolmago.dto.api.user.response.ErrorResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.InsufficientAuthenticationException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.stereotype.Component;
@@ -25,6 +26,12 @@ public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint 
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException, ServletException {
         String requestUri = request.getRequestURI();
+
+        // GUEST 사용자가 자격이 필요한 페이지에 접근했을 때
+        if (authException instanceof InsufficientAuthenticationException && "GUEST".equals(authException.getMessage())) {
+            handleGuestAccess(response);
+            return;
+        }
 
         // API 요청인 경우 JSON 응답
         if (requestUri.startsWith("/api/")) {
@@ -51,5 +58,12 @@ public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint 
                     "<script>alert('로그인이 필요합니다.'); location.href='/login';</script>"
             );
         }
+    }
+
+    private void handleGuestAccess(HttpServletResponse response) throws IOException {
+        response.setContentType("text/html; charset=UTF-8");
+        response.getWriter().write(
+                "<script>alert('전화번호 미인증 계정입니다. 전화번호 인증 후 이용 가능합니다.'); location.href='/';</script>"
+        );
     }
 }

@@ -3,6 +3,7 @@ package kr.eolmago.scheduler;
 import kr.eolmago.domain.entity.deal.Deal;
 import kr.eolmago.domain.entity.deal.enums.DealStatus;
 import kr.eolmago.repository.deal.DealRepository;
+import kr.eolmago.service.deal.DealScheduler;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

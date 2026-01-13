@@ -115,6 +115,14 @@ export class Ui {
         // popular auctions
         this.popularAuctions = root.querySelector("#popular-auctions");
 
+        // report modal
+        this.reportButton = root.querySelector("#report-button");
+        this.reportModal = root.querySelector("#report-modal");
+        this.reportForm = root.querySelector("#report-form");
+        this.reportCancel = root.querySelector("#report-cancel");
+        this.reportDescription = root.querySelector("#report-description");
+        this.reportReason = root.querySelector("#report-reason");
+
         // gallery state
         this.galleryUrls = [];
         this.mainImageIndex = 0;
@@ -762,6 +770,64 @@ export class Ui {
             this.cancelButton.dataset.bound = "1";
         }
 
+        // Report Modal Interactions
+        if (this.reportButton && !this.reportButton.dataset.bound) {
+            this.reportButton.addEventListener("click", () => {
+                if (this.reportModal) {
+                    this.reportModal.classList.remove("hidden");
+                    this.reportModal.classList.add("flex");
+                }
+            });
+            this.reportButton.dataset.bound = "1";
+        }
+
+        if (this.reportCancel && !this.reportCancel.dataset.bound) {
+            this.reportCancel.addEventListener("click", () => {
+                if (this.reportModal) {
+                    this.reportModal.classList.add("hidden");
+                    this.reportModal.classList.remove("flex");
+                    this.reportForm?.reset();
+                }
+            });
+            this.reportCancel.dataset.bound = "1";
+        }
+
+        if (this.reportForm && !this.reportForm.dataset.bound) {
+            this.reportForm.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                const d = this.data ?? {};
+                const formData = new FormData(this.reportForm);
+                const targetType = formData.get("reportTarget");
+                const reason = this.reportReason?.value;
+                const description = this.reportDescription?.value;
+
+                if (!description || description.length < 10) {
+                    alert("신고 내용은 최소 10자 이상 입력해주세요.");
+                    return;
+                }
+
+                try {
+                    this.setLoading(true);
+                    await api.createReport({
+                        auctionId: d.auctionId,
+                        reportedUserId: d.sellerId || d.sellerUserId, // Assuming seller is reported
+                        type: targetType,
+                        reason: reason,
+                        description: description
+                    });
+                    this.setToast("신고 접수", "신고가 정상적으로 접수되었습니다.");
+                    this.reportModal.classList.add("hidden");
+                    this.reportModal.classList.remove("flex");
+                    this.reportForm.reset();
+                } catch (err) {
+                    this.toastError(err.message || "신고 접수에 실패했습니다.");
+                } finally {
+                    this.setLoading(false);
+                }
+            });
+            this.reportForm.dataset.bound = "1";
+        }
+
         // 유찰/취소이면 입찰 인터랙션 자체가 필요 없으므로, 아래 바인딩은 유지하되 실행 전 validate에서 방어
         this.bidMinus?.addEventListener("click", () => {
             const d = this.data ?? {};
@@ -799,6 +865,12 @@ export class Ui {
 
         // 입찰하기
         this.bidSubmit?.addEventListener("click", async () => {
+            const userRole = this.bidSubmit.dataset.userRole;
+            if (userRole === 'GUEST') {
+                alert('전화번호 미인증 계정입니다. 전화번호 인증 후 이용 가능합니다.');
+                return;
+            }
+
             const d = this.data ?? {};
             if (this.isUnsoldAuction(d) || this.isCancelledAuction(d)) return;
 
