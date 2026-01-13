@@ -4,7 +4,6 @@ import static kr.eolmago.service.chat.ChatConstants.MESSAGE_PAGE_SIZE;
 
 import java.util.List;
 import java.util.UUID;
-
 import kr.eolmago.domain.entity.auction.Auction;
 import kr.eolmago.domain.entity.chat.ChatMessage;
 import kr.eolmago.domain.entity.chat.ChatRoom;
@@ -41,12 +40,12 @@ public class ChatService {
 
 	@Transactional(readOnly = true)
 	public List<ChatRoomSummaryResponse> getMyRooms(UUID userId, ChatRoomType roomType) {
-		return chatRoomRepository.findMyRoomsByType(userId, roomType).stream()
-			.map(room -> ChatRoomSummaryResponse.from(room, userId))
+		return chatRoomRepository.findMyRoomSummariesByType(userId, roomType).stream()
+			.map(ChatRoomSummaryResponse::from)
 			.toList();
 	}
 
-	@Transactional(readOnly = true)
+	@Transactional
 	public List<ChatMessageResponse> getMessages(UUID userId, Long roomId, Long cursor) {
 		findRoomAndValidateParticipant(roomId, userId);
 
@@ -55,6 +54,11 @@ public class ChatService {
 		List<ChatMessage> page = (cursor == null)
 			? chatMessageRepository.findByChatRoomChatRoomIdOrderByChatMessageIdDesc(roomId, pageable)
 			: chatMessageRepository.findByChatRoomChatRoomIdAndChatMessageIdLessThanOrderByChatMessageIdDesc(roomId, cursor, pageable);
+
+		if (cursor == null && !page.isEmpty()) {
+			Long latestId = page.get(0).getChatMessageId();
+			chatRoomRepository.markRead(roomId, userId, latestId);
+		}
 
 		return page.stream().map(ChatMessageResponse::from).toList();
 	}
@@ -91,7 +95,6 @@ public class ChatService {
 		chatStreamPublisher.publish(roomId, senderId, content.trim());
 	}
 
-
 	public void publishNotificationMessage(UUID receiverUserId, String content) {
 		Long roomId = getOrCreateNotificationRoom(receiverUserId);
 		UUID botId = systemUserProvider.notificationBotUserId();
@@ -102,6 +105,14 @@ public class ChatService {
 	public ChatRoom getRoomOrThrow(Long roomId) {
 		return chatRoomRepository.findById(roomId)
 			.orElseThrow(() -> new ChatException(ErrorCode.CHAT_ROOM_NOT_FOUND));
+	}
+
+	@Transactional(readOnly = true)
+	public ChatRoom getRoomForUserOrThrow(UUID userId, Long roomId) {
+		ChatRoom room = chatRoomRepository.findRoomViewById(roomId)
+			.orElseThrow(() -> new ChatException(ErrorCode.CHAT_ROOM_NOT_FOUND));
+		chatValidator.validateParticipant(room, userId);
+		return room;
 	}
 
 	private ChatRoom findRoomAndValidateParticipant(Long roomId, UUID userId) {
@@ -131,7 +142,7 @@ public class ChatService {
 		ChatRoom newRoom = ChatRoom.createAuctionRoom(auction, seller, buyer);
 
 		try {
-			return chatRoomRepository.save(newRoom).getChatRoomId();
+			return chatRoomRepository.saveAndFlush(newRoom).getChatRoomId();
 		} catch (DataIntegrityViolationException e) {
 			ChatRoom room = chatRoomRepository
 				.findByAuctionAuctionIdAndRoomType(auctionId, ChatRoomType.AUCTION)
@@ -140,7 +151,6 @@ public class ChatService {
 			return room.getChatRoomId();
 		}
 	}
-
 
 	private Long createNotificationRoom(UUID userId) {
 		UUID botId = systemUserProvider.notificationBotUserId();
@@ -154,42 +164,12 @@ public class ChatService {
 		ChatRoom room = ChatRoom.createNotificationRoom(botUser, targetUser);
 
 		try {
-			return chatRoomRepository.save(room).getChatRoomId();
+			return chatRoomRepository.saveAndFlush(room).getChatRoomId();
 		} catch (DataIntegrityViolationException e) {
 			ChatRoom existing = chatRoomRepository
 				.findByRoomTypeAndTargetUserId(ChatRoomType.NOTIFICATION, userId)
 				.orElseThrow(() -> e);
 			return existing.getChatRoomId();
 		}
-	}
-
-	private User resolveBuyer(Auction auction, UUID requesterId) {
-		User seller = auction.getSeller();
-		User buyer = auction.getBuyer();
-
-		if (buyer == null) {
-			if (seller.getUserId().equals(requesterId)) {
-				throw new ChatException(ErrorCode.CHAT_SELLER_CANNOT_CREATE_AS_BUYER);
-			}
-			return userRepository.findById(requesterId)
-				.orElseThrow(() -> new ChatException(ErrorCode.USER_NOT_FOUND));
-		}
-
-		boolean isSeller = seller.getUserId().equals(requesterId);
-		boolean isBuyer = buyer.getUserId().equals(requesterId);
-		if (!isSeller && !isBuyer) {
-			throw new ChatException(ErrorCode.CHAT_FORBIDDEN_AUCTION);
-		}
-
-		return buyer;
-	}
-
-	@Transactional(readOnly = true)
-	public ChatRoom getRoomForUserOrThrow(UUID userId, Long roomId) {
-		ChatRoom room = chatRoomRepository.findById(roomId)
-			.orElseThrow(() -> new ChatException(ErrorCode.CHAT_ROOM_NOT_FOUND));
-
-		chatValidator.validateParticipant(room, userId);
-		return room;
 	}
 }

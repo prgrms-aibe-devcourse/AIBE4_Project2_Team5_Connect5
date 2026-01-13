@@ -12,7 +12,10 @@ import kr.eolmago.global.util.DurationCalculator;
 import kr.eolmago.repository.auction.AuctionRepository;
 import kr.eolmago.repository.auction.BidRepository;
 import kr.eolmago.repository.user.UserRepository;
+import kr.eolmago.service.auction.event.AuctionEndAtChangedEvent;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +34,7 @@ public class BidService {
     private final BidRepository bidRepository;
     private final AuctionRepository auctionRepository;
     private final UserRepository userRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     // 입찰 생성
     @Transactional
@@ -93,44 +97,29 @@ public class BidService {
         OffsetDateTime endAt = auction.getEndAt();
         OffsetDateTime originalEndAt = auction.getOriginalEndAt();
 
-        if (endAt == null || originalEndAt == null) {
-            return false;
-        }
+        if (endAt == null || originalEndAt == null) return false;
 
-        // 남은시간 계산
         long remainingSeconds = ChronoUnit.SECONDS.between(now, endAt);
-        if (remainingSeconds <= 0) {
-            return false;
-        }
-
-        if (remainingSeconds > EXTENSION_THRESHOLD_SECONDS) {
-            return false;
-        }
+        if (remainingSeconds <= 0) return false;
+        if (remainingSeconds > EXTENSION_THRESHOLD_SECONDS) return false;
 
         OffsetDateTime candidateEndAt = endAt.plusSeconds(EXTENSION_DURATION_SECONDS);
         OffsetDateTime capEndAt = now.plusSeconds(MAX_REMAINING_SECONDS);
         OffsetDateTime hardCapEndAt = originalEndAt.plusHours(HARD_MAX_EXTENSION_HOURS);
 
-        // 최종 종료시각 갱신
-        // 5분 이하 남았을 때 5분 자동 연장, 연장 후 남은 시간은 최대 30분을 넘지 않도록 캡 적용
-        // 원래 종료 시간으로부터 최대 12시간까지만 연장 가능
         OffsetDateTime newEndAt = candidateEndAt;
-        if (newEndAt.isAfter(capEndAt)) {
-            newEndAt = capEndAt;
-        }
-        if (newEndAt.isAfter(hardCapEndAt)) {
-            newEndAt = hardCapEndAt;
-        }
+        if (newEndAt.isAfter(capEndAt)) newEndAt = capEndAt;
+        if (newEndAt.isAfter(hardCapEndAt)) newEndAt = hardCapEndAt;
 
-        if (!newEndAt.isAfter(endAt)) {
-            return false;
-        }
+        if (!newEndAt.isAfter(endAt)) return false;
 
         int newDurationHours = DurationCalculator.calculateHoursBetween(originalEndAt, newEndAt);
         auction.extendEndTime(newEndAt, newDurationHours);
 
+        eventPublisher.publishEvent(new AuctionEndAtChangedEvent(auction.getAuctionId(), newEndAt));
         return true;
     }
+
 
     private BidCreateResponse buildBidCreateResponse(Bid bid, boolean extensionApplied) {
         Auction auction = bid.getAuction();
