@@ -3,13 +3,16 @@
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layouts/base}">
 <head>
-    <title layout:fragment="title">채팅방</title>
+    <title layout:fragment="title" th:text="${title}">채팅방</title>
 </head>
 
 <body>
 <div layout:fragment="content" class="bg-gradient-to-b from-slate-50 to-white">
     <div id="chatRoot"
-         th:attr="data-room-id=${roomId}, data-user-id=${userId}"
+         th:attr="data-room-id=${roomId},
+                  data-user-id=${userId},
+                  data-room-type=${roomType},
+                  data-read-only=${readOnly}"
          class="mx-auto max-w-3xl px-6 py-10">
 
         <div class="mb-5 flex items-center justify-between">
@@ -18,8 +21,11 @@
                     C
                 </div>
                 <div>
-                    <div class="text-[17px] font-extrabold text-slate-900 leading-tight">채팅</div>
-                    <div class="text-xs text-slate-500">거래 관련 대화를 나눠요</div>
+                    <div class="text-[17px] font-extrabold text-slate-900 leading-tight" th:text="${title}">채팅</div>
+                    <div class="text-xs text-slate-500" th:text="${subtitle}">거래 관련 대화를 나눠요</div>
+                    <div th:if="${auctionTitle != null and !auctionTitle.isBlank()}"
+                         class="mt-1 text-xs text-slate-400"
+                         th:text="${auctionTitle}">경매 제목</div>
                 </div>
             </div>
 
@@ -53,7 +59,8 @@
                 </div>
             </div>
 
-            <div class="border-t border-slate-100 bg-white/80 backdrop-blur px-5 py-4">
+            <!-- ✅ 알림채팅이면 입력창 자체 제거 -->
+            <div th:if="${!readOnly}" class="border-t border-slate-100 bg-white/80 backdrop-blur px-5 py-4">
                 <div class="flex items-end gap-3">
                     <div class="flex-1">
                         <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 shadow-sm focus-within:ring-2 focus-within:ring-slate-200">
@@ -75,6 +82,13 @@
                     Enter 전송 · Shift+Enter 줄바꿈
                 </div>
             </div>
+
+            <!-- ✅ 알림채팅 안내 문구 -->
+            <div th:if="${readOnly}" class="border-t border-slate-100 bg-white/80 backdrop-blur px-5 py-4">
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                    알림 채팅은 읽기 전용입니다.
+                </div>
+            </div>
         </section>
     </div>
 </div>
@@ -87,11 +101,13 @@
 
             const roomId = root.dataset.roomId;
             const myUserId = String(root.dataset.userId ?? '');
+            const roomType = String(root.dataset.roomType ?? '');
+            const readOnly = String(root.dataset.readOnly ?? 'false') === 'true' || roomType === 'NOTIFICATION';
 
             const messagesEl = document.getElementById('messages');
             const loadMoreBtn = document.getElementById('loadMore');
-            const inputEl = document.getElementById('messageInput');
-            const sendBtn = document.getElementById('sendBtn');
+            const inputEl = document.getElementById('messageInput'); // 알림채팅이면 null
+            const sendBtn = document.getElementById('sendBtn');       // 알림채팅이면 null
 
             let cursor = null;
             let loading = false;
@@ -143,6 +159,7 @@
             }
 
             function setSendEnabled(enabled) {
+                if (!sendBtn) return;
                 sendBtn.disabled = !enabled;
             }
 
@@ -166,9 +183,6 @@
                     </div>
                   </div>`;
             }
-
-
-
 
             function appendMessage(raw) {
                 if (messagesEl.dataset.state === 'empty') {
@@ -227,7 +241,7 @@
                             messagesEl.innerHTML = `
                               <div id="emptyState" class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm text-center">
                                 <div class="text-sm font-semibold text-slate-800">메시지가 아직 없어요</div>
-                                <div class="mt-1 text-xs text-slate-500">첫 메시지를 보내보세요.</div>
+                                <div class="mt-1 text-xs text-slate-500">첫 메시지가 도착하면 여기에 표시돼요.</div>
                               </div>
                             `;
                         }
@@ -235,7 +249,6 @@
                         cursor = null;
                         return;
                     }
-
 
                     const asc = [...list].reverse();
                     const html = asc.map(renderMessage).join('');
@@ -264,7 +277,7 @@
             }
 
             function connectStomp() {
-                try { stompClient?.disconnect?.(() => {}); } catch (_) {}
+                try { if (stompClient && stompClient.disconnect) stompClient.disconnect(() => {}); } catch (_) {}
 
                 const sock = new SockJS('/ws');
                 stompClient = Stomp.over(sock);
@@ -274,7 +287,7 @@
                 const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
                 stompClient.connect(headers, () => {
-                    setSendEnabled(true);
+                    setSendEnabled(!readOnly);
                     stompClient.subscribe(`/topic/chat.rooms.${roomId}`, (frame) => {
                         const msg = JSON.parse(frame.body);
                         appendMessage(msg);
@@ -285,9 +298,13 @@
             }
 
             function sendMessage() {
+                if (readOnly) return;
+
                 const now = Date.now();
                 if (now - lastSendAt < 180) return;
                 lastSendAt = now;
+
+                if (!inputEl) return;
 
                 const content = (inputEl.value || '').trim();
                 if (!content) return;
@@ -306,6 +323,7 @@
             }
 
             function autosize() {
+                if (!inputEl) return;
                 inputEl.style.height = 'auto';
                 inputEl.style.height = Math.min(inputEl.scrollHeight, 160) + 'px';
             }
@@ -315,23 +333,25 @@
                 loadMessages(cursor);
             });
 
-            sendBtn.addEventListener('click', sendMessage);
+            if (!readOnly && sendBtn && inputEl) {
+                sendBtn.addEventListener('click', sendMessage);
 
-            inputEl.addEventListener('compositionstart', () => { composing = true; });
-            inputEl.addEventListener('compositionend', () => { composing = false; });
+                inputEl.addEventListener('compositionstart', () => { composing = true; });
+                inputEl.addEventListener('compositionend', () => { composing = false; });
 
-            inputEl.addEventListener('keydown', (e) => {
-                if (e.key !== 'Enter') return;
-                if (e.shiftKey) return;
-                if (e.isComposing || composing || e.keyCode === 229) return;
-                e.preventDefault();
-                sendMessage();
-            });
+                inputEl.addEventListener('keydown', (e) => {
+                    if (e.key !== 'Enter') return;
+                    if (e.shiftKey) return;
+                    if (e.isComposing || composing || e.keyCode === 229) return;
+                    e.preventDefault();
+                    sendMessage();
+                });
 
-            inputEl.addEventListener('input', autosize);
+                inputEl.addEventListener('input', autosize);
+            }
 
             window.addEventListener('beforeunload', () => {
-                try { stompClient?.disconnect?.(() => {}); } catch (_) {}
+                try { if (stompClient && stompClient.disconnect) stompClient.disconnect(() => {}); } catch (_) {}
             });
 
             setSendEnabled(false);

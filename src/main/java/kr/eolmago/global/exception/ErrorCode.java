@@ -69,6 +69,8 @@ public enum ErrorCode {
     CHAT_SELLER_CANNOT_CREATE_AS_BUYER(HttpStatus.BAD_REQUEST, "CH203", "판매자는 구매자 권한으로 채팅방을 생성할 수 없습니다."),
 
     CHAT_INVALID_SEND_REQUEST(HttpStatus.BAD_REQUEST, "CH301", "채팅 전송 요청이 올바르지 않습니다."),
+    CHAT_NOTIFICATION_READ_ONLY(HttpStatus.FORBIDDEN, "CH204", "알림 채팅은 읽기 전용입니다."),
+    CHAT_ROOM_NOT_AVAILABLE_YET(HttpStatus.CONFLICT, "CH205", "낙찰/거래 확정 이후 채팅이 열립니다."),
 
     // Deal
     DEAL_NOT_FOUND(HttpStatus.NOT_FOUND, "D001", "거래를 찾을 수 없습니다."),
