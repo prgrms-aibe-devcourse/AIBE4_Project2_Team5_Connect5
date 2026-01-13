@@ -11,9 +11,10 @@ import org.springframework.stereotype.Repository;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Optional;
 
-import static kr.eolmago.domain.entity.user.QUserPenalty.userPenalty;
 import static kr.eolmago.domain.entity.user.QUser.user;
+import static kr.eolmago.domain.entity.user.QUserPenalty.userPenalty;
 
 @Repository
 @RequiredArgsConstructor
@@ -47,5 +48,19 @@ public class UserPenaltyRepositoryImpl implements UserPenaltyRepositoryCustom {
                 .fetchFirst();
 
         return fetchOne != null;
+    }
+
+    @Override
+    public Optional<UserPenalty> findActivePenaltyByUser(User user, OffsetDateTime now) {
+        UserPenalty penalty = queryFactory
+                .selectFrom(userPenalty)
+                .where(
+                        userPenalty.user.eq(user),
+                        userPenalty.expiresAt.gt(now).or(userPenalty.expiresAt.isNull())
+                )
+                .orderBy(userPenalty.startedAt.desc())
+                .fetchFirst();
+
+        return Optional.ofNullable(penalty);
     }
 }

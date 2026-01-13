@@ -21,6 +21,36 @@
         return data.content || [];
     }
 
+    // 정지 정보 조회
+    async function fetchPenaltyInfo() {
+        try {
+            const response = await fetch('/api/users/me/penalty', {
+                method: 'GET',
+                headers: { 'Accept': 'application/json' }
+            });
+
+            if (response.ok) {
+                return await response.json();
+            }
+            return null;
+        } catch (error) {
+            console.error('정지 정보 조회 실패:', error);
+            return null;
+        }
+    }
+
+    // 날짜 포맷팅
+    function formatDate(dateString) {
+        if (!dateString) return '무기한';
+        const date = new Date(dateString);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${year}년 ${month}월 ${day}일 ${hours}:${minutes}`;
+    }
+
     // 숫자 포맷팅 (1000 -> 1,000)
     function formatNumber(n) {
         if (n == null || n === "") return "0";
@@ -154,14 +184,38 @@
     }
 
     // 물품 등록 버튼 이벤트 처리
-    function handleCreateAuctionClick() {
+    async function handleCreateAuctionClick() {
         const createAuctionBtn = document.getElementById("create-auction-btn");
         if (createAuctionBtn) {
-            createAuctionBtn.addEventListener("click", function(event) {
+            createAuctionBtn.addEventListener("click", async function(event) {
                 const userRole = this.getAttribute("data-user-role");
+                const userStatus = this.getAttribute("data-user-status");
+
+                // SUSPENDED 체크 (우선순위 높음)
+                if (userStatus === "SUSPENDED") {
+                    event.preventDefault();
+
+                    // 정지 정보 조회
+                    const penaltyInfo = await fetchPenaltyInfo();
+
+                    if (penaltyInfo) {
+                        const expiresDate = formatDate(penaltyInfo.expiresAt);
+                        alert(
+                            `서비스 이용약관 위반으로 인해 서비스 이용이 제한되었습니다.\n\n` +
+                            `- 정지 사유: ${penaltyInfo.reason}\n` +
+                            `- 이용 재개: ${expiresDate}`
+                        );
+                    } else {
+                        alert("서비스 이용이 제한되었습니다.");
+                    }
+                    return;
+                }
+
+                // GUEST 체크
                 if (userRole === "GUEST") {
                     event.preventDefault();
                     alert("전화번호 미인증 계정입니다. 전화번호 인증 후 이용 가능합니다.");
+                    return;
                 }
             });
         }

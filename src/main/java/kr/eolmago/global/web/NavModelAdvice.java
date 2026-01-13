@@ -40,6 +40,21 @@ public class NavModelAdvice {
 		return notificationService.unreadCount(userId);
 	}
 
+    @ModelAttribute("userRole")
+    public String userRole(@AuthenticationPrincipal CustomUserDetails me) {
+        if (me == null) return null;
+        return me.getAuthorities().stream()
+                .findFirst()
+                .map(authority -> authority.getAuthority().replace("ROLE_", ""))
+                .orElse(null);
+    }
+
+    @ModelAttribute("userStatus")
+    public String userStatus(@AuthenticationPrincipal CustomUserDetails me) {
+        if (me == null) return null;
+        return me.getStatus(); // CustomUserDetails에 getStatus() 메서드가 있다고 가정
+    }
+
 	private UUID tryUserId(CustomUserDetails me) {
 		if (me == null || me.getId() == null || me.getId().isBlank()) return null;
 		try {

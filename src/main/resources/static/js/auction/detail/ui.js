@@ -866,6 +866,27 @@ export class Ui {
         // 입찰하기
         this.bidSubmit?.addEventListener("click", async () => {
             const userRole = this.bidSubmit.dataset.userRole;
+            const userStatus = this.bidSubmit.dataset.userStatus;
+
+            // SUSPENDED 체크 (우선순위 높음)
+            if (userStatus === 'SUSPENDED') {
+                // 정지 정보 조회
+                const penaltyInfo = await this.fetchPenaltyInfo();
+
+                if (penaltyInfo) {
+                    const expiresDate = this.formatPenaltyDate(penaltyInfo.expiresAt);
+                    alert(
+                        `서비스 이용약관 위반으로 인해 서비스 이용이 제한되었습니다.\n\n` +
+                        `- 정지 사유: ${penaltyInfo.reason}\n` +
+                        `- 이용 재개: ${expiresDate}`
+                    );
+                } else {
+                    alert('서비스 이용이 제한되었습니다.');
+                }
+                return;
+            }
+
+            // GUEST 체크
             if (userRole === 'GUEST') {
                 alert('전화번호 미인증 계정입니다. 전화번호 인증 후 이용 가능합니다.');
                 return;
@@ -964,6 +985,37 @@ export class Ui {
         this.bidSubmit.textContent = text;
         await new Promise((r) => setTimeout(r, Math.max(0, Number(durationMs ?? 0))));
         this.bidSubmit.textContent = prev;
+    }
+
+    // 정지 정보 조회
+    async fetchPenaltyInfo() {
+        try {
+            const response = await fetch('/api/users/me/penalty', {
+                method: 'GET',
+                headers: { 'Accept': 'application/json' },
+                credentials: 'include'
+            });
+
+            if (response.ok) {
+                return await response.json();
+            }
+            return null;
+        } catch (error) {
+            console.error('정지 정보 조회 실패:', error);
+            return null;
+        }
+    }
+
+    // 날짜 포맷팅
+    formatPenaltyDate(dateString) {
+        if (!dateString) return '무기한';
+        const date = new Date(dateString);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${year}년 ${month}월 ${day}일 ${hours}:${minutes}`;
     }
 
     flashPriceCard() {

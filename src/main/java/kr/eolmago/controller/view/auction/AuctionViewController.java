@@ -1,7 +1,6 @@
 package kr.eolmago.controller.view.auction;
 
 import kr.eolmago.domain.entity.auction.enums.AuctionStatus;
-import kr.eolmago.domain.entity.auction.enums.ItemCategory;
 import kr.eolmago.domain.entity.user.enums.UserRole;
 import kr.eolmago.dto.api.auction.request.AuctionSearchRequest;
 import kr.eolmago.dto.api.auction.response.AuctionListResponse;
@@ -11,7 +10,6 @@ import kr.eolmago.global.security.CustomUserDetails;
 import kr.eolmago.service.auction.AuctionSearchService;
 import kr.eolmago.service.auction.AuctionService;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.GrantedAuthority;
@@ -110,8 +108,10 @@ public class AuctionViewController {
                     .map(auth -> auth.replace("ROLE_", ""))
                     .orElse("GUEST");
             model.addAttribute("userRole", UserRole.valueOf(role));
+            model.addAttribute("userStatus", userDetails.getStatus());
         } else {
             model.addAttribute("userRole", UserRole.GUEST);
+            model.addAttribute("userStatus", null);
         }
 
         return "pages/auction/auction-detail";
