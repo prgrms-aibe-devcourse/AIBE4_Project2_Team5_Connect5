@@ -81,14 +81,17 @@ supabase:
   service-role-key: ${SUPABASE_SERVICE_ROLE_KEY}
   bucket: eolmago
 
+coolsms:
+  apiKey: ${COOLSMS_API_KEY}
+  secretkey: ${COOLSMS_SECRET_KEY}
+  from:
+    number: ${COOLSMS_FROM_NUMBER}
+
+chat:
+  notification-bot-user-id: 00000000-0000-0000-0000-000000000001
+
 logging:
   level:
     kr.eolmago: INFO
     org.springframework.web: WARN
     org.hibernate.SQL: WARN
-
-# 경매 종료 스케줄러 설정
-auction:
-  close:
-    sweep:
-      delay-ms: 60000
