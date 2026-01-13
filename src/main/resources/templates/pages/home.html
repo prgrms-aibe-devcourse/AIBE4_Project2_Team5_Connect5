@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layouts/base}">
 <head>
@@ -41,7 +42,9 @@
                             경매 둘러보기
                         </a>
 
-                        <a th:href="@{/seller/auctions/create}"
+                        <a id="create-auction-btn"
+                           th:href="@{/seller/auctions/create}"
+                           th:data-user-role="${userRole}"
                            class="inline-flex items-center justify-center rounded-lg border border-gray-400 bg-white/90 px-5 py-2.5 text-sm font-semibold text-gray-900 hover:bg-white transition">
                             물품 등록
                         </a>

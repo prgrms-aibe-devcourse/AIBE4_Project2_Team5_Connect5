@@ -2,6 +2,7 @@ package kr.eolmago.controller.view.auction;
 
 import kr.eolmago.domain.entity.auction.enums.AuctionStatus;
 import kr.eolmago.domain.entity.auction.enums.ItemCategory;
+import kr.eolmago.domain.entity.user.enums.UserRole;
 import kr.eolmago.dto.api.auction.request.AuctionSearchRequest;
 import kr.eolmago.dto.api.auction.response.AuctionListResponse;
 import kr.eolmago.dto.api.common.PageResponse;
@@ -13,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -98,8 +100,20 @@ public class AuctionViewController {
     }
 
     @GetMapping("/{auctionId}")
-    public String auctionDetail(@PathVariable UUID auctionId, Model model) {
+    public String auctionDetail(@PathVariable UUID auctionId, Model model, @AuthenticationPrincipal CustomUserDetails userDetails) {
         model.addAttribute("auctionId", auctionId);
+
+        if (userDetails != null) {
+            String role = userDetails.getAuthorities().stream()
+                    .findFirst()
+                    .map(GrantedAuthority::getAuthority)
+                    .map(auth -> auth.replace("ROLE_", ""))
+                    .orElse("GUEST");
+            model.addAttribute("userRole", UserRole.valueOf(role));
+        } else {
+            model.addAttribute("userRole", UserRole.GUEST);
+        }
+
         return "pages/auction/auction-detail";
     }
 }
