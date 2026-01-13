@@ -6,12 +6,12 @@ import kr.eolmago.domain.entity.notification.Notification;
 import kr.eolmago.domain.entity.user.User;
 import kr.eolmago.dto.api.notification.response.NotificationResponse;
 import kr.eolmago.repository.notification.NotificationRepository;
+import kr.eolmago.repository.user.UserRepository;
 import kr.eolmago.service.notification.NotificationSseHub;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import kr.eolmago.repository.user.UserRepository;
 
 @Service
 @RequiredArgsConstructor
@@ -20,6 +20,7 @@ public class NotificationPublisher {
 	private final NotificationRepository notificationRepository;
 	private final UserRepository userRepository;
 	private final NotificationSseHub sseRegistry;
+	private final ApplicationEventPublisher eventPublisher;
 
 	@Transactional
 	public Long publish(NotificationPublishCommand cmd) {
@@ -27,19 +28,27 @@ public class NotificationPublisher {
 
 		User user = userRepository.getReferenceById(userId);
 
-		Notification n = Notification.create(
-			user,
-			cmd.type(),
-			cmd.title(),
-			cmd.body(),
-			cmd.linkUrl(),
-			cmd.relatedEntityType(),
-			cmd.relatedEntityId()
+		Notification saved = notificationRepository.save(
+			Notification.create(
+				user,
+				cmd.type(),
+				cmd.title(),
+				cmd.body(),
+				cmd.linkUrl(),
+				cmd.relatedEntityType(),
+				cmd.relatedEntityId()
+			)
 		);
 
-		Notification saved = notificationRepository.save(n);
-
 		sseRegistry.push(userId, NotificationResponse.from(saved));
+
+		eventPublisher.publishEvent(
+			new NotificationCreatedEvent(
+				userId,
+				cmd.title(),
+				cmd.body()
+			)
+		);
 
 		return saved.getNotificationId();
 	}
