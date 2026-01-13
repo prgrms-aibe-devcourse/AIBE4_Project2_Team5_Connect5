@@ -14,6 +14,7 @@
 
     const dealId = root.dataset.dealId;
     const role = root.dataset.role; // 'BUYER' or 'SELLER'
+    let currentDeal = null; // 현재 거래 정보 저장
 
     // ========================================
     // 공통 유틸리티 함수
@@ -97,6 +98,7 @@
             }
 
             const deal = await response.json();
+            currentDeal = deal; // 전역 변수에 저장
             updateUI(deal);
 
         } catch (error) {
@@ -392,6 +394,100 @@
         });
     }
 
+    /**
+     * 신고 모달 관리
+     */
+    function setupReportModal() {
+        const reportButton = document.getElementById('report-button');
+        const reportModal = document.getElementById('report-modal');
+        const reportForm = document.getElementById('report-form');
+        const reportCancel = document.getElementById('report-cancel');
+        const reportDescription = document.getElementById('report-description');
+        const reportReason = document.getElementById('report-reason');
+
+        if (!reportButton || !reportModal) return;
+
+        reportButton.addEventListener('click', () => {
+            reportModal.classList.remove('hidden');
+            reportModal.classList.add('flex');
+        });
+
+        reportCancel.addEventListener('click', () => {
+            reportModal.classList.add('hidden');
+            reportModal.classList.remove('flex');
+            reportForm.reset();
+        });
+
+        reportForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(reportForm);
+            const targetType = formData.get('reportTarget');
+            const reason = reportReason.value;
+            const description = reportDescription.value;
+
+            if (!description || description.length < 10) {
+                alert('신고 내용은 최소 10자 이상 입력해주세요.');
+                return;
+            }
+
+            if (!currentDeal) {
+                showToast('거래 정보를 불러오지 못해 신고할 수 없습니다.', 'error');
+                return;
+            }
+
+            // 신고 대상 ID 결정 (상대방 ID)
+            // role이 BUYER면 sellerId, SELLER면 buyerId
+            // currentDeal 객체에 sellerId, buyerId가 있다고 가정 (API 응답 확인 필요)
+            // 만약 API 응답에 ID가 없다면 추가 필요. 일단 닉네임만 보이는데...
+            // DealResponse DTO를 확인해야 함.
+            // 일단 currentDeal에 sellerId, buyerId가 있다고 가정하고 진행.
+            // 만약 없다면 백엔드 수정 필요할 수 있음.
+            // 하지만 보통 상세 조회에는 ID가 포함됨.
+
+            // auctionId도 필요함. Deal은 Auction과 연관되어 있음.
+            // currentDeal.auctionId 가 필요함.
+
+            const reportedUserId = role === 'BUYER' ? currentDeal.sellerId : currentDeal.buyerId;
+            const auctionId = currentDeal.auctionId;
+
+            if (!reportedUserId || !auctionId) {
+                console.error('Missing IDs:', { reportedUserId, auctionId, currentDeal });
+                showToast('신고에 필요한 정보가 부족합니다.', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/reports', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        auctionId: auctionId,
+                        reportedUserId: reportedUserId,
+                        type: targetType,
+                        reason: reason,
+                        description: description
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || '신고 접수에 실패했습니다.');
+                }
+
+                showToast('신고가 정상적으로 접수되었습니다.', 'info');
+                reportModal.classList.add('hidden');
+                reportModal.classList.remove('flex');
+                reportForm.reset();
+
+            } catch (err) {
+                showToast(err.message || '신고 접수에 실패했습니다.', 'error');
+            }
+        });
+    }
+
     // ========================================
     // PDF 다운로드
     // ========================================
@@ -458,6 +554,7 @@
         } else if (role === 'SELLER') {
             setupSellerConfirmModal();
         }
+        setupReportModal(); // 신고 모달 초기화 추가
     }
 
     // 페이지 로드 시 실행
