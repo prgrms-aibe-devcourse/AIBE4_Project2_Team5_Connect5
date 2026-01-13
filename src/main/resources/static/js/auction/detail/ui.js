@@ -865,6 +865,12 @@ export class Ui {
 
         // 입찰하기
         this.bidSubmit?.addEventListener("click", async () => {
+            const userRole = this.bidSubmit.dataset.userRole;
+            if (userRole === 'GUEST') {
+                alert('전화번호 미인증 계정입니다. 전화번호 인증 후 이용 가능합니다.');
+                return;
+            }
+
             const d = this.data ?? {};
             if (this.isUnsoldAuction(d) || this.isCancelledAuction(d)) return;
 
