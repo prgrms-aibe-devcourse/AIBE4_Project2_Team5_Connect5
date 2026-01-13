@@ -1,144 +1,155 @@
-(() => {
-    console.log("[buyer-review_create] init");
+// 구매 리뷰 작성 페이지
+document.addEventListener('DOMContentLoaded', () => {
+    const log = (...args) => console.log('[buyer-review-create]', ...args);
 
-    const pathMatch = window.location.pathname.match(/\/buyer\/deals\/(\d+)\/review/);
-    const dealId = pathMatch ? pathMatch[1] : null;
+    const dealIdInput = document.getElementById('deal-id');
+    const ratingHidden = document.getElementById('rating-input');
+    const contentInput = document.getElementById('content');
 
-    if (!dealId) {
-        console.warn("[buyer-review_create] dealId not found in path, redirecting...");
-        window.location.href = "/buyer/deals";
+    const ratingError = document.getElementById('rating-error');
+    const contentError = document.getElementById('content-error');
+    const formError = document.getElementById('form-error');
+    const countSpan = document.getElementById('content-count');
+
+    const submitBtn = document.getElementById('submit-review-btn');
+    const starButtons = document.querySelectorAll('.review-star');
+
+    if (!dealIdInput || !ratingHidden || !contentInput || !submitBtn) {
+        log('필수 요소를 찾지 못했습니다.');
         return;
     }
 
-    const ratingInput = document.getElementById("rating-input");
-    const ratingError = document.getElementById("rating-error");
-    const starButtons = Array.from(document.querySelectorAll(".rating-star-btn"));
+    let currentRating = Number(ratingHidden.value || 0);
 
-    const contentInput = document.getElementById("content-input");
-    const contentError = document.getElementById("content-error");
-    const contentCount = document.getElementById("content-count");
-
-    const cancelBtn = document.getElementById("cancel-btn");
-    const submitBtn = document.getElementById("submit-btn");
-
-    if (!ratingInput || !contentInput || !cancelBtn || !submitBtn) {
-        console.error("[buyer-review_create] required elements not found");
-        return;
-    }
-
-    // 초기 별점 UI 설정
-    function updateStarUI(rating) {
+    // --- 별 렌더링 ---
+    function renderStars(rating) {
         starButtons.forEach((btn) => {
             const value = Number(btn.dataset.value);
+            const svg = btn.querySelector('svg');
+            if (!svg) return;
+
             if (value <= rating) {
-                btn.classList.add("text-yellow-400");
-                btn.classList.remove("text-gray-300");
+                svg.classList.remove('text-gray-300');
+                svg.classList.add('text-yellow-400');
             } else {
-                btn.classList.remove("text-yellow-400");
-                btn.classList.add("text-gray-300");
+                svg.classList.remove('text-yellow-400');
+                svg.classList.add('text-gray-300');
             }
         });
     }
 
-    // 기본값 5점
-    ratingInput.value = "5";
-    updateStarUI(5);
-
-    // 별점 클릭 이벤트
+    // 별 클릭 이벤트
     starButtons.forEach((btn) => {
-        btn.addEventListener("click", () => {
+        btn.addEventListener('click', () => {
             const value = Number(btn.dataset.value);
-            ratingInput.value = String(value);
-            updateStarUI(value);
-            ratingError.classList.add("hidden");
-            ratingError.textContent = "";
+            currentRating = value;
+            ratingHidden.value = String(value);
+            renderStars(currentRating);
+            ratingError.classList.add('hidden');
         });
     });
 
-    // 내용 글자수 카운트
-    contentInput.addEventListener("input", () => {
-        const length = contentInput.value.length;
-        contentCount.textContent = `${length} / 1000`;
+    renderStars(currentRating);
 
-        if (length > 0) {
-            contentError.classList.add("hidden");
-            contentError.textContent = "";
+    // --- 내용 글자수 카운터 ---
+    const MAX_LENGTH = 1000;
+    const updateCount = () => {
+        const len = contentInput.value.length;
+        if (len > MAX_LENGTH) {
+            contentInput.value = contentInput.value.slice(0, MAX_LENGTH);
+        }
+        if (countSpan) {
+            countSpan.textContent = `${contentInput.value.length} / ${MAX_LENGTH}`;
+        }
+    };
+    contentInput.addEventListener('input', () => {
+        updateCount();
+        if (contentInput.value.trim()) {
+            contentError.classList.add('hidden');
         }
     });
+    updateCount();
 
-    // 취소 버튼: 다시 거래 목록으로
-    cancelBtn.addEventListener("click", () => {
-        window.location.href = "/buyer/deals";
-    });
-
-    // 단순 fetch 래퍼
-    async function postJson(url, body) {
-        const response = await fetch(url, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(body)
-        });
-
-        if (!response.ok) {
-            const text = await response.text().catch(() => "");
-            throw new Error(`HTTP ${response.status}: ${text}`);
-        }
-
-        return response.json().catch(() => null);
-    }
-
-    // 유효성 검사
-    function validateForm() {
-        let valid = true;
-        const rating = Number(ratingInput.value);
+    // --- 유효성 검사 ---
+    function validate() {
+        let ok = true;
+        const rating = Number(ratingHidden.value || 0);
         const content = contentInput.value.trim();
 
         if (!rating || rating < 1 || rating > 5) {
-            ratingError.classList.remove("hidden");
-            ratingError.textContent = "평점은 1점부터 5점 사이여야 합니다.";
-            valid = false;
+            ratingError.classList.remove('hidden');
+            ok = false;
+        } else {
+            ratingError.classList.add('hidden');
         }
 
-        if (content.length === 0) {
-            contentError.classList.remove("hidden");
-            contentError.textContent = "리뷰 내용을 입력해주세요.";
-            valid = false;
-        } else if (content.length > 1000) {
-            contentError.classList.remove("hidden");
-            contentError.textContent = "리뷰 내용은 최대 1000자까지 입력할 수 있습니다.";
-            valid = false;
+        if (!content) {
+            contentError.classList.remove('hidden');
+            ok = false;
+        } else {
+            contentError.classList.add('hidden');
         }
 
-        return valid;
+        if (!ok) {
+            formError.classList.add('hidden');
+        }
+
+        return ok;
     }
 
-    // 등록 버튼 클릭
-    submitBtn.addEventListener("click", async () => {
-        if (!validateForm()) {
-            return;
-        }
+    // --- 제출 ---
+    async function submitReview() {
+        if (!validate()) return;
 
-        const rating = Number(ratingInput.value);
+        const dealId = dealIdInput.value;
+        const rating = Number(ratingHidden.value);
         const content = contentInput.value.trim();
 
+        const url = `/api/buyer/deals/${dealId}/review`;
+        const body = { rating, content };
+
+        log('POST', url, body);
+
         submitBtn.disabled = true;
+        formError.classList.add('hidden');
 
         try {
-            console.log("[buyer-review_create] POST /api/reviews/deals/" + dealId);
-            await postJson(`/api/reviews/deals/${dealId}`, {
-                rating,
-                content
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
             });
 
-            alert("리뷰가 등록되었습니다.");
-            window.location.href = "/mypage/buyer-reviews";
+            log('response status', res.status);
+
+            if (res.ok) {
+                // 성공 → 구매 거래 목록으로 이동
+                window.location.href = '/buyer/deals';
+                return;
+            }
+
+            // 실패 → 서버에서 내려준 메시지를 보여주기
+            let message = '리뷰 작성 중 오류가 발생했습니다.';
+            try {
+                const data = await res.json();
+                log('response body', data);
+                if (data && (data.message || data.errorMessage || data.error)) {
+                    message = data.message || data.errorMessage || data.error;
+                }
+            } catch (e) {
+                log('응답 JSON 파싱 실패', e);
+            }
+
+            formError.textContent = message;
+            formError.classList.remove('hidden');
         } catch (e) {
-            console.error("[buyer-review_create] failed to submit review", e);
-            alert("리뷰 등록에 실패했습니다. 잠시 후 다시 시도해주세요.");
+            log('요청 실패', e);
+            formError.textContent = '네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+            formError.classList.remove('hidden');
         } finally {
             submitBtn.disabled = false;
         }
-    });
-})();
+    }
+
+    submitBtn.addEventListener('click', submitReview);
+});

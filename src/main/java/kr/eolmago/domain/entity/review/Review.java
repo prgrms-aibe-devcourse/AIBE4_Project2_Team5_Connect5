@@ -41,7 +41,7 @@ public class Review extends AuditableEntity {
             Deal deal,
             User seller,
             User buyer,
-            short rating,
+            int rating,
             String content
     ) {
         Review review = new Review();
