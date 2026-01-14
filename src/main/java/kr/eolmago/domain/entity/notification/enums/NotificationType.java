@@ -29,5 +29,6 @@ public enum NotificationType {
 
     // 채팅
     CHAT_MESSAGE,             // 채팅 메시지(기존)
-    CHAT_ROOM_CREATED         // 마감 후 채팅방 생성(양쪽)
+    CHAT_ROOM_CREATED,         // 마감 후 채팅방 생성(양쪽)
+    FAVORITE_ADDED
 }
