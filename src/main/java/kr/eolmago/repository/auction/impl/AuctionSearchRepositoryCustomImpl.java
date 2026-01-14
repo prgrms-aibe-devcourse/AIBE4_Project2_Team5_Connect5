@@ -103,8 +103,12 @@ public class AuctionSearchRepositoryCustomImpl implements AuctionSearchRepositor
 
         // WHERE 절 생성
         String whereClause = buildWhereClause(category, brands, minPrice, maxPrice, status);
-        // item_name, title, description 모두 검색 대상에 포함
-        whereClause += "AND to_tsvector('simple', ai.item_name || ' ' || COALESCE(a.title, '') || ' ' || COALESCE(a.description, '')) @@ to_tsquery('simple', :processedKeyword) ";
+        // item_name, title 검색
+        whereClause += """
+            AND (
+                to_tsvector('simple', ai.item_name) @@ to_tsquery('simple', :processedKeyword)
+                OR to_tsvector('simple', COALESCE(a.title, '')) @@ to_tsquery('simple', :processedKeyword)
+            ) """;
 
         // ORDER BY 절 생성
         String orderBy = buildOrderBy(sort);
