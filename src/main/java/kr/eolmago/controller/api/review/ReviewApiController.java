@@ -2,16 +2,17 @@ package kr.eolmago.controller.api.review;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import kr.eolmago.dto.api.review.request.ReviewCreateRequest;
+import kr.eolmago.dto.view.review.ReviewResponse;
 import kr.eolmago.global.security.CustomUserDetails;
 import kr.eolmago.service.review.ReviewService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
+import java.net.URI;
+import java.util.List;
 import java.util.UUID;
 
 @Tag(name = "리뷰 API", description = "거래 리뷰 관련 API")
