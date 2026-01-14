@@ -9,8 +9,10 @@ import kr.eolmago.global.security.CustomUserDetails;
 import kr.eolmago.service.auction.AuctionSearchService;
 import kr.eolmago.service.auction.AuctionService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -24,14 +26,20 @@ import java.util.Map;
 import java.util.UUID;
 
 @Controller
-@RequestMapping("/auctions")
+@RequestMapping
 @RequiredArgsConstructor
 public class AuctionViewController {
 
     private final AuctionService auctionService;
     private final AuctionSearchService auctionSearchService;
 
-    @GetMapping
+    @Value("${supabase.url:}")
+    private String supabaseUrl;
+
+    @Value("${supabase.anon-key:}")
+    private String supabaseAnonKey;
+
+    @GetMapping("/auctions")
     public String auctionList(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "8") int size,
@@ -95,7 +103,7 @@ public class AuctionViewController {
         return "pages/auction/auction-list";
     }
 
-    @GetMapping("/{auctionId}")
+    @GetMapping("/auctions/{auctionId}")
     public String auctionDetail(
             @PathVariable UUID auctionId,
             Model model,
@@ -105,5 +113,50 @@ public class AuctionViewController {
         // userRole, userStatus는 NavModelAdvice가 자동으로 설정
 
         return "pages/auction/auction-detail";
+    }
+
+    @GetMapping("/seller/auctions/create")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    public String sellerAuctionCreate(
+            Model model,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        applySellerCommonModel(model);
+
+        model.addAttribute("mode", "create");
+        model.addAttribute("auctionId", null);
+        model.addAttribute("statusText", "작성 중");
+
+        return "pages/seller/create-auction";
+    }
+
+    @GetMapping("/seller/auctions/drafts/{auctionId}")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    public String sellerAuctionEdit(@PathVariable UUID auctionId,
+                                    Model model,
+                                    @AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        applySellerCommonModel(model);
+
+        model.addAttribute("mode", "edit");
+        model.addAttribute("auctionId", auctionId);
+        model.addAttribute("statusText", "임시 저장");
+
+        return "pages/seller/create-auction";
+    }
+
+    @GetMapping("/seller/auctions")
+    public String sellerAuctions(Model model) {
+        applySellerCommonModel(model);
+        return "pages/seller/seller-auctions";
+    }
+
+    private void applySellerCommonModel(Model model) {
+        model.addAttribute("apiBase", "/api/auctions");
+        model.addAttribute("redirectAfterPublish", "/seller/auctions");
+        model.addAttribute("redirectAfterDelete", "/seller/auctions");
+
+        model.addAttribute("supabaseUrl", supabaseUrl);
+        model.addAttribute("supabaseAnonKey", supabaseAnonKey);
     }
 }

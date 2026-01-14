@@ -31,36 +31,6 @@ public class SellerViewController {
     @Value("${supabase.anon-key:}")
     private String supabaseAnonKey;
 
-    @GetMapping("/auctions/create")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
-    public String auctionCreate(
-            Model model,
-            @AuthenticationPrincipal CustomUserDetails userDetails) {
-
-        applyCommonModel(model);
-
-        model.addAttribute("mode", "create");
-        model.addAttribute("auctionId", null);
-        model.addAttribute("statusText", "작성 중");
-
-        return "pages/seller/create-auction";
-    }
-
-    @GetMapping("/auctions/drafts/{auctionId}")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
-    public String auctionEdit(@PathVariable UUID auctionId,
-                              Model model,
-                              @AuthenticationPrincipal CustomUserDetails userDetails) {
-
-        applyCommonModel(model);
-
-        model.addAttribute("mode", "edit");
-        model.addAttribute("auctionId", auctionId);
-        model.addAttribute("statusText", "임시 저장");
-
-        return "pages/seller/create-auction";
-    }
-
     private void applyCommonModel(Model model) {
         model.addAttribute("apiBase", "/api/auctions");
         model.addAttribute("redirectAfterPublish", "/seller/auctions");
@@ -70,48 +40,5 @@ public class SellerViewController {
         model.addAttribute("supabaseAnonKey", supabaseAnonKey);
     }
 
-    @GetMapping("/auctions")
-    public String sellerAuctions(Model model) {
-        applyCommonModel(model);
-        return "pages/seller/seller-auctions";
-    }
 
-    @GetMapping("/deals")
-    public String deals(Model model) {
-        applyCommonModel(model);
-        return "pages/seller/seller-deals";
-    }
-
-    @GetMapping("/deals/{dealId}")
-    public String sellerDealDetail(@PathVariable Long dealId,
-                                   @AuthenticationPrincipal CustomUserDetails userDetails,
-                                   Model model) {
-
-        UUID sellerId = userDetails.getUserId();
-        SellerDealDetailResponse deal = sellerDealService.getDealDetail(dealId, sellerId);
-
-        applyCommonModel(model);
-        model.addAttribute("dealId", dealId);
-        model.addAttribute("role", "SELLER");
-        model.addAttribute("deal", deal);
-
-        return "pages/deal/deal-detail";
-    }
-
-    // 판매자 리뷰 상세 보기
-    @GetMapping("/deals/{dealId}/review/view")
-    public String sellerReviewView(@PathVariable Long dealId,
-                                   @AuthenticationPrincipal CustomUserDetails userDetails,
-                                   Model model) {
-
-        UUID sellerId = userDetails.getUserId();
-        ReviewResponse review = reviewService.getReviewByDealIdForSeller(dealId, sellerId);
-
-        applyCommonModel(model);
-        model.addAttribute("dealId", dealId);
-        model.addAttribute("role", "SELLER");
-        model.addAttribute("review", review);
-
-        return "pages/reviews/review-detail";
-    }
 }
