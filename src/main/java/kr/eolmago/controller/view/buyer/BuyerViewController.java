@@ -20,12 +20,6 @@ public class BuyerViewController {
 
     private final BuyerDealService buyerDealService;
 
-    // 입찰/낙찰 내역 페이지
-    @GetMapping("/bids")
-    public String bids() {
-        return "pages/buyer/buyer-bids";
-    }
-
     // 구매자 거래 목록 페이지
     @GetMapping("/deals")
     public String deals() {
