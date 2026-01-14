@@ -169,8 +169,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!auctionId) return;
 
         // ✅ 로그인 체크
-        const userRoleElement = document.querySelector('[data-user-role]');
-        const userRole = userRoleElement?.dataset?.userRole;
+        const userRole = document.body.dataset.userRole;
 
         if (!userRole || userRole === 'ANONYMOUS') {
             alert('로그인이 필요합니다.');
