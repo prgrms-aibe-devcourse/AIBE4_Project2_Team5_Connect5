@@ -80,50 +80,8 @@ export function computeOffsetMsFromServerNow(serverNowMs) {
     return s - now;
 }
 
-/**
- * 서버 시간 확보 우선순위:
- * 1) data.serverNow (ISO/epoch 둘 다 지원)
- * 2) response header Date
- * 3) Date.now()
- */
-export function parseServerNowMsFromResponse(data, response) {
-    // 1) body
-    const bodyVal = data?.serverNow ?? data?.serverNowMs ?? null;
-    const bodyMs = toMs(bodyVal);
-    if (bodyMs) return bodyMs;
-
-    // 2) header Date
-    const headerDate = response?.headers?.get?.("Date") ?? null;
-    const headerMs = toMs(headerDate);
-    if (headerMs) return headerMs;
-
-    // 3) fallback
-    return Date.now();
-}
-
-function toMs(v) {
-    if (v === null || v === undefined) return null;
-    if (typeof v === "number") return Number.isFinite(v) ? v : null;
-
-    const s = String(v).trim();
-    if (!s) return null;
-
-    // epoch string
-    if (/^\d{12,}$/.test(s)) {
-        const n = Number(s);
-        return Number.isFinite(n) ? n : null;
-    }
-
-    const t = Date.parse(s);
-    return Number.isNaN(t) ? null : t;
-}
-
-/**
- * 상태 라벨(필요 시 확장)
- */
 export function resolveLabel(kind, value) {
     if (kind === "condition") {
-        // 서버 enum/문자열 케이스에 맞게 필요 시 수정
         const map = {
             NEW: "새상품",
             LIKE_NEW: "거의 새것",
@@ -136,11 +94,6 @@ export function resolveLabel(kind, value) {
     return safeText(value);
 }
 
-/**
- * displayOrder 0부터 시작(요청 반영)
- * - 객체 배열: displayOrder 기준 오름차순 정렬
- * - 문자열 배열: 순서대로 displayOrder=idx
- */
 export function normalizeOrderedImages(data) {
     const candidates =
         data?.contentImages ??
@@ -149,16 +102,12 @@ export function normalizeOrderedImages(data) {
         data?.bodyImages ??
         null;
 
-    // 객체 배열 케이스
     if (Array.isArray(candidates) && candidates.length && typeof candidates[0] === "object") {
         const mapped = candidates
             .map((x) => {
                 const url = x.url ?? x.imageUrl ?? x.imageURL ?? x.path ?? x.src ?? null;
-
-                // displayOrder가 0일 수도 있으므로 null/undefined만 "없음"으로 취급
                 const orderRaw = x.displayOrder ?? x.order ?? x.display_order ?? null;
                 const displayOrder = (orderRaw === null || orderRaw === undefined) ? null : Number(orderRaw);
-
                 return { url, displayOrder };
             })
             .filter((x) => !!x.url);
@@ -170,7 +119,6 @@ export function normalizeOrderedImages(data) {
         });
     }
 
-    // 문자열 배열 케이스
     const urls =
         (Array.isArray(data?.contentImageUrls) && data.contentImageUrls) ||
         (Array.isArray(data?.detailImageUrls) && data.detailImageUrls) ||
@@ -180,10 +128,6 @@ export function normalizeOrderedImages(data) {
     return urls.filter(Boolean).map((url, idx) => ({ url, displayOrder: idx }));
 }
 
-/**
- * 서버 bidIncrement가 없을 때 프론트에서 동일 룰로 계산(방어)
- * Java BidIncrementCalculator와 동일
- */
 export function calcBidIncrement(currentPrice) {
     const p = Number(currentPrice ?? 0);
 

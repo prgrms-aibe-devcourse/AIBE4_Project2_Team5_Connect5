@@ -38,14 +38,12 @@
     const $tabAllCount = document.getElementById('tab-all-count');
     const $tabLiveCount = document.getElementById('live-count');
     const $tabClosedCount = document.getElementById('closed-count');
-    const $tabEndedCount = document.getElementById('ended-count');
     const $tabDraftCount = document.getElementById('draft-count');
 
     const tabToStatus = {
         all: null,
         live: 'LIVE',
         closed: 'ENDED_SOLD',
-        ended: 'ENDED_UNSOLD',
         draft: 'DRAFT',
     };
 
@@ -53,7 +51,6 @@
         all: ['목록이 비어 있습니다.', '등록한 경매가 없습니다.'],
         live: ['진행 중인 경매가 없습니다.', '진행 중인 경매가 없습니다.'],
         closed: ['낙찰 완료된 경매가 없습니다.', '낙찰 완료된 경매가 없습니다.'],
-        ended: ['유찰된 경매가 없습니다.', '유찰된 경매가 없습니다.'],
         draft: ['임시 저장된 경매가 없습니다.', '작성 중인 경매는 자동으로 저장됩니다.'],
     };
 
@@ -93,29 +90,17 @@
 
     // ===== Loaders =====
     const loadCountsAndSummary = async () => {
-        const [all, live, closed, endedUnsoldCount, draft] = await Promise.all([
+        const [all, live, closed, draft] = await Promise.all([
             api.fetchCount({ sellerId, status: null }),
             api.fetchCount({ sellerId, status: 'LIVE' }),
             api.fetchCount({ sellerId, status: 'ENDED_SOLD' }),
-            api.fetchCount({ sellerId, status: 'ENDED_UNSOLD' }),
             api.fetchCount({ sellerId, status: 'DRAFT' }),
         ]);
-
-        const endedData = await api.getAuctions({
-            sellerId,
-            page: 0,
-            size: 200,
-            sort: 'latest',
-            status: 'ENDED_UNSOLD',
-        });
-        const endedUnsoldItems = Array.isArray(endedData?.content) ? endedData.content : [];
-        const endedNoBidsCount = endedUnsoldItems.filter((it) => it?.endReason === 'NO_BIDS').length;
 
         // 탭 카운트
         $tabAllCount.textContent = String(all);
         $tabLiveCount.textContent = String(live);
         $tabClosedCount.textContent = String(closed);
-        $tabEndedCount.textContent = String(endedNoBidsCount);
         $tabDraftCount.textContent = String(draft);
 
         // 요약 카드
@@ -144,12 +129,7 @@
 
                 const raw = Array.isArray(data?.content) ? data.content : [];
                 const q = state.search.trim().toLowerCase();
-                let filtered = raw.filter((it) => String(it?.title ?? '').toLowerCase().includes(q));
-
-                // 유찰 탭일 경우 NO_BIDS만 필터링
-                if (state.activeTab === 'ended') {
-                    filtered = filtered.filter((it) => it?.endReason === 'NO_BIDS');
-                }
+                const filtered = raw.filter((it) => String(it?.title ?? '').toLowerCase().includes(q));
 
                 const total = filtered.length;
                 if (total === 0) {
@@ -203,12 +183,7 @@
                 status,
             });
 
-            let items = Array.isArray(data?.content) ? data.content : [];
-
-            // 유찰 탭일 경우 NO_BIDS만 필터링
-            if (state.activeTab === 'ended') {
-                items = items.filter((it) => it?.endReason === 'NO_BIDS');
-            }
+            const items = Array.isArray(data?.content) ? data.content : [];
             const pageInfo = data?.pageInfo ?? {};
             const total = Number(pageInfo?.totalElements ?? 0);
 

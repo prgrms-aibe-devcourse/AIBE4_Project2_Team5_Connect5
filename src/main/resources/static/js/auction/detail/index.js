@@ -20,7 +20,6 @@ import { calcBidIncrement } from "./util.js";
 
         const { data, serverNowMs } = await api.fetchDetailWithServerTime(auctionId);
 
-        // 서버에서 bidIncrement가 안 오면 프론트에서 계산(방어)
         if (data && (data.bidIncrement === null || data.bidIncrement === undefined)) {
             data.bidIncrement = calcBidIncrement(Number(data.currentPrice ?? 0));
         }
@@ -28,7 +27,7 @@ import { calcBidIncrement } from "./util.js";
         ui.renderAll(data, serverNowMs, api);
         ui.bindInteractions(data, api);
 
-        // 비슷한 경매 로드 (브랜드, 카테고리 기반)
+        // 비슷한 경매 로드
         try {
             const brand = data?.specs?.brand || null;
             const category = data?.category || null;
