@@ -79,8 +79,10 @@ public class NavModelAdvice {
     @ModelAttribute("userId")
     public String userId(@AuthenticationPrincipal CustomUserDetails me) {
         if (me == null) {
-            return null;
+            log.info("✅ NavModelAdvice - userId: (인증 정보 없음)");
+            return "";
         }
+        log.info("✅ NavModelAdvice - userId: {}", me.getId());
         return me.getId();
     }
 }

@@ -11,4 +11,5 @@ public interface UserPenaltyRepositoryCustom {
     List<UserPenalty> findExpiredPenalties(OffsetDateTime now);
     boolean existsActivePenalty(User user, OffsetDateTime now);
     Optional<UserPenalty> findActivePenaltyByUser(User user, OffsetDateTime now);
+    List<UserPenalty> findPenaltyHistoryByUser(User user);
 }

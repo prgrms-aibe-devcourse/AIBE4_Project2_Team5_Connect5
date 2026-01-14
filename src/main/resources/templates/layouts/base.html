@@ -5,7 +5,11 @@
 
 <head th:replace="~{fragments/head :: head('얼마고')}"></head>
 
-<body class="bg-gradient-to-br from-gray-50 via-white to-gray-50 text-gray-900 min-h-screen flex flex-col">
+<body th:attr="class='bg-gradient-to-br from-gray-50 via-white to-gray-50 text-gray-900 min-h-screen flex flex-col',
+               data-user-role=${userRole ?: 'ANONYMOUS'},
+               data-user-status=${userStatus ?: ''},
+               data-user-id=${userId ?: ''}">
+
 <th:block th:replace="~{fragments/nav :: nav}" />
 <script th:src="@{/js/common/nav.js}" defer></script>
 
