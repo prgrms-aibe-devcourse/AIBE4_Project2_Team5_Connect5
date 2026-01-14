@@ -80,6 +80,9 @@ final class ChatRoomServiceTestDoubles {
 		when(chatRoomRepository.findById(anyLong()))
 			.thenAnswer(inv -> Optional.ofNullable(roomsById.get(inv.getArgument(0))));
 
+		when(chatRoomRepository.findRoomViewById(anyLong()))
+			.thenAnswer(inv -> Optional.ofNullable(roomsById.get(inv.getArgument(0))));
+
 		when(chatRoomRepository.findByAuctionAuctionIdAndRoomType(any(UUID.class), any(ChatRoomType.class)))
 			.thenAnswer(inv -> {
 				UUID auctionId = inv.getArgument(0);
@@ -96,38 +99,23 @@ final class ChatRoomServiceTestDoubles {
 				return Optional.ofNullable(notificationRoomsByTargetUserId.get(targetUserId));
 			});
 
-		when(chatRoomRepository.findMyRoomsByType(any(UUID.class), any(ChatRoomType.class)))
-			.thenAnswer(inv -> {
-				UUID userId = inv.getArgument(0);
-				ChatRoomType type = inv.getArgument(1);
-
-				List<ChatRoom> result = new ArrayList<>();
-				for (ChatRoom room : roomsById.values()) {
-					if (room.getRoomType() != type) continue;
-
-					boolean isSeller = room.getSeller() != null && room.getSeller().getUserId().equals(userId);
-					boolean isBuyer = room.getBuyer() != null && room.getBuyer().getUserId().equals(userId);
-					boolean isTarget = room.getTargetUserId() != null && room.getTargetUserId().equals(userId);
-
-					if (isSeller || isBuyer || isTarget) result.add(room);
-				}
-				return result;
-			});
-
 		when(chatRoomRepository.save(any(ChatRoom.class)))
-			.thenAnswer(inv -> {
-				ChatRoom room = inv.getArgument(0);
-				UUID auctionId = extractAuctionId(room);
+			.thenAnswer(inv -> saveWithPossibleRace(inv.getArgument(0)));
 
-				// 경합 시뮬레이션: 첫 save는 예외를 던지되, "누군가 먼저 저장했다" 상태로 저장해 둠
-				if (auctionId != null && raceAuctionIds.contains(auctionId) && racedAlready.add(auctionId)) {
-					saveInternal(room);
-					throw new DataIntegrityViolationException("race");
-				}
+		when(chatRoomRepository.saveAndFlush(any(ChatRoom.class)))
+			.thenAnswer(inv -> saveWithPossibleRace(inv.getArgument(0)));
+	}
 
-				saveInternal(room);
-				return room;
-			});
+	private ChatRoom saveWithPossibleRace(ChatRoom room) {
+		UUID auctionId = extractAuctionId(room);
+
+		if (auctionId != null && raceAuctionIds.contains(auctionId) && racedAlready.add(auctionId)) {
+			saveInternal(room);
+			throw new DataIntegrityViolationException("race");
+		}
+
+		saveInternal(room);
+		return room;
 	}
 
 	private void saveInternal(ChatRoom room) {

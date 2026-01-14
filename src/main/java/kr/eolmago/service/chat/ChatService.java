@@ -18,6 +18,8 @@ import kr.eolmago.repository.chat.ChatRoomRepository;
 import kr.eolmago.repository.user.UserRepository;
 import kr.eolmago.service.chat.exception.ChatException;
 import kr.eolmago.service.chat.validation.ChatValidator;
+import kr.eolmago.service.notification.publish.NotificationPublishCommand;
+import kr.eolmago.service.notification.publish.NotificationPublisher;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
@@ -37,6 +39,7 @@ public class ChatService {
 	private final ChatStreamPublisher chatStreamPublisher;
 	private final ChatValidator chatValidator;
 	private final ChatSystemUserProvider systemUserProvider;
+	private final NotificationPublisher notificationPublisher;
 
 	@Transactional(readOnly = true)
 	public List<ChatRoomSummaryResponse> getMyRooms(UUID userId, ChatRoomType roomType) {
@@ -142,7 +145,12 @@ public class ChatService {
 		ChatRoom newRoom = ChatRoom.createAuctionRoom(auction, seller, buyer);
 
 		try {
-			return chatRoomRepository.saveAndFlush(newRoom).getChatRoomId();
+			Long roomId = chatRoomRepository.saveAndFlush(newRoom).getChatRoomId();
+
+			notificationPublisher.publish(NotificationPublishCommand.chatRoomCreated(seller.getUserId(), roomId));
+			notificationPublisher.publish(NotificationPublishCommand.chatRoomCreated(buyer.getUserId(), roomId));
+
+			return roomId;
 		} catch (DataIntegrityViolationException e) {
 			ChatRoom room = chatRoomRepository
 				.findByAuctionAuctionIdAndRoomType(auctionId, ChatRoomType.AUCTION)

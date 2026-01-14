@@ -13,6 +13,8 @@ import kr.eolmago.repository.auction.AuctionRepository;
 import kr.eolmago.repository.auction.BidRepository;
 import kr.eolmago.repository.user.UserRepository;
 import kr.eolmago.service.auction.event.AuctionEndAtChangedEvent;
+import kr.eolmago.service.notification.publish.NotificationPublishCommand;
+import kr.eolmago.service.notification.publish.NotificationPublisher;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.context.ApplicationEventPublisher;
@@ -35,6 +37,7 @@ public class BidService {
     private final AuctionRepository auctionRepository;
     private final UserRepository userRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final NotificationPublisher notificationPublisher;
 
     // 입찰 생성
     @Transactional
@@ -77,6 +80,8 @@ public class BidService {
         int diff = amount - currentHighest;
         if (increment > 0 && diff % increment != 0) throw new BusinessException(ErrorCode.BID_INVALID_INCREMENT);
 
+        UUID prevHighestBidderId = bidRepository.findTopBidderIdByAuction(auction).orElse(null);
+
         // 입찰 생성
         User bidder = userRepository.getReferenceById(buyer_id);
         Bid bid = Bid.create(auction, bidder, amount, requestId);
@@ -85,9 +90,18 @@ public class BidService {
         // 경매 최고가 갱신, 입찰 카운트 증가
         auction.updateBid(amount);
 
-        // 자동 연장
         OffsetDateTime now = OffsetDateTime.now();
         boolean extensionApplied = tryAutoExtension(auction, now);
+
+        notificationPublisher.publish(
+            NotificationPublishCommand.bidAccepted(buyer_id, auctionId, amount)
+        );
+
+        if (prevHighestBidderId != null && !prevHighestBidderId.equals(buyer_id)) {
+            notificationPublisher.publish(
+                NotificationPublishCommand.bidOutbid(prevHighestBidderId, auctionId)
+            );
+        }
 
         return buildBidCreateResponse(bid, extensionApplied);
     }

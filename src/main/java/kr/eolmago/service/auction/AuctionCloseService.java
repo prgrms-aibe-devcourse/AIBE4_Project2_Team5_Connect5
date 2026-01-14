@@ -12,6 +12,8 @@ import kr.eolmago.global.exception.ErrorCode;
 import kr.eolmago.repository.auction.*;
 import kr.eolmago.repository.user.UserRepository;
 import kr.eolmago.service.auction.event.AuctionSoldEvent;
+import kr.eolmago.service.notification.publish.NotificationPublishCommand;
+import kr.eolmago.service.notification.publish.NotificationPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -39,6 +41,7 @@ public class AuctionCloseService {
     private final AuctionItemRepository auctionItemRepository;
     private final AuctionImageRepository auctionImageRepository;
     private final UserRepository userRepository;
+    private final NotificationPublisher notificationPublisher;
 
     private final ApplicationEventPublisher eventPublisher;
 
@@ -64,6 +67,12 @@ public class AuctionCloseService {
 
         if (highestBid == null) {
             auction.closeAsUnsold();
+            notificationPublisher.publish(
+                NotificationPublishCommand.auctionUnsold(
+                    auction.getSeller().getUserId(),
+                    auction.getAuctionId()
+                )
+            );
             return;
         }
 
@@ -71,6 +80,22 @@ public class AuctionCloseService {
         Long finalPrice = (long) highestBid.getAmount();
 
         auction.closeAsSold(buyer, finalPrice);
+
+        notificationPublisher.publish(
+            NotificationPublishCommand.auctionSold(
+                auction.getSeller().getUserId(),
+                auction.getAuctionId(),
+                finalPrice
+            )
+        );
+
+        notificationPublisher.publish(
+            NotificationPublishCommand.auctionWon(
+                buyer.getUserId(),
+                auction.getAuctionId(),
+                finalPrice
+            )
+        );
 
         AuctionSoldEvent event = new AuctionSoldEvent(
             auction.getAuctionId(),
@@ -167,5 +192,12 @@ public class AuctionCloseService {
         }
 
         auction.cancelBySeller();
+
+        notificationPublisher.publish(
+            NotificationPublishCommand.auctionCanceled(
+                sellerId,
+                auction.getAuctionId()
+            )
+        );
     }
 }

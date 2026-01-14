@@ -53,9 +53,13 @@ public class DealScheduler {
     }
 
     /**
-     * 자동 거래 완료 처리
+     * 자동 거래 완료(COMPLETE) 처리
      *
-     * CONFIRMED 상태이면서, 배송 시작 후 7일이 지난 거래를 자동으로 COMPLETED로 전환
+     * 조건:
+     * 1. CONFIRMED 상태
+     * 2. 배송 시작 후 7일 경과 (shippedAt + 7일)
+     * 3. 진행 중인 신고/분쟁이 없음
+     *
      * 매 시간 정각에 실행
      */
     @Scheduled(cron = "0 0 * * * *")  // 매 시간 정각 (0분 0초)
@@ -66,11 +70,8 @@ public class DealScheduler {
         OffsetDateTime now = OffsetDateTime.now();
         OffsetDateTime autoCompleteThreshold = now.minusDays(7);  // 7일 전
 
-        // CONFIRMED 상태이면서, shippedAt이 7일 이전인 거래 조회
-        List<Deal> dealsToComplete = dealRepository.findByStatusAndShippedAtBefore(
-                DealStatus.CONFIRMED,
-                autoCompleteThreshold
-        );
+        // 자동 완료 가능한 거래 조회
+        List<Deal> dealsToComplete = dealRepository.findCompletableDeals(autoCompleteThreshold);
 
         int completedCount = 0;
         for (Deal deal : dealsToComplete) {
