@@ -23,11 +23,6 @@ public class BuyerViewController {
     private final BuyerDealService buyerDealService;
     private final ReviewService reviewService;
 
-    @GetMapping("/bids")
-    public String bids() {
-        return "pages/buyer/buyer-bids";
-    }
-
     @GetMapping("/deals")
     public String deals() {
         return "pages/buyer/buyer-deals";
