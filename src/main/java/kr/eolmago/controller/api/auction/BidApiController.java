@@ -30,8 +30,8 @@ public class BidApiController {
             @Valid @RequestBody BidCreateRequest request,
             @AuthenticationPrincipal CustomUserDetails principal
     ) {
-        UUID buyer_id = UUID.fromString(principal.getId());
-        BidCreateResponse response = bidService.createBid(auctionId, request, buyer_id);
+        UUID buyerId = UUID.fromString(principal.getId());
+        BidCreateResponse response = bidService.createBid(auctionId, request, buyerId);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 }

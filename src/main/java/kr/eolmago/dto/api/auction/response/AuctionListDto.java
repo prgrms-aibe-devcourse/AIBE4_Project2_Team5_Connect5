@@ -1,5 +1,6 @@
 package kr.eolmago.dto.api.auction.response;
 
+import kr.eolmago.domain.entity.auction.enums.AuctionEndReason;
 import kr.eolmago.domain.entity.auction.enums.AuctionStatus;
 
 import java.time.OffsetDateTime;
@@ -19,6 +20,7 @@ public record AuctionListDto(
         int bidCount,
         int favoriteCount,
         OffsetDateTime endAt,
-        AuctionStatus status
+        AuctionStatus status,
+        AuctionEndReason endReason
 ) {
 }

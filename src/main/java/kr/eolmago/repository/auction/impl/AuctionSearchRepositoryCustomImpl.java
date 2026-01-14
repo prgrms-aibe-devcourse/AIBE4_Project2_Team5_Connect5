@@ -2,6 +2,7 @@ package kr.eolmago.repository.auction.impl;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
+import kr.eolmago.domain.entity.auction.enums.AuctionEndReason;
 import kr.eolmago.domain.entity.auction.enums.AuctionStatus;
 import kr.eolmago.domain.entity.auction.enums.ItemCategory;
 import kr.eolmago.dto.api.auction.response.AuctionListDto;
@@ -429,7 +430,8 @@ public class AuctionSearchRepositoryCustomImpl implements AuctionSearchRepositor
                     (Integer) row[9],                           // bid_count
                     (Integer) row[10],                           // favorite_count
                     convertToOffsetDateTime(row[11]),            // end_at
-                    AuctionStatus.valueOf((String) row[12])     // status
+                    AuctionStatus.valueOf((String) row[12]),     // status
+                    AuctionEndReason.valueOf((String) row[13])   // endReason
             );
             dtos.add(dto);
         }
