@@ -10,12 +10,12 @@ import kr.eolmago.dto.api.favorite.response.FavoriteAuctionResponse;
 import kr.eolmago.dto.api.favorite.response.FavoriteStatusResponse;
 import kr.eolmago.dto.api.favorite.response.FavoriteToggleResponse;
 import kr.eolmago.global.exception.BusinessException;
-import kr.eolmago.service.notification.publish.NotificationPublisher;
-import kr.eolmago.service.notification.publish.NotificationPublishCommand;
 import kr.eolmago.global.exception.ErrorCode;
 import kr.eolmago.repository.auction.AuctionRepository;
 import kr.eolmago.repository.favorite.FavoriteRepository;
 import kr.eolmago.repository.user.UserRepository;
+import kr.eolmago.service.notification.publish.NotificationPublishCommand;
+import kr.eolmago.service.notification.publish.NotificationPublisher;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -36,14 +37,14 @@ public class FavoriteService {
 
 
     /**
-     * 찜 토글
+     * 찜 토글 (추가/삭제)
      *
      * [동작]
      * - 이미 찜한 경매면: 찜 삭제 + favoriteCount 감소
      * - 아직 찜하지 않았으면: 찜 생성 + favoriteCount 증가
      *
      * [제약]
-     * - 로그인 필수이다. (컨트롤러에서 principal로 userId 확보)
+     * - 로그인 필수이다.
      * - 본인 경매는 찜 불가이다.
      * - 중복 찜 불가이다. (DB unique + 예외 처리로 최종 방어)
      *
@@ -64,12 +65,12 @@ public class FavoriteService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.AUCTION_NOT_FOUND));
 
         // 본인 경매 찜 금지
-        if (auction.getSeller().getUserId().equals(userId)) {
+        if (auction.getSeller() != null && userId.equals(auction.getSeller().getUserId())) {
             throw new BusinessException(ErrorCode.FAVORITE_SELF_AUCTION_FORBIDDEN);
         }
 
         // 토글 처리
-        boolean favorited =  favoriteRepository.findByUser_UserIdAndAuction_AuctionId(userId, auctionId)
+        boolean favorited =  favoriteRepository.findByUserAndAuction(userId, auctionId)
                 .map(existing -> {
                     // 찜 삭제
                     favoriteRepository.delete(existing);
@@ -99,11 +100,11 @@ public class FavoriteService {
     }
 
     /**
-     * 경매 목록/검색/상세에서 "하트(찜 여부)" 표시를 위해 배치로 찜 여부를 조회하는 메서드이다.
+     * 경매 목록/검색/상세에서 "하트(찜 여부)" 표시를 위해 배치로 찜 여부를 조회하는 메서드
      *
      * - 입력: 화면에 노출된 auctionIds
      * - 처리: DB에서 실제 찜된 auctionIds만 조회 후
-     * - 출력: auctionId -> true/false Map으로 반환한다.
+     * - 출력: { auctionId: true/false } Map 형태
      */
     public FavoriteStatusResponse getFavoriteStatuses(UUID userId, FavoriteStatusRequest request) {
         List<UUID> auctionIds = Optional.ofNullable(request.auctionIds()).orElse(List.of());
@@ -114,10 +115,14 @@ public class FavoriteService {
         List<UUID> favoritedIds = favoriteRepository.findFavoritedAuctionIds(userId, auctionIds);
         Set<UUID> favoritedSet = new HashSet<>(favoritedIds);
 
-        Map<UUID, Boolean> result = new LinkedHashMap<>();
-        for (UUID id : auctionIds) {
-            result.put(id, favoritedSet.contains(id));
-        }
+        Map<UUID, Boolean> result = auctionIds.stream()
+                .collect(Collectors.toMap(
+                        id -> id,
+                        favoritedSet::contains,
+                        (a, b) -> a,
+                        LinkedHashMap::new
+                ));
+
         return new FavoriteStatusResponse(result);
     }
 

@@ -271,6 +271,57 @@ document.addEventListener("DOMContentLoaded", () => {
             .replaceAll("'", "&#039;");
     }
 
+    function statusBadge(item) {
+        const status = item?.status;
+        const endReason = item?.endReason;
+
+        switch (status) {
+            case "LIVE":
+                return {
+                    label: "진행 중",
+                    cls:
+                        "inline-flex items-center rounded-full border px-3 py-1 text-xs font-black " +
+                        "border-emerald-200 bg-emerald-50 text-emerald-700",
+                };
+            case "DRAFT":
+                return {
+                    label: "임시 저장",
+                    cls:
+                        "inline-flex items-center rounded-full border px-3 py-1 text-xs font-black " +
+                        "border-slate-200 bg-slate-50 text-slate-700",
+                };
+            case "ENDED_SOLD":
+                return {
+                    label: "낙찰 완료",
+                    cls:
+                        "inline-flex items-center rounded-full border px-3 py-1 text-xs font-black " +
+                        "border-slate-300 bg-slate-100 text-slate-900",
+                };
+            case "ENDED_UNSOLD":
+                if (endReason === "SELLER_STOPPED") {
+                    return {
+                        label: "경매 취소",
+                        cls:
+                            "inline-flex items-center rounded-full border px-3 py-1 text-xs font-black " +
+                            "border-slate-300 bg-slate-100 text-slate-700",
+                    };
+                }
+                return {
+                    label: "유찰",
+                    cls:
+                        "inline-flex items-center rounded-full border px-3 py-1 text-xs font-black " +
+                        "border-rose-200 bg-rose-50 text-rose-700",
+                };
+            default:
+                return {
+                    label: String(status ?? "-"),
+                    cls:
+                        "inline-flex items-center rounded-full border px-3 py-1 text-xs font-black " +
+                        "border-slate-200 bg-white text-slate-700",
+                };
+        }
+    }
+
     // 카드 HTML 생성 (auction-card.html과 유사한 Tailwind 구성)
     // 카드 HTML 생성 (찜 목록용 완성본 - 하트 이미지 오버레이)
     function renderFavoriteCard(item) {
@@ -282,6 +333,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const favoriteCount = item.favoriteCount ?? 0;
         const bidCount = item.bidCount ?? 0;
         const remainingTime = escapeHtml(item.remainingTime || "");
+        const status = statusBadge(item);
 
         return `
     <article data-auction-card
@@ -295,6 +347,10 @@ document.addEventListener("DOMContentLoaded", () => {
                    class="h-full w-full object-cover group-hover:scale-105 transition-transform" />`
                 : ""
         }
+        
+        <div class="absolute left-3 top-3">
+          <span class="${status.cls}">${escapeHtml(status.label)}</span>
+        </div>
 
         <!-- 하트: 이미지 위에 덮이기 -->
         <button type="button"
@@ -346,6 +402,9 @@ document.addEventListener("DOMContentLoaded", () => {
             찜 <span class="font-semibold text-slate-800">${favoriteCount}</span>
           </div>
         </div>
+        
+        
+        
       </a>
 
     </article>

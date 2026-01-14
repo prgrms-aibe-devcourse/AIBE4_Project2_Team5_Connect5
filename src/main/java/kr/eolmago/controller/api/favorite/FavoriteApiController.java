@@ -7,6 +7,8 @@ import kr.eolmago.dto.api.favorite.request.FavoriteStatusRequest;
 import kr.eolmago.dto.api.favorite.response.FavoriteAuctionResponse;
 import kr.eolmago.dto.api.favorite.response.FavoriteStatusResponse;
 import kr.eolmago.dto.api.favorite.response.FavoriteToggleResponse;
+import kr.eolmago.global.exception.BusinessException;
+import kr.eolmago.global.exception.ErrorCode;
 import kr.eolmago.global.security.CustomUserDetails;
 import kr.eolmago.service.favorite.FavoriteService;
 import lombok.RequiredArgsConstructor;
@@ -26,11 +28,15 @@ public class FavoriteApiController {
 
     private final FavoriteService favoriteService;
 
+    @Operation(summary = "찜 토글(추가/삭제)")
     @PostMapping("/{auctionId}")
     public ResponseEntity<FavoriteToggleResponse>  toggle(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable UUID auctionId
     ) {
+        // 로그인 여부
+        requireLogin(userDetails);
+
         FavoriteToggleResponse response = favoriteService.toggleFavorite(
                 userDetails.getUserId(),
                 auctionId
@@ -39,17 +45,30 @@ public class FavoriteApiController {
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * 경매 목록/상세 화면에서 하트 표시를 위해 "한 번에" 찜 상태를 조회한다.
+     * request: { auctionIds: [ ... ] }
+     * response: { favoritedByAuctionId: { auctionId: true/false, ... } }
+     */
     @Operation(summary = "찜 여부 배치 조회 (경매 목록/상세 하트 표시용)")
     @PostMapping("/status")
     public ResponseEntity<FavoriteStatusResponse> getStatuses(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody FavoriteStatusRequest request
     ) {
+        // 로그인 여부
+        requireLogin(userDetails);
+
         return ResponseEntity.ok(
                 favoriteService.getFavoriteStatuses(userDetails.getUserId(), request)
         );
     }
 
+    /**
+     * 내 찜 목록 조회
+     * - filter: ALL | LIVE | ENDED
+     * - sort: recent | deadline | price_asc | price_desc
+     */
     @Operation(summary = "내 찜 목록 조회")
     @GetMapping("/me")
     public ResponseEntity<PageResponse<FavoriteAuctionResponse>> getMyFavorites(
@@ -58,8 +77,18 @@ public class FavoriteApiController {
             @RequestParam(defaultValue = "ALL") String filter,
             @RequestParam(defaultValue = "recent") String sort
     ) {
+        // 로그인 여부
+        requireLogin(userDetails);
+
         return ResponseEntity.ok(
                 favoriteService.getMyFavorites(userDetails.getUserId(), pageable, filter, sort)
         );
+    }
+
+    // 헬퍼 메서드
+    private void requireLogin(CustomUserDetails userDetails) {
+        if (userDetails == null) {
+            throw new BusinessException(ErrorCode.USER_UNAUTHORIZED);
+        }
     }
 }

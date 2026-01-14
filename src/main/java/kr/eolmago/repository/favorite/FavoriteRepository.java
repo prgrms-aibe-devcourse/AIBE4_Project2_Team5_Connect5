@@ -11,11 +11,8 @@ import java.util.UUID;
 
 public interface FavoriteRepository extends JpaRepository<Favorite, Long>, FavoriteRepositoryCustom {
 
-    Optional<Favorite> findByUser_UserIdAndAuction_AuctionId(UUID userId, UUID auctionId);
-
-    boolean existsByUser_UserIdAndAuction_AuctionId(UUID userId, UUID auctionId);
-
-    void deleteByUser_UserIdAndAuction_AuctionId(UUID userId, UUID auctionId);
+    @Query("select f from Favorite f where f.user.userId = :userId and f.auction.auctionId = :auctionId")
+    Optional<Favorite> findByUserAndAuction(@Param("userId") UUID userId, @Param("auctionId") UUID auctionId);
 
     // 배치 찜 여부 확인용: 찜된 auctionId들만 뽑아오기
     @Query("""
