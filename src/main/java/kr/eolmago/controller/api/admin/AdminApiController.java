@@ -2,6 +2,7 @@ package kr.eolmago.controller.api.admin;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import kr.eolmago.domain.entity.report.enums.ReportAction;
 import kr.eolmago.domain.entity.report.enums.ReportStatus;
 import kr.eolmago.domain.entity.user.enums.PenaltyType;
 import kr.eolmago.domain.entity.user.enums.UserStatus;
@@ -86,5 +87,27 @@ public class AdminApiController {
     ) {
         List<PenaltyHistoryResponse> response = adminService.getPenaltyHistory(userId);
         return ResponseEntity.ok(response);
+    }
+
+    // 신고 상세 조회
+    @Operation(summary = "신고 상세 조회")
+    @GetMapping("/reports/{reportId}")
+    public ResponseEntity<ReportAdminResponse> getReportDetail(
+            @PathVariable Long reportId
+    ) {
+        ReportAdminResponse response = adminService.getReportDetail(reportId);
+        return ResponseEntity.ok(response);
+    }
+
+    // 신고 처리 (상태 변경 + 제재 조치)
+    @Operation(summary = "신고 처리")
+    @PatchMapping("/reports/{reportId}/resolve")
+    public ResponseEntity<Void> resolveReport(
+            @PathVariable Long reportId,
+            @RequestParam ReportAction action,
+            @RequestParam(required = false) String adminNote
+    ) {
+        adminService.resolveReport(reportId, action, adminNote);
+        return ResponseEntity.ok().build();
     }
 }

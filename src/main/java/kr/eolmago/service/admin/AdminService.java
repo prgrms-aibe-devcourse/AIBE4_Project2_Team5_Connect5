@@ -1,6 +1,8 @@
 package kr.eolmago.service.admin;
 
 import kr.eolmago.domain.entity.report.Report;
+import kr.eolmago.domain.entity.report.enums.ReportAction;
+import kr.eolmago.domain.entity.report.enums.ReportReason;
 import kr.eolmago.domain.entity.report.enums.ReportStatus;
 import kr.eolmago.domain.entity.user.SocialLogin;
 import kr.eolmago.domain.entity.user.User;
@@ -26,7 +28,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -54,6 +55,90 @@ public class AdminService {
     public PageResponse<ReportAdminResponse> getReports(ReportStatus status, Pageable pageable) {
         Page<Report> reportPage = reportRepository.findReportsWithFilters(status, pageable);
         return PageResponse.of(reportPage, this::toReportAdminResponse);
+    }
+
+    /**
+     * 신고 상세 조회 (조회 시 PENDING → UNDER_REVIEW)
+     */
+    @Transactional
+    public ReportAdminResponse getReportDetail(Long reportId) {
+        Report report = reportRepository.findById(reportId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 신고입니다."));
+
+        // 처리 대기 상태면 → 처리중으로 변경
+        if (report.getStatus() == ReportStatus.PENDING) {
+            report.updateStatus(ReportStatus.UNDER_REVIEW);
+            log.info("신고 상태 변경: reportId={}, PENDING → UNDER_REVIEW", reportId);
+        }
+
+        return toReportAdminResponse(report);
+    }
+
+    /**
+     * 신고 처리 (제재 조치 + 상태 변경)
+     */
+    @Transactional
+    public void resolveReport(Long reportId, ReportAction action, String adminNote) {
+        Report report = reportRepository.findById(reportId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 신고입니다."));
+
+        // 이미 처리 완료된 신고는 재처리 불가
+        if (report.getStatus() == ReportStatus.RESOLVED || report.getStatus() == ReportStatus.REJECTED) {
+            throw new IllegalStateException("이미 처리된 신고입니다.");
+        }
+
+        User reportedUser = report.getReportedUser();
+        String reportReasonText = getReportReasonText(report.getReason());
+
+        // ReportAction에 따른 제재 처리
+        switch (action) {
+            case NONE:
+                // 조치 없음 → REJECTED
+                report.updateAction(action);
+                report.updateStatus(ReportStatus.REJECTED);
+                report.updateResolvedAt(OffsetDateTime.now());
+                if (adminNote != null) {
+                    report.UpdateActionMemo(adminNote);
+                }
+                log.info("신고 처리 (조치 없음): reportId={}, action={}", reportId, action);
+                break;
+
+            case SUSPEND_1D:
+                applySuspension(reportedUser, 1, reportReasonText);
+                report.updateAction(action);
+                report.updateStatus(ReportStatus.RESOLVED);
+                report.updateResolvedAt(OffsetDateTime.now());
+                if (adminNote != null) {
+                    report.UpdateActionMemo(adminNote);
+                }
+                log.info("신고 처리 (1일 정지): reportId={}, userId={}", reportId, reportedUser.getUserId());
+                break;
+
+            case SUSPEND_7D:
+                applySuspension(reportedUser, 7, reportReasonText);
+                report.updateAction(action);
+                report.updateStatus(ReportStatus.RESOLVED);
+                report.updateResolvedAt(OffsetDateTime.now());
+                if (adminNote != null) {
+                    report.UpdateActionMemo(adminNote);
+                }
+                log.info("신고 처리 (7일 정지): reportId={}, userId={}", reportId, reportedUser.getUserId());
+                break;
+
+            case BAN:
+                applyBan(reportedUser, reportReasonText);
+                report.updateAction(action);
+                report.updateStatus(ReportStatus.RESOLVED);
+                report.updateResolvedAt(OffsetDateTime.now());
+                if (adminNote != null) {
+                    report.UpdateActionMemo(adminNote);
+                }
+                log.info("신고 처리 (영구 차단): reportId={}, userId={}", reportId, reportedUser.getUserId());
+                break;
+
+            default:
+                throw new IllegalArgumentException("알 수 없는 조치입니다: " + action);
+        }
     }
 
     /**
@@ -103,6 +188,43 @@ public class AdminService {
 
     // ================= PRIVATE METHODS ================= //
 
+    private void applySuspension(User user, int days, String reason) {
+        // 이미 BANNED 상태면 변경 불가
+        if (user.getStatus() == UserStatus.BANNED) {
+            throw new IllegalStateException("이미 영구 차단된 사용자입니다.");
+        }
+
+        user.updateStatus(UserStatus.SUSPENDED);
+
+        UserPenalty penalty = UserPenalty.create(
+                user,
+                null,
+                PenaltyType.SUSPENDED,
+                reason,
+                OffsetDateTime.now(),
+                OffsetDateTime.now().plusDays(days)
+        );
+        userPenaltyRepository.save(penalty);
+
+        log.info("사용자 정지 처리: userId={}, days={}", user.getUserId(), days);
+    }
+
+    private void applyBan(User user, String reason) {
+        user.updateStatus(UserStatus.BANNED);
+
+        UserPenalty penalty = UserPenalty.create(
+                user,
+                null,
+                PenaltyType.BANNED,
+                reason,
+                OffsetDateTime.now(),
+                null // 영구 차단
+        );
+        userPenaltyRepository.save(penalty);
+
+        log.info("사용자 영구 차단 처리: userId={}", user.getUserId());
+    }
+
     private void createPenaltyRecord(User user, UserStatus status, String reason) {
         if (reason == null || reason.isBlank()) {
             reason = "관리자 직접 조치";
@@ -121,6 +243,22 @@ public class AdminService {
 
         UserPenalty penalty = UserPenalty.create(user, null, penaltyType, reason, OffsetDateTime.now(), expiresAt);
         userPenaltyRepository.save(penalty);
+    }
+
+    /**
+     * ReportReason enum을 한글 설명으로 변환
+     */
+    private String getReportReasonText(ReportReason reason) {
+        return switch (reason) {
+            case FRAUD_SUSPECT -> "사기 의심";
+            case ITEM_NOT_AS_DESCRIBED -> "설명/사진 불일치";
+            case ABUSIVE_LANGUAGE -> "욕설/비매너";
+            case SPAM_AD -> "광고/도배";
+            case ILLEGAL_ITEM -> "불법/금지 품목";
+            case COUNTERFEIT -> "가품 의심";
+            case PERSONAL_INFO -> "개인정보 노출";
+            case OTHER -> "기타";
+        };
     }
 
     private UserAdminResponse toUserAdminResponse(User user) {
@@ -146,24 +284,38 @@ public class AdminService {
         User reporter = report.getReporter();
         User reportedUser = report.getReportedUser();
 
-        String reporterNickname = Optional.ofNullable(reporter.getUserProfile())
-                .map(UserProfile::getNickname)
-                .orElse("탈퇴한 사용자");
+        UserProfile reporterProfile = reporter.getUserProfile();
+        UserProfile reportedUserProfile = reportedUser.getUserProfile();
 
-        String reportedUserNickname = Optional.ofNullable(reportedUser.getUserProfile())
-                .map(UserProfile::getNickname)
-                .orElse("알 수 없음");
+        String reporterNickname = reporterProfile != null
+                ? reporterProfile.getNickname()
+                : "탈퇴한 사용자";
+
+        String reporterProfileImage = reporterProfile != null
+                ? reporterProfile.getProfileImageUrl()
+                : null;
+
+        String reportedUserNickname = reportedUserProfile != null
+                ? reportedUserProfile.getNickname()
+                : "알 수 없음";
+
+        String reportedUserProfileImage = reportedUserProfile != null
+                ? reportedUserProfile.getProfileImageUrl()
+                : null;
 
         return ReportAdminResponse.builder()
                 .reportId(report.getReportId())
                 .reportedUserId(reportedUser.getUserId())
                 .reportedUserNickname(reportedUserNickname)
+                .reportedUserProfileImage(reportedUserProfileImage)
                 .reporterUserId(reporter.getUserId())
                 .reporterNickname(reporterNickname)
-                .auctionId(report.getAuction().getAuctionId())
+                .reporterProfileImage(reporterProfileImage)
+                .auctionId(report.getAuction() != null ? report.getAuction().getAuctionId() : null)
                 .reason(report.getReason())
                 .description(report.getDescription())
                 .status(report.getStatus())
+                .action(report.getAction())
                 .createdAt(report.getCreatedAt())
                 .build();
     }

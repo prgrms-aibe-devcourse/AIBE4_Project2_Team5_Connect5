@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const pageSize = 10;
     let userGrowthChart = null;
     let transactionVolumeChart = null;
+    let currentReportId = null;
 
     // --- 초기화 ---
     loadUsers(); // 기본으로 사용자 목록 로드
@@ -34,6 +35,12 @@ document.addEventListener('DOMContentLoaded', () => {
             loadPenalties();
         }
     });
+
+    //  모달 관련 이벤트 리스너
+    document.getElementById('closeReportModal').addEventListener('click', closeReportModal);
+    document.getElementById('modalCancelBtn').addEventListener('click', closeReportModal);
+    document.getElementById('modalSubmitBtn').addEventListener('click', handleReportSubmit);
+
 
     // 탭 전환
     ['users', 'reports', 'penalties', 'stats'].forEach(tabName => {
@@ -124,15 +131,142 @@ document.addEventListener('DOMContentLoaded', () => {
             const tr = document.createElement('tr');
             tr.className = 'hover:bg-gray-50';
             tr.innerHTML = `
-                <td class="px-6 py-4 whitespace-nowrap"><div class="text-sm font-medium text-gray-900">${escapeHtml(report.reportedUserNickname)}</div><div class="text-xs text-gray-500">${report.reportedUserId.substring(0,8)}...</div></td>
-                <td class="px-6 py-4 whitespace-nowrap"><div class="text-sm font-medium text-gray-900">${escapeHtml(report.reporterNickname)}</div><div class="text-xs text-gray-500">${report.reporterUserId.substring(0,8)}...</div></td>
-                <td class="px-6 py-4"><div class="text-sm text-gray-900">${report.reason}</div><div class="text-xs text-gray-500 truncate max-w-xs">${escapeHtml(report.description)}</div></td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatDate(report.createdAt)}</td>
-                <td class="px-6 py-4 whitespace-nowrap">${getStatusBadge(report.status, 'report')}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><button onclick="manageReport('${report.reportId}')" class="text-indigo-600 hover:text-indigo-900">상세보기</button></td>
-            `;
+            <td class="px-6 py-4 whitespace-nowrap"><div class="text-sm font-medium text-gray-900">${escapeHtml(report.reportedUserNickname)}</div><div class="text-xs text-gray-500">${report.reportedUserId.substring(0,8)}...</div></td>
+            <td class="px-6 py-4 whitespace-nowrap"><div class="text-sm font-medium text-gray-900">${escapeHtml(report.reporterNickname)}</div><div class="text-xs text-gray-500">${report.reporterUserId.substring(0,8)}...</div></td>
+            <td class="px-6 py-4"><div class="text-sm text-gray-900">${getReasonText(report.reason)}</div><div class="text-xs text-gray-500 truncate max-w-xs">${escapeHtml(report.description)}</div></td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatDate(report.createdAt)}</td>
+            <td class="px-6 py-4 whitespace-nowrap">${getStatusBadge(report.status, 'report')}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <button onclick="openReportDetailModal(${report.reportId})" class="text-indigo-600 hover:text-indigo-900">상세보기</button>
+            </td>
+        `;
             tbody.appendChild(tr);
         });
+    }
+
+    // 신고 상세 모달 열기
+    window.openReportDetailModal = async function(reportId) {
+        try {
+            const response = await fetch(`/api/admin/reports/${reportId}`, { credentials: 'same-origin' });
+            if (!response.ok) throw new Error(`Failed to load report detail: ${response.statusText}`);
+
+            const report = await response.json();
+            currentReportId = reportId;
+
+            // 모달에 데이터 채우기
+            document.getElementById('modalReporterImage').src = report.reporterProfileImage || '/images/profile/base.png';
+            document.getElementById('modalReporterNickname').textContent = report.reporterNickname;
+            document.getElementById('modalReporterUserId').textContent = report.reporterUserId.substring(0, 8) + '...';
+
+            document.getElementById('modalReportedImage').src = report.reportedUserProfileImage || '/images/profile/base.png';
+            document.getElementById('modalReportedNickname').textContent = report.reportedUserNickname;
+            document.getElementById('modalReportedUserId').textContent = report.reportedUserId.substring(0, 8) + '...';
+
+            document.getElementById('modalReportReason').textContent = getReasonText(report.reason);
+            document.getElementById('modalReportDescription').textContent = report.description || '상세 설명 없음';
+            document.getElementById('modalReportCreatedAt').textContent = formatDateTime(report.createdAt);
+
+            // 이미 처리된 신고인지 확인
+            if (report.status === 'RESOLVED' || report.status === 'REJECTED') {
+                document.getElementById('modalActionSection').classList.add('hidden');
+                document.getElementById('modalAlreadyResolved').classList.remove('hidden');
+                document.getElementById('modalResolvedAction').textContent = `처리 완료: ${getActionText(report.action)}`;
+            } else {
+                document.getElementById('modalActionSection').classList.remove('hidden');
+                document.getElementById('modalAlreadyResolved').classList.add('hidden');
+                document.getElementById('modalReportAction').value = '';
+            }
+
+            // 모달 표시
+            document.getElementById('reportDetailModal').classList.remove('hidden');
+            document.getElementById('reportDetailModal').classList.add('flex');
+
+            // 신고 목록 새로고침 (PENDING → UNDER_REVIEW 변경 반영)
+            loadReports();
+        } catch (error) {
+            console.error('Error loading report detail:', error);
+            alert('신고 상세 정보를 불러올 수 없습니다.');
+        }
+    };
+
+    // 모달 닫기
+    function closeReportModal() {
+        document.getElementById('reportDetailModal').classList.add('hidden');
+        document.getElementById('reportDetailModal').classList.remove('flex');
+        currentReportId = null;
+    }
+
+    // 신고 처리 제출
+    async function handleReportSubmit() {
+        const action = document.getElementById('modalReportAction').value;
+
+        if (!action) {
+            alert('처리 조치를 선택해주세요.');
+            return;
+        }
+
+        if (!currentReportId) {
+            alert('처리할 신고가 선택되지 않았습니다.');
+            return;
+        }
+
+        const confirmMessage = getConfirmMessage(action);
+        if (!confirm(confirmMessage)) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/admin/reports/${currentReportId}/resolve?action=${action}`, {
+                method: 'PATCH',
+                credentials: 'same-origin'
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(errorText || '신고 처리에 실패했습니다.');
+            }
+
+            alert('신고 처리가 완료되었습니다.');
+            closeReportModal();
+            loadReports(); // 목록 새로고침
+        } catch (error) {
+            console.error('Error resolving report:', error);
+            alert('신고 처리 중 오류가 발생했습니다: ' + error.message);
+        }
+    }
+
+    function getConfirmMessage(action) {
+        const messages = {
+            'NONE': '조치 없이 신고를 반려하시겠습니까?',
+            'SUSPEND_1D': '피신고자를 1일 정지 처리하시겠습니까?',
+            'SUSPEND_7D': '피신고자를 7일 정지 처리하시겠습니까?',
+            'BAN': '피신고자를 영구 차단 처리하시겠습니까? 이 작업은 되돌릴 수 없습니다.'
+        };
+        return messages[action] || '이 신고를 처리하시겠습니까?';
+    }
+
+    function getActionText(action) {
+        const actions = {
+            'NONE': '조치 없음 (반려)',
+            'SUSPEND_1D': '1일 정지',
+            'SUSPEND_7D': '7일 정지',
+            'BAN': '영구 차단'
+        };
+        return actions[action] || action;
+    }
+
+    function getReasonText(reason) {
+        const reasons = {
+            'FRAUD_SUSPECT': '사기 의심',
+            'ITEM_NOT_AS_DESCRIBED': '설명/사진 불일치',
+            'ABUSIVE_LANGUAGE': '욕설/비매너',
+            'SPAM_AD': '광고/도배',
+            'ILLEGAL_ITEM': '불법/금지 품목',
+            'COUNTERFEIT': '가품 의심',
+            'PERSONAL_INFO': '개인정보 노출',
+            'OTHER': '기타'
+        };
+        return reasons[reason] || reason;
     }
 
     // --- 제재 이력 관리 기능 ---
@@ -332,6 +466,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const reportBadges = {
             PENDING: '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">처리 대기</span>',
             UNDER_REVIEW: '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">처리중</span>',
+            REJECTED: '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-black-100 text-red-800">기각</span>',
             RESOLVED: '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">처리 완료</span>'
         };
         if (type === 'user') return userBadges[status] || status;
@@ -366,5 +501,4 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     window.manageUser = (userId) => alert(`사용자 관리 모달을 엽니다: ${userId}`);
-    window.manageReport = (reportId) => alert(`신고 상세 보기 모달을 엽니다: ${reportId}`);
 });
