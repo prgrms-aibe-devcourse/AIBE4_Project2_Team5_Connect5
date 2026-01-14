@@ -5,8 +5,8 @@
 
 <head th:replace="~{fragments/head :: head('얼마고')}"></head>
 
-<body th:attr="class='bg-gradient-to-br from-gray-50 via-white to-gray-50 text-gray-900 min-h-screen flex flex-col',
-               data-user-role=${userRole ?: 'ANONYMOUS'},
+<body class="bg-gradient-to-br from-gray-50 via-white to-gray-50 text-gray-900 min-h-screen flex flex-col"
+      th:attr="data-user-role=${userRole ?: 'ANONYMOUS'},
                data-user-status=${userStatus ?: ''},
                data-user-id=${userId ?: ''}">
 
