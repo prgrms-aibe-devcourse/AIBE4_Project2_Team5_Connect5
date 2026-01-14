@@ -13,6 +13,7 @@ public enum ErrorCode {
 
     // Common
     INVALID_INPUT_VALUE(HttpStatus.BAD_REQUEST, "C001", "입력값이 올바르지 않습니다."),
+    INFRA_REDIS_CONNECTION_FACTORY_MISSING(HttpStatus.INTERNAL_SERVER_ERROR, "C998", "Redis 연결 설정이 누락되었습니다."),
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "C999", "서버 내부 오류가 발생했습니다."),
 
     // User
@@ -57,6 +58,7 @@ public enum ErrorCode {
     BID_IDEMPOTENCY_CONFLICT(HttpStatus.CONFLICT, "B008", "요청 식별값이 기존 요청과 충돌합니다."),
     BID_AMOUNT_EXCEEDS_LIMIT(HttpStatus.BAD_REQUEST, "B009", "입찰 금액이 상한선을 초과했습니다."),
     AUCTION_LOCK_BUSY(HttpStatus.CONFLICT, "B010", "요청이 많아 잠시 후 다시 시도해주세요."),
+    BID_QUEUE_TIMEOUT(HttpStatus.REQUEST_TIMEOUT, "B011", "입찰 처리 대기 시간이 초과되었습니다. 잠시 후 다시 시도해주세요."),
 
     // Chat
     CHAT_AUTH_REQUIRED(HttpStatus.UNAUTHORIZED, "CH001", "로그인이 필요합니다."),

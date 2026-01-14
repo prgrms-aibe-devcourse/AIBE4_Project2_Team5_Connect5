@@ -10,6 +10,8 @@ import kr.eolmago.dto.api.favorite.response.FavoriteAuctionResponse;
 import kr.eolmago.dto.api.favorite.response.FavoriteStatusResponse;
 import kr.eolmago.dto.api.favorite.response.FavoriteToggleResponse;
 import kr.eolmago.global.exception.BusinessException;
+import kr.eolmago.service.notification.publish.NotificationPublisher;
+import kr.eolmago.service.notification.publish.NotificationPublishCommand;
 import kr.eolmago.global.exception.ErrorCode;
 import kr.eolmago.repository.auction.AuctionRepository;
 import kr.eolmago.repository.favorite.FavoriteRepository;
@@ -30,6 +32,7 @@ public class FavoriteService {
     private final FavoriteRepository favoriteRepository;
     private final AuctionRepository auctionRepository;
     private final UserRepository userRepository;
+    private final NotificationPublisher notificationPublisher;
 
 
     /**
@@ -79,6 +82,9 @@ public class FavoriteService {
                         Favorite favorite = Favorite.create(user, auction);
                         favoriteRepository.save(favorite);
                         auctionRepository.incrementFavoriteCount(auctionId);
+                        notificationPublisher.publish(
+                            NotificationPublishCommand.favoriteAdded(userId, auctionId)
+                        );
                         return true;
                     } catch (DataIntegrityViolationException e) {
                         // 중복 찜 방어

@@ -78,14 +78,6 @@
 
                 <button type="button"
                         class="sa-tab border-b-2 border-transparent px-1 py-2 text-sm font-extrabold text-slate-500 hover:text-slate-700"
-                        data-tab="ended">
-                    유찰
-                    <span class="ml-2 inline-flex items-center justify-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-black text-slate-900"
-                          id="ended-count">0</span>
-                </button>
-
-                <button type="button"
-                        class="sa-tab border-b-2 border-transparent px-1 py-2 text-sm font-extrabold text-slate-500 hover:text-slate-700"
                         data-tab="draft">
                     임시 저장
                     <span class="ml-2 inline-flex items-center justify-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-black text-slate-900"
@@ -123,7 +115,7 @@
                         <th class="px-4 py-3 text-left text-xs font-extrabold text-slate-500 border-b border-slate-200">상태</th>
                         <th class="px-4 py-3 text-left text-xs font-extrabold text-slate-500 border-b border-slate-200">입찰 현황</th>
                         <th class="px-4 py-3 text-left text-xs font-extrabold text-slate-500 border-b border-slate-200">일정</th>
-                        <th class="w-28 px-4 py-3 text-right text-xs font-extrabold text-slate-500 border-b border-slate-200"></th>
+                        <!-- ✅ 마지막 빈 컬럼 삭제 -->
                     </tr>
                     </thead>
 
@@ -143,7 +135,7 @@
         <!-- Range text -->
         <div class="mt-4 text-xs font-bold text-slate-500" id="sa-range-text">전체 0개 중 0-0 표시</div>
 
-        <!-- Pagination (경매 목록과 동일한 스타일) -->
+        <!-- Pagination -->
         <div class="mt-10">
             <nav id="sa-pagination" class="flex items-center justify-center gap-2" aria-label="Pagination">
                 <!-- JS 렌더링 -->

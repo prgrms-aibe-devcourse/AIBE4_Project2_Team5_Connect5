@@ -9,6 +9,8 @@ import kr.eolmago.dto.api.user.response.UserProfileResponse;
 import kr.eolmago.global.security.CustomUserDetails;
 import kr.eolmago.repository.user.SocialLoginRepository;
 import kr.eolmago.repository.user.UserProfileRepository;
+import kr.eolmago.service.notification.publish.NotificationPublisher;
+import kr.eolmago.service.notification.publish.NotificationPublishCommand;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -29,6 +31,7 @@ public class UserProfileService {
     private final VerificationCodeService verificationCodeService;
     private final UserProfileImageUploadService userProfileImageUploadService;
     private final SocialLoginRepository socialLoginRepository;
+    private final NotificationPublisher notificationPublisher;
 
     @Transactional(readOnly = true)
     public UserProfileResponse getUserProfile(UUID userId) {
@@ -147,6 +150,10 @@ public class UserProfileService {
         if (user.getRole() == UserRole.GUEST) {
             user.updateRole(UserRole.USER);
             log.info("사용자 역할 변경: userId={}, newRole=USER", userId);
+
+            notificationPublisher.publish(
+                NotificationPublishCommand.phoneVerified(userId)
+            );
         }
 
         verificationCodeService.deleteVerificationCode(phoneNumber);

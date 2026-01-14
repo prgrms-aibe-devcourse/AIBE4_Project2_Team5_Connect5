@@ -22,7 +22,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static kr.eolmago.global.constants.AuctionConstants.*;
+import static kr.eolmago.service.auction.constants.AuctionConstants.*;
 
 @Slf4j
 @Component
@@ -105,7 +105,7 @@ public class AuctionCloseScheduler {
     }
 
     // endAt <= now 인 LIVE를 주기적으로 마감
-    @Scheduled(fixedDelayString = "${auction.close.sweep.delay-ms:60000}")
+    @Scheduled(fixedDelay = 60000)
     public void sweepOverdueAuctions() {
         try {
             OffsetDateTime now = OffsetDateTime.now();

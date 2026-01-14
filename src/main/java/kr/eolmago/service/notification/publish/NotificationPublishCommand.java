@@ -229,11 +229,12 @@ public record NotificationPublishCommand(
 
 	// 기간 정지 -> 피신고자에게
 	public static NotificationPublishCommand reportSuspended(UUID reportedUserId, Long reportId, int days) {
+		String durationText = (days == 0) ? "영구" : (days + "일");
 		return new NotificationPublishCommand(
 			reportedUserId,
 			NotificationType.REPORT_SUSPENDED,
 			"🚫 이용이 제한되었습니다",
-			"신고 조치로 인해 " + days + "일 동안 이용이 제한됩니다.\n자세한 내용을 확인해 주세요.",
+			"신고 조치로 인해 " + durationText + " 동안 이용이 제한됩니다.\n자세한 내용을 확인해 주세요.",
 			"/reports/" + reportId,
 			RelatedEntityType.REPORT,
 			String.valueOf(reportId)
@@ -286,6 +287,18 @@ public record NotificationPublishCommand(
 			"/chats/rooms/" + roomId,
 			RelatedEntityType.CHAT,
 			String.valueOf(roomId)
+		);
+	}
+
+	public static NotificationPublishCommand favoriteAdded(UUID userId, UUID auctionId) {
+		return new NotificationPublishCommand(
+			userId,
+			NotificationType.FAVORITE_ADDED,
+			"⭐ 관심 경매에 추가되었습니다",
+			"관심 경매로 등록되었습니다.\n마감 결과를 알림으로 알려드릴게요.",
+			"/auctions/" + auctionId,
+			RelatedEntityType.AUCTION,
+			auctionId.toString()
 		);
 	}
 }
