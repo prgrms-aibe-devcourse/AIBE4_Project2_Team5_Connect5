@@ -1,4 +1,4 @@
-package kr.eolmago.controller.api.seller;
+package kr.eolmago.controller.api.review;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

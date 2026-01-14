@@ -1,4 +1,4 @@
-package kr.eolmago.controller.api.buyer;
+package kr.eolmago.controller.api.review;
 
 import kr.eolmago.dto.api.review.request.ReviewCreateRequest;
 import kr.eolmago.global.security.CustomUserDetails;
