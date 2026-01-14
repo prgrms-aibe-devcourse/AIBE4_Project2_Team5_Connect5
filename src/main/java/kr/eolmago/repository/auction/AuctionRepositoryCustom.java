@@ -1,5 +1,6 @@
 package kr.eolmago.repository.auction;
 
+import kr.eolmago.domain.entity.auction.Auction;
 import kr.eolmago.domain.entity.auction.enums.AuctionStatus;
 import kr.eolmago.domain.entity.auction.enums.ItemCategory;
 import kr.eolmago.dto.api.auction.request.AuctionSearchRequest;
@@ -23,4 +24,6 @@ public interface AuctionRepositoryCustom {
 
     // 경매 상세 조회
     Optional<AuctionDetailDto> findDetailById(UUID auctionId);
+
+    Optional<Auction> findByIdForUpdate(UUID auctionId);
 }

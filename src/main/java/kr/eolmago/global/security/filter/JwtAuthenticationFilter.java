@@ -6,11 +6,14 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import kr.eolmago.domain.entity.user.enums.UserStatus;
+import kr.eolmago.global.security.CustomUserDetails;
 import kr.eolmago.service.user.JwtService;
 import kr.eolmago.service.user.RefreshTokenService;
 import kr.eolmago.service.user.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.authentication.InsufficientAuthenticationException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -47,7 +50,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         return uri.startsWith("/css/")
                 || uri.startsWith("/js/")
                 || uri.startsWith("/images/")
+                || uri.equals("/")
+                || uri.equals("/home")
                 || uri.equals("/login")
+                || uri.startsWith("/auctions")
                 || uri.startsWith("/oauth2/")
                 || uri.startsWith("/login/oauth2/")
                 || uri.startsWith("/swagger-ui/")
@@ -87,7 +93,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         switch (tokenStatus) {
             case VALID:
-                authenticateUser(accessToken, request);
+                authenticateUser(accessToken, request, response);
                 break;
 
             case EXPIRED:
@@ -181,10 +187,30 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
     }
 
-    private void authenticateUser(String token, HttpServletRequest request) {
+    private void authenticateUser(String token, HttpServletRequest request, HttpServletResponse response) {
         try {
             UUID userId = jwtService.getUserIdFromToken(token);
             UserDetails userDetails = userService.getUserDetailsById(userId);
+
+            // SUSPENDED 유저 체크
+            if (userDetails instanceof CustomUserDetails) {
+                CustomUserDetails customUserDetails = (CustomUserDetails) userDetails;
+                if (UserStatus.SUSPENDED.name().equals(customUserDetails.getStatus())) {
+                    String method = request.getMethod();
+                    // GET 요청은 허용, 그 외(POST, PUT, DELETE 등)는 차단
+                    if (!"GET".equalsIgnoreCase(method)) {
+                        log.warn("SUSPENDED 사용자의 쓰기 요청 차단: userId={}, method={}", userId, method);
+                        // SecurityContext에 인증 정보를 설정하지 않음 -> 401/403 처리됨
+                        SecurityContextHolder.clearContext();
+                        // AuthenticationEntryPoint에서 처리할 수 있도록 예외 정보를 request에 담거나
+                        // 여기서 직접 예외를 던지면 FilterChain에서 잡히지 않을 수 있음.
+                        // SecurityContext가 비어있으면 AuthenticationEntryPoint가 호출됨.
+                        // 하지만 구체적인 이유(SUSPENDED)를 전달하기 위해 request attribute 활용 가능
+                        request.setAttribute("SPRING_SECURITY_LAST_EXCEPTION", new InsufficientAuthenticationException("SUSPENDED"));
+                        return;
+                    }
+                }
+            }
 
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(

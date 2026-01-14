@@ -191,11 +191,25 @@
                 const userRole = this.getAttribute("data-user-role");
                 const userStatus = this.getAttribute("data-user-status");
 
-                // SUSPENDED 체크 (우선순위 높음)
+                // 1순위: 로그인 안 한 사용자 (ANONYMOUS)
+                if (!userRole || userRole === "" || userRole === "ANONYMOUS") {
+                    event.preventDefault();
+                    alert("로그인이 필요합니다.");
+                    window.location.href = "/login";
+                    return;
+                }
+
+                // 2순위: GUEST (로그인은 했지만 전화번호 미인증)
+                if (userRole === "GUEST") {
+                    event.preventDefault();
+                    alert("전화번호 미인증 계정입니다. 전화번호 인증 후 이용 가능합니다.");
+                    return;
+                }
+
+                // 3순위: SUSPENDED 체크
                 if (userStatus === "SUSPENDED") {
                     event.preventDefault();
 
-                    // 정지 정보 조회
                     const penaltyInfo = await fetchPenaltyInfo();
 
                     if (penaltyInfo) {
@@ -208,13 +222,6 @@
                     } else {
                         alert("서비스 이용이 제한되었습니다.");
                     }
-                    return;
-                }
-
-                // GUEST 체크
-                if (userRole === "GUEST") {
-                    event.preventDefault();
-                    alert("전화번호 미인증 계정입니다. 전화번호 인증 후 이용 가능합니다.");
                     return;
                 }
             });

@@ -18,7 +18,6 @@ export class Api {
     async fetchDetailWithServerTime(auctionId) {
         const { data, response } = await this.getAuctionDetail(auctionId);
 
-        // serverNow 우선순위: body(serverNow/serverNowMs) > header(Date) > Date.now()
         const serverNowMs =
             this.#toMs(data?.serverNow ?? data?.serverNowMs) ??
             this.#toMs(response?.headers?.get?.("Date")) ??
@@ -37,7 +36,6 @@ export class Api {
         const s = String(v).trim();
         if (!s) return null;
 
-        // epoch string (ms)
         if (/^\d{12,}$/.test(s)) {
             const n = Number(s);
             return Number.isFinite(n) && n > 0 ? n : null;
@@ -74,7 +72,7 @@ export class Api {
     }
 
     /**
-     * 경매 마감 API 호출
+     * 경매 마감 API 호출 (멱등)
      */
     async closeAuction(auctionId) {
         const url = `/api/auctions/${encodeURIComponent(auctionId)}/close`;
@@ -97,6 +95,39 @@ export class Api {
         }
 
         return { success: true };
+    }
+
+    /**
+     * 거래 생성 (낙찰(ENDED_SOLD & SOLD)일 때만 호출해야 함)
+     * request:
+     * {
+     *   auctionId: UUID,
+     *   sellerId: UUID,
+     *   buyerId: UUID,
+     *   finalPrice: number
+     * }
+     */
+    async createDealFromAuction(request) {
+        const url = `/api/deals/from-auction`;
+
+        const response = await fetch(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Accept: "application/json"
+            },
+            credentials: "same-origin",
+            body: JSON.stringify(request)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => null);
+            const errorMessage = errorData?.message || `거래 생성에 실패했습니다 (${response.status})`;
+            throw new Error(errorMessage);
+        }
+
+        const data = await response.json().catch(() => null);
+        return { data, response };
     }
 
     /**

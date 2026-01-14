@@ -3,7 +3,6 @@ package kr.eolmago.service.auction;
 import kr.eolmago.domain.entity.auction.Auction;
 import kr.eolmago.domain.entity.auction.AuctionImage;
 import kr.eolmago.domain.entity.auction.AuctionItem;
-import kr.eolmago.domain.entity.auction.Bid;
 import kr.eolmago.domain.entity.auction.enums.AuctionStatus;
 import kr.eolmago.domain.entity.auction.enums.ItemCategory;
 import kr.eolmago.domain.entity.auction.enums.ItemCondition;
@@ -21,6 +20,8 @@ import kr.eolmago.repository.auction.AuctionRepository;
 import kr.eolmago.repository.auction.BidRepository;
 import kr.eolmago.repository.user.UserRepository;
 import kr.eolmago.service.auction.event.AuctionEndAtChangedEvent;
+import kr.eolmago.service.notification.publish.NotificationPublishCommand;
+import kr.eolmago.service.notification.publish.NotificationPublisher;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
@@ -48,6 +49,7 @@ public class AuctionService {
 
     private final AuctionCloseService auctionCloseService;
     private final ApplicationEventPublisher eventPublisher;
+    private final NotificationPublisher notificationPublisher;
 
     // 임시저장 생성
     @Transactional
@@ -207,6 +209,8 @@ public class AuctionService {
         auction.publish(startAt, endAt);
 
         eventPublisher.publishEvent(new AuctionEndAtChangedEvent(auction.getAuctionId(), endAt));
+
+        notificationPublisher.publish(NotificationPublishCommand.auctionPublished(sellerId, auction.getAuctionId()));
 
         return new AuctionDraftResponse(sellerId, auction.getAuctionId(), auction.getStatus());
     }

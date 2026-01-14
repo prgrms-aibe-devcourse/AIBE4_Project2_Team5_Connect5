@@ -6,7 +6,6 @@ import kr.eolmago.dto.api.search.response.AutocompleteResponse;
 import kr.eolmago.dto.api.search.response.PopularKeywordResponse;
 import kr.eolmago.service.search.SearchKeywordService;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 

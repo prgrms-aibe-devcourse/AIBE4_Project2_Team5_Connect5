@@ -7,6 +7,8 @@ import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.core.types.dsl.StringExpression;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
+import jakarta.persistence.LockModeType;
+import kr.eolmago.domain.entity.auction.Auction;
 import kr.eolmago.domain.entity.auction.enums.AuctionStatus;
 import kr.eolmago.domain.entity.auction.enums.ItemCategory;
 import kr.eolmago.dto.api.auction.request.AuctionSearchRequest;
@@ -67,7 +69,8 @@ public class AuctionRepositoryImpl implements AuctionRepositoryCustom {
                         auction.bidCount,
                         auction.favoriteCount,
                         auction.endAt,
-                        auction.status
+                        auction.status,
+                        auction.endReason
                 ))
                 .from(auction)
                 .innerJoin(auction.auctionItem, auctionItem)
@@ -155,6 +158,17 @@ public class AuctionRepositoryImpl implements AuctionRepositoryCustom {
                 .on(auctionImage.auctionItem.eq(auctionItem)
                         .and(auctionImage.displayOrder.eq(0)))
                 .where(auction.auctionId.eq(auctionId))
+                .fetchOne();
+
+        return Optional.ofNullable(result);
+    }
+
+    @Override
+    public Optional<Auction> findByIdForUpdate(UUID auctionId) {
+        Auction result = queryFactory
+                .selectFrom(auction)
+                .where(auction.auctionId.eq(auctionId))
+                .setLockMode(LockModeType.PESSIMISTIC_WRITE)
                 .fetchOne();
 
         return Optional.ofNullable(result);

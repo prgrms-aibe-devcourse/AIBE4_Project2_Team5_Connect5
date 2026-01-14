@@ -128,6 +128,15 @@ document.addEventListener("DOMContentLoaded", () => {
         const buttons = Array.from(document.querySelectorAll(FAVORITE_BTN_SELECTOR));
         if (buttons.length === 0) return;
 
+        const userRoleElement = document.querySelector('[data-user-role]');
+        const userRole = userRoleElement?.dataset?.userRole;
+
+        // 로그인하지 않았거나 ANONYMOUS면 API 호출하지 않음
+        if (!userRole || userRole === 'ANONYMOUS') {
+            buttons.forEach((btn) => setHeartUI(btn, false));
+            return;
+        }
+
         const auctionIds = buttons.map((b) => b.dataset.auctionId).filter(Boolean);
         const uniqueIds = Array.from(new Set(auctionIds));
         if (uniqueIds.length === 0) return;
@@ -136,7 +145,11 @@ document.addEventListener("DOMContentLoaded", () => {
             method: "POST",
             body: JSON.stringify({ auctionIds: uniqueIds }),
         });
-        if (!res || !res.ok) return;
+
+        if (!res || !res.ok) {
+            buttons.forEach((btn) => setHeartUI(btn, false));
+            return;
+        }
 
         const raw = await res.json();
         const statusMap = normalizeStatusResponse(raw);
@@ -155,6 +168,15 @@ document.addEventListener("DOMContentLoaded", () => {
         const auctionId = btn.dataset.auctionId;
         if (!auctionId) return;
 
+        // ✅ 로그인 체크
+        const userRole = document.body.dataset.userRole;
+
+        if (!userRole || userRole === 'ANONYMOUS') {
+            alert('로그인이 필요합니다.');
+            window.location.href = '/login';
+            return;
+        }
+
         setBtnLoading(btn, true);
 
         const res = await apiFetch(`/api/favorites/${auctionId}`, { method: "POST" });
@@ -172,10 +194,9 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        const data = await res.json(); // { auctionId, favorited, favoriteCount }
+        const data = await res.json();
         setHeartUI(btn, data.favorited);
 
-        // favorites page라면: 해제 시 카드 제거 + empty-state 처리 + count 갱신
         const favoritesGrid = document.getElementById(FAVORITE_GRID_ID);
         if (favoritesGrid && !data.favorited) {
             const card = btn.closest("[data-auction-card]") || btn.closest("article") || btn.closest("div");

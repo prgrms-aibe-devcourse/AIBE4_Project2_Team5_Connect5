@@ -8,6 +8,8 @@ import kr.eolmago.dto.view.deal.DealResponse;
 import kr.eolmago.repository.auction.AuctionRepository;
 import kr.eolmago.repository.deal.DealRepository;
 import kr.eolmago.repository.user.UserRepository;
+import kr.eolmago.service.notification.publish.NotificationPublishCommand;
+import kr.eolmago.service.notification.publish.NotificationPublisher;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +31,7 @@ public class DealService {
     private final DealRepository dealRepository;
     private final AuctionRepository auctionRepository;
     private final UserRepository userRepository;
+    private final NotificationPublisher notificationPublisher;
 
     /**
      * 거래 생성
@@ -155,6 +158,10 @@ public class DealService {
         }
 
         deal.complete();
+
+        notificationPublisher.publish(NotificationPublishCommand.dealCompleted(deal.getSeller().getUserId(), dealId));
+        notificationPublisher.publish(NotificationPublishCommand.dealCompleted(deal.getBuyer().getUserId(), dealId));
+
         return DealResponse.from(deal);
     }
 

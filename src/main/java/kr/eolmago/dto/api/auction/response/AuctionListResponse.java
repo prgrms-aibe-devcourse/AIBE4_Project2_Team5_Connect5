@@ -1,5 +1,6 @@
 package kr.eolmago.dto.api.auction.response;
 
+import kr.eolmago.domain.entity.auction.enums.AuctionEndReason;
 import kr.eolmago.domain.entity.auction.enums.AuctionStatus;
 import kr.eolmago.global.util.TimeFormatter;
 
@@ -20,7 +21,8 @@ public record AuctionListResponse(
         int favoriteCount,
         OffsetDateTime endAt,
         String remainingTime,
-        AuctionStatus status
+        AuctionStatus status,
+        AuctionEndReason endReason
 ) {
     public static AuctionListResponse from(AuctionListDto dto) {
         return new AuctionListResponse(
@@ -37,7 +39,8 @@ public record AuctionListResponse(
                 dto.favoriteCount(),
                 dto.endAt(),
                 TimeFormatter.formatRemainingTime(dto.endAt()),
-                dto.status()
+                dto.status(),
+                dto.endReason()
         );
     }
 }

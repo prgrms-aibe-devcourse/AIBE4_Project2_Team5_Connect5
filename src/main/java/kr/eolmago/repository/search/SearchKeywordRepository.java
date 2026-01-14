@@ -9,10 +9,6 @@ import java.util.Optional;
 
 /**
  * 검색 키워드 Repository
- *
- * 역할:
- * - 간단한 조회: 메서드 이름 쿼리
- * - 복잡한 조회: QueryDSL (SearchKeywordRepositoryCustom)
  */
 public interface SearchKeywordRepository extends JpaRepository<SearchKeyword, Long>, SearchKeywordRepositoryCustom {
 

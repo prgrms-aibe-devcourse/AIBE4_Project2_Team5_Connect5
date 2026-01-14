@@ -1,6 +1,7 @@
 package kr.eolmago.repository.search.impl;
 
 import com.querydsl.jpa.impl.JPAQueryFactory;
+import jakarta.persistence.EntityManager;
 import kr.eolmago.domain.entity.search.QSearchKeyword;
 import kr.eolmago.domain.entity.search.SearchKeyword;
 import kr.eolmago.repository.search.SearchKeywordRepositoryCustom;
@@ -21,6 +22,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SearchKeywordRepositoryImpl implements SearchKeywordRepositoryCustom {
     private final JPAQueryFactory queryFactory;
+    private final EntityManager entityManager;
 
     QSearchKeyword searchKeyword = QSearchKeyword.searchKeyword;
 
@@ -105,5 +107,52 @@ public class SearchKeywordRepositoryImpl implements SearchKeywordRepositoryCusto
                         searchKeyword.searchCount.lt(minCount)
                 )
                 .fetch();
+    }
+
+    /**
+     * 검색어 통계 원자적 업데이트 (UPSERT)
+     *
+     * PostgreSQL의 INSERT ... ON CONFLICT DO UPDATE 활용
+     *
+     * 동작:
+     * 1. 검색어가 없으면 (INSERT):
+     *    - keyword, search_count=1, keyword_type(자동판단), last_searched_at=현재시간, created_at=현재시간
+     *
+     * 2. 검색어가 있으면 (UPDATE):
+     *    - search_count = search_count + 1
+     *    - last_searched_at = 현재시간
+     *
+     * 동시성 보장:
+     * - DB 레벨에서 원자적으로 처리 (ACID 보장)
+     * - Race Condition 없음
+     * - Lost Update 없음
+     *
+     * keyword_type 판단 로직:
+     * - BRAND: 브랜드명 포함 (아이폰|갤럭시|픽셀|샤오미|apple|samsung|google|xiaomi)
+     * - MODEL: 숫자 포함
+     * - GENERAL: 그 외
+     *
+     * @param keyword 검색어
+     */
+    @Override
+    public void upsertSearchCount(String keyword, String keywordType) {
+        String sql = """
+            INSERT INTO search_keywords (keyword, search_count, keyword_type, last_searched_at, created_at)
+            VALUES (
+                :keyword,
+                1,
+                :keywordType,
+                NOW(),
+                NOW()
+            )
+            ON CONFLICT (keyword) DO UPDATE SET
+                search_count = search_keywords.search_count + 1,
+                last_searched_at = NOW()
+            """;
+
+        entityManager.createNativeQuery(sql)
+                .setParameter("keyword", keyword)
+                .setParameter("keywordType", keywordType)
+                .executeUpdate();
     }
 }

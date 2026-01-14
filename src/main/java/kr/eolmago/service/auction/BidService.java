@@ -1,30 +1,31 @@
 package kr.eolmago.service.auction;
 
-import kr.eolmago.domain.entity.auction.Auction;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import kr.eolmago.domain.entity.auction.Bid;
-import kr.eolmago.domain.entity.auction.enums.AuctionStatus;
-import kr.eolmago.domain.entity.user.User;
 import kr.eolmago.dto.api.auction.request.BidCreateRequest;
 import kr.eolmago.dto.api.auction.response.BidCreateResponse;
 import kr.eolmago.global.exception.BusinessException;
 import kr.eolmago.global.exception.ErrorCode;
-import kr.eolmago.global.util.DurationCalculator;
-import kr.eolmago.repository.auction.AuctionRepository;
 import kr.eolmago.repository.auction.BidRepository;
-import kr.eolmago.repository.user.UserRepository;
-import kr.eolmago.service.auction.event.AuctionEndAtChangedEvent;
+import kr.eolmago.service.auction.stream.BidProcessingResult;
+import kr.eolmago.service.auction.stream.BidResultStore;
+import kr.eolmago.service.auction.stream.BidStreamProperties;
+import kr.eolmago.service.auction.stream.BidStreamSupport;
 import lombok.RequiredArgsConstructor;
-
-import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.redis.connection.stream.MapRecord;
+import org.springframework.data.redis.connection.stream.RecordId;
+import org.springframework.data.redis.connection.stream.StreamRecords;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.OffsetDateTime;
-import java.time.temporal.ChronoUnit;
+import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-import static kr.eolmago.global.constants.AuctionConstants.*;
+import static kr.eolmago.service.auction.constants.AuctionConstants.*;
 
 @Service
 @RequiredArgsConstructor
@@ -32,103 +33,143 @@ import static kr.eolmago.global.constants.AuctionConstants.*;
 public class BidService {
 
     private final BidRepository bidRepository;
-    private final AuctionRepository auctionRepository;
-    private final UserRepository userRepository;
-    private final ApplicationEventPublisher eventPublisher;
 
-    // 입찰 생성
+    private final StringRedisTemplate redisTemplate;
+    private final BidStreamProperties props;
+    private final BidResultStore bidResultStore;
+
     @Transactional
-    public BidCreateResponse createBid(UUID auctionId, BidCreateRequest request, UUID buyer_id) {
+    public BidCreateResponse createBid(UUID auctionId, BidCreateRequest request, UUID buyerId) {
 
-        // 입찰 중복 처리 방지
-        String requestId = request.clientRequestId();
-        Optional<Bid> existing = bidRepository.findByClientRequestIdAndBidderId(requestId, buyer_id);
-        if (existing.isPresent()) {
-            Bid bid = existing.get();
-            if (bid.getAmount() == request.amount()) {
-                // 동일 요청 재시도 -> 기존 결과 반환
-                return buildBidCreateResponse(bid, false);
-            }
-            throw new BusinessException(ErrorCode.BID_IDEMPOTENCY_CONFLICT);
-        }
-
-        // 예외 처리
-        Auction auction = auctionRepository.findById(auctionId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.AUCTION_NOT_FOUND));
-
-        if (auction.getStatus() != AuctionStatus.LIVE) {
-            throw new BusinessException(ErrorCode.AUCTION_NOT_LIVE);
-        }
-
-        if (auction.getSeller().getUserId().equals(buyer_id)) {
-            throw new BusinessException(ErrorCode.SELLER_CANNOT_BID);
-        }
-
-        // 최소 입찰가, 최대 입찰가 검증
-        int currentHighest = auction.getCurrentPrice();
-        int increment = auction.getBidIncrement();
+        long idempotencyTtlMs = props.getIdempotencyTtlMs();
+        long apiWaitTimeoutMs = props.getApiWaitTimeoutMs();
         int amount = request.amount();
 
-        int minAcceptable = currentHighest + increment;
-        if (amount < minAcceptable) throw new BusinessException(ErrorCode.BID_INVALID_AMOUNT);
-        if (amount > MAX_BID_AMOUNT) throw new BusinessException(ErrorCode.BID_AMOUNT_EXCEEDS_LIMIT);
+        // 멱등성 키(clientRequestId) 필수
+        String requestId = request.clientRequestId();
+        if (requestId == null || requestId.isBlank()) {
+            throw new BusinessException(ErrorCode.BID_IDEMPOTENCY_REQUIRED);
+        }
 
-        // 입찰 단위 검증, 입찰은 단위의 배수만 가능
-        int diff = amount - currentHighest;
-        if (increment > 0 && diff % increment != 0) throw new BusinessException(ErrorCode.BID_INVALID_INCREMENT);
+        String resultKey = BidStreamSupport.resultKey(buyerId, requestId);
 
-        // 입찰 생성
-        User bidder = userRepository.getReferenceById(buyer_id);
-        Bid bid = Bid.create(auction, bidder, amount, requestId);
-        bidRepository.save(bid);
+        // Redis 결과가 있으면 즉시 반환
+        BidProcessingResult cached = bidResultStore.get(resultKey);
+        if (cached != null && !cached.isPending()) {
+            return resolveOrThrow(cached);
+        }
 
-        // 경매 최고가 갱신, 입찰 카운트 증가
-        auction.updateBid(amount);
+        // 이미 저장된 요청이면 바로 반환
+        Optional<Bid> existing = bidRepository.findByClientRequestIdAndBidderId(requestId, buyerId);
+        if (existing.isPresent()) {
 
-        // 자동 연장
-        OffsetDateTime now = OffsetDateTime.now();
-        boolean extensionApplied = tryAutoExtension(auction, now);
+            Bid bid = existing.get();
+            if (bid.getAmount() != amount) {
+                throw new BusinessException(ErrorCode.BID_IDEMPOTENCY_CONFLICT);
+            }
 
-        return buildBidCreateResponse(bid, extensionApplied);
+            return buildBidCreateResponse(bid, false);
+        }
+
+        // 결과키 PENDING
+        bidResultStore.putPendingIfAbsent(resultKey, Duration.ofMillis(idempotencyTtlMs));
+
+        // publishKey NX로 설정, 최초 1회만 Stream 발행
+        // 키가 없을 때만 set -> 중복 발행 방지
+        String publishKey = BidStreamSupport.publishKey(buyerId, requestId);
+        Boolean firstPublish = redisTemplate.opsForValue().setIfAbsent(
+                publishKey,
+                "1",
+                Duration.ofMillis(idempotencyTtlMs)
+        );
+
+        if (Boolean.TRUE.equals(firstPublish)) {
+            publishToStream(auctionId, buyerId, amount, requestId);
+        }
+
+        // 결과키 대기(폴링)
+        long deadline = System.currentTimeMillis() + apiWaitTimeoutMs;
+
+        while (System.currentTimeMillis() < deadline) {
+            BidProcessingResult result = bidResultStore.get(resultKey);
+            if (result != null && !result.isPending()) {
+                return resolveOrThrow(result);
+            }
+            sleepSilently(RESULT_WAIT_POLL_MS);
+        }
+
+        // 타임아웃 발생 시 DB 멱등 조회로 결과 복구
+        Optional<Bid> afterTimeout = bidRepository.findByClientRequestIdAndBidderId(requestId, buyerId);
+        if (afterTimeout.isPresent()) {
+            Bid bid = afterTimeout.get();
+            if (bid.getAmount() != amount) {
+                throw new BusinessException(ErrorCode.BID_IDEMPOTENCY_CONFLICT);
+            }
+            return buildBidCreateResponse(bid, false); // 복구 시 자동 연장 여부는 false
+        }
+
+        throw new BusinessException(ErrorCode.BID_QUEUE_TIMEOUT);
     }
 
-    // 자동 연장
-    private boolean tryAutoExtension(Auction auction, OffsetDateTime now) {
-        OffsetDateTime endAt = auction.getEndAt();
-        OffsetDateTime originalEndAt = auction.getOriginalEndAt();
+    private void publishToStream(UUID auctionId, UUID buyerId, int amount, String requestId) {
+        // BidStreamProperties
+        String streamKey = props.getStreamKey();
+        long resultTtlMs = props.getResultTtlMs();
 
-        if (endAt == null || originalEndAt == null) return false;
+        Map<String, String> body = new HashMap<>();
+        body.put("auctionId", auctionId.toString());
+        body.put("buyerId", buyerId.toString());
+        body.put("amount", String.valueOf(amount));
+        body.put("requestId", requestId);
 
-        long remainingSeconds = ChronoUnit.SECONDS.between(now, endAt);
-        if (remainingSeconds <= 0) return false;
-        if (remainingSeconds > EXTENSION_THRESHOLD_SECONDS) return false;
+        /*
+        * MapRecord<K, HK, HV>
+        * K: Stream Key 타입 - stream:bids
+        * HK: Hash Key(필드 이름) 타입 - auctionId
+        * HV: Hash Value(필드 값) 타입 - 1000
+         * */
+        MapRecord<String, String, String> record = StreamRecords.newRecord()
+                .in(streamKey)
+                .ofMap(body);
 
-        OffsetDateTime candidateEndAt = endAt.plusSeconds(EXTENSION_DURATION_SECONDS);
-        OffsetDateTime capEndAt = now.plusSeconds(MAX_REMAINING_SECONDS);
-        OffsetDateTime hardCapEndAt = originalEndAt.plusHours(HARD_MAX_EXTENSION_HOURS);
-
-        OffsetDateTime newEndAt = candidateEndAt;
-        if (newEndAt.isAfter(capEndAt)) newEndAt = capEndAt;
-        if (newEndAt.isAfter(hardCapEndAt)) newEndAt = hardCapEndAt;
-
-        if (!newEndAt.isAfter(endAt)) return false;
-
-        int newDurationHours = DurationCalculator.calculateHoursBetween(originalEndAt, newEndAt);
-        auction.extendEndTime(newEndAt, newDurationHours);
-
-        eventPublisher.publishEvent(new AuctionEndAtChangedEvent(auction.getAuctionId(), newEndAt));
-        return true;
+        RecordId id = redisTemplate.opsForStream().add(record);
+        if (id == null) {
+            String resultKey = BidStreamSupport.resultKey(buyerId, requestId);
+            bidResultStore.put(
+                    resultKey,
+                    BidProcessingResult.error(ErrorCode.INTERNAL_SERVER_ERROR.name(), "Failed to publish bid stream"),
+                    Duration.ofMillis(resultTtlMs)
+            );
+        }
     }
 
+    // 시스템 에러 처리
+    private BidCreateResponse resolveOrThrow(BidProcessingResult result) {
+        if (result.isSuccess()) {
+            return result.response();
+        }
+        if (result.isError()) {
+            if (ErrorCode.INTERNAL_SERVER_ERROR.name().equals(result.errorCode())) {
+                throw new RuntimeException(result.errorMessage() != null ? result.errorMessage() : "Bid failed");
+            }
+
+            try {
+                ErrorCode code = ErrorCode.valueOf(result.errorCode());
+                throw new BusinessException(code);
+            } catch (IllegalArgumentException ignored) {
+                throw new RuntimeException(result.errorMessage() != null ? result.errorMessage() : "Bid failed");
+            }
+        }
+        throw new BusinessException(ErrorCode.BID_QUEUE_TIMEOUT);
+    }
 
     private BidCreateResponse buildBidCreateResponse(Bid bid, boolean extensionApplied) {
-        Auction auction = bid.getAuction();
+        var auction = bid.getAuction();
+
         int currentHighest = auction.getCurrentPrice();
         int minAcceptable = currentHighest + auction.getBidIncrement();
 
-        // 현재 최고 입찰자 ID 조회
-        UUID highestBidderId = bidRepository.findTopBidderIdByAuction(auction)
-                .orElse(null);
+        UUID highestBidderId = bidRepository.findTopBidderIdByAuction(auction).orElse(null);
 
         return new BidCreateResponse(
                 bid.getBidId(),
@@ -140,5 +181,13 @@ public class BidService {
                 extensionApplied,
                 highestBidderId
         );
+    }
+
+    private void sleepSilently(long ms) {
+        try {
+            Thread.sleep(ms);
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+        }
     }
 }

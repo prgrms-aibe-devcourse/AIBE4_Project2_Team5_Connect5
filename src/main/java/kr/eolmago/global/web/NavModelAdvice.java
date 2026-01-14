@@ -3,6 +3,7 @@ package kr.eolmago.global.web;
 import kr.eolmago.global.security.CustomUserDetails;
 import kr.eolmago.service.notification.NotificationService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -11,6 +12,7 @@ import java.util.UUID;
 
 @ControllerAdvice
 @RequiredArgsConstructor
+@Slf4j
 public class NavModelAdvice {
 
 	private final NotificationService notificationService;
@@ -42,17 +44,27 @@ public class NavModelAdvice {
 
     @ModelAttribute("userRole")
     public String userRole(@AuthenticationPrincipal CustomUserDetails me) {
-        if (me == null) return null;
-        return me.getAuthorities().stream()
+        if (me == null) {
+            log.info("✅ NavModelAdvice - userRole: ANONYMOUS (인증 정보 없음)");
+            return "ANONYMOUS";
+        }
+        String role = me.getAuthorities().stream()
                 .findFirst()
                 .map(authority -> authority.getAuthority().replace("ROLE_", ""))
-                .orElse(null);
+                .orElse("ANONYMOUS");
+        log.info("✅ NavModelAdvice - userRole: {}, userId: {}", role, me.getId());
+        return role;
     }
 
     @ModelAttribute("userStatus")
     public String userStatus(@AuthenticationPrincipal CustomUserDetails me) {
-        if (me == null) return null;
-        return me.getStatus(); // CustomUserDetails에 getStatus() 메서드가 있다고 가정
+        if (me == null) {
+            log.info("✅ NavModelAdvice - userStatus: (인증 정보 없음)");
+            return "";
+        }
+        String status = me.getStatus();
+        log.info("✅ NavModelAdvice - userStatus: {}, userId: {}", status, me.getId());
+        return status != null ? status : "";
     }
 
 	private UUID tryUserId(CustomUserDetails me) {
@@ -63,4 +75,14 @@ public class NavModelAdvice {
 			return null;
 		}
 	}
+
+    @ModelAttribute("userId")
+    public String userId(@AuthenticationPrincipal CustomUserDetails me) {
+        if (me == null) {
+            log.info("✅ NavModelAdvice - userId: (인증 정보 없음)");
+            return "";
+        }
+        log.info("✅ NavModelAdvice - userId: {}", me.getId());
+        return me.getId();
+    }
 }

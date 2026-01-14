@@ -1,7 +1,9 @@
 package kr.eolmago.repository.report.impl;
 
+import com.querydsl.core.BooleanBuilder;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import kr.eolmago.domain.entity.report.Report;
+import kr.eolmago.domain.entity.report.enums.ReportStatus;
 import kr.eolmago.domain.entity.user.QUser;
 import kr.eolmago.domain.entity.user.QUserProfile;
 import kr.eolmago.domain.entity.user.User;
@@ -41,8 +43,9 @@ public class ReportRepositoryImpl implements ReportRepositoryCustom {
                 .fetch();
 
         long total = queryFactory
-                .selectFrom(report)
-                .fetchCount();
+                .select(report.count())
+                .from(report)
+                .fetchOne();
 
         return new PageImpl<>(reports, pageable, total);
     }
@@ -67,9 +70,43 @@ public class ReportRepositoryImpl implements ReportRepositoryCustom {
                 .fetch();
 
         long total = queryFactory
-                .selectFrom(report)
+                .select(report.count())
+                .from(report)
                 .where(report.reporter.userId.eq(reporterUser.getUserId()))
-                .fetchCount();
+                .fetchOne();
+
+        return new PageImpl<>(reports, pageable, total);
+    }
+
+    @Override
+    public Page<Report> findReportsWithFilters(ReportStatus status, Pageable pageable) {
+        QUser reporter = new QUser("reporter");
+        QUserProfile reporterProfile = new QUserProfile("reporterProfile");
+        QUser reportedUser = new QUser("reportedUser");
+        QUserProfile reportedUserProfile = new QUserProfile("reportedUserProfile");
+
+        BooleanBuilder builder = new BooleanBuilder();
+        if (status != null) {
+            builder.and(report.status.eq(status));
+        }
+
+        List<Report> reports = queryFactory
+                .selectFrom(report)
+                .join(report.reporter, reporter).fetchJoin()
+                .leftJoin(reporter.userProfile, reporterProfile).fetchJoin()
+                .join(report.reportedUser, reportedUser).fetchJoin()
+                .leftJoin(reportedUser.userProfile, reportedUserProfile).fetchJoin()
+                .where(builder)
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize())
+                .orderBy(report.createdAt.desc())
+                .fetch();
+
+        long total = queryFactory
+                .select(report.count())
+                .from(report)
+                .where(builder)
+                .fetchOne();
 
         return new PageImpl<>(reports, pageable, total);
     }

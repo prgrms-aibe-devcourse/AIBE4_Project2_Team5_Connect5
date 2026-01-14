@@ -11,6 +11,8 @@ import kr.eolmago.service.chat.ChatStreamPublisher;
 import kr.eolmago.service.chat.ChatSystemUserProvider;
 import kr.eolmago.service.chat.exception.ChatException;
 import kr.eolmago.service.chat.validation.ChatValidator;
+import kr.eolmago.service.notification.publish.NotificationPublisher;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -27,6 +29,7 @@ class ChatRoomServiceTest {
 		ChatMessageRepository chatMessageRepository = mock(ChatMessageRepository.class);
 		ChatStreamPublisher chatStreamPublisher = mock(ChatStreamPublisher.class);
 		ChatSystemUserProvider systemUserProvider = mock(ChatSystemUserProvider.class);
+		NotificationPublisher notificationPublisher = mock(NotificationPublisher.class);
 
 		ChatValidator chatValidator = new ChatValidator();
 
@@ -37,7 +40,8 @@ class ChatRoomServiceTest {
 			doubles.userRepository,
 			chatStreamPublisher,
 			chatValidator,
-			systemUserProvider
+			systemUserProvider,
+			notificationPublisher
 		);
 	}
 

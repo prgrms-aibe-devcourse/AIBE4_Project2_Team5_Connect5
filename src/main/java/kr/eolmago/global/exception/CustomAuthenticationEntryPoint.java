@@ -27,8 +27,12 @@ public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint 
     public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException, ServletException {
         String requestUri = request.getRequestURI();
 
+        // Filter에서 설정한 예외가 있다면 우선 사용
+        Exception exception = (Exception) request.getAttribute("SPRING_SECURITY_LAST_EXCEPTION");
+        String message = exception != null ? exception.getMessage() : authException.getMessage();
+
         // GUEST 사용자가 자격이 필요한 페이지에 접근했을 때
-        if (authException instanceof InsufficientAuthenticationException && "GUEST".equals(authException.getMessage())) {
+        if (authException instanceof InsufficientAuthenticationException && "GUEST".equals(message)) {
             handleGuestAccess(response);
             return;
         }
@@ -36,12 +40,19 @@ public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint 
         // API 요청인 경우 JSON 응답
         if (requestUri.startsWith("/api/")) {
             // ✨ BANNED 유저 체크 추가
-            if (authException.getMessage() != null && authException.getMessage().contains("BANNED")) {
+            if (message != null && message.contains("BANNED")) {
                 response.setStatus(HttpStatus.FORBIDDEN.value());
                 response.setContentType(MediaType.APPLICATION_JSON_VALUE);
                 response.setCharacterEncoding("UTF-8");
                 response.getWriter().write(objectMapper.writeValueAsString(
                         ErrorResponse.of(403, "Forbidden", "영구 정지된 이용자입니다.")
+                ));
+            } else if (message != null && message.contains("SUSPENDED")) {
+                response.setStatus(HttpStatus.FORBIDDEN.value());
+                response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                response.setCharacterEncoding("UTF-8");
+                response.getWriter().write(objectMapper.writeValueAsString(
+                        ErrorResponse.of(403, "Forbidden", "정지된 이용자입니다. 쓰기 작업이 제한됩니다.")
                 ));
             } else {
                 response.setStatus(HttpStatus.UNAUTHORIZED.value());

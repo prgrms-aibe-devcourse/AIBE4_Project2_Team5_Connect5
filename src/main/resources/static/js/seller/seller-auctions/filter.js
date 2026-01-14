@@ -38,14 +38,12 @@
     const $tabAllCount = document.getElementById('tab-all-count');
     const $tabLiveCount = document.getElementById('live-count');
     const $tabClosedCount = document.getElementById('closed-count');
-    const $tabEndedCount = document.getElementById('ended-count');
     const $tabDraftCount = document.getElementById('draft-count');
 
     const tabToStatus = {
         all: null,
         live: 'LIVE',
         closed: 'ENDED_SOLD',
-        ended: 'ENDED_UNSOLD',
         draft: 'DRAFT',
     };
 
@@ -53,7 +51,6 @@
         all: ['목록이 비어 있습니다.', '등록한 경매가 없습니다.'],
         live: ['진행 중인 경매가 없습니다.', '진행 중인 경매가 없습니다.'],
         closed: ['낙찰 완료된 경매가 없습니다.', '낙찰 완료된 경매가 없습니다.'],
-        ended: ['유찰된 경매가 없습니다.', '유찰된 경매가 없습니다.'],
         draft: ['임시 저장된 경매가 없습니다.', '작성 중인 경매는 자동으로 저장됩니다.'],
     };
 
@@ -91,110 +88,232 @@
         $empty.classList.add('hidden');
     };
 
+    // ===== Sorting helpers (DRAFT 항상 맨 뒤) =====
+    const normalizeStatus = (it) => String(it?.status ?? '').toUpperCase();
+    const isDraft = (it) => normalizeStatus(it) === 'DRAFT';
+
+    const toNumber = (v) => {
+        const n = Number(v);
+        return Number.isFinite(n) ? n : 0;
+    };
+
+    const toTime = (v) => {
+        if (!v) return 0;
+        const t = new Date(v).getTime();
+        return Number.isFinite(t) ? t : 0;
+    };
+
+    // 최신순 기준: updatedAt > createdAt > endAt
+    const latestBase = (it) =>
+        toTime(it?.updatedAt) ||
+        toTime(it?.createdAt) ||
+        toTime(it?.endAt) ||
+        0;
+
+    // 마감임박: endAt 오름차순(없으면 맨 뒤)
+    const deadlineBase = (it) => {
+        const t = toTime(it?.endAt);
+        return t > 0 ? t : Number.MAX_SAFE_INTEGER;
+    };
+
+    // 가격: ENDED_SOLD면 낙찰가 계열, 아니면 현재가/최고가/시작가
+    const priceBase = (it) => {
+        const st = normalizeStatus(it);
+        if (st === 'ENDED_SOLD') {
+            return (
+                toNumber(it?.finalPrice) ||
+                toNumber(it?.closedPrice) ||
+                toNumber(it?.winningBidAmount) ||
+                toNumber(it?.soldPrice) ||
+                0
+            );
+        }
+        return (
+            toNumber(it?.currentPrice) ||
+            toNumber(it?.highestBidAmount) ||
+            toNumber(it?.highestBid) ||
+            toNumber(it?.startPrice) ||
+            0
+        );
+    };
+
+    // 인기: favorite/like/view/bidCount fallback
+    const popularBase = (it) =>
+        toNumber(it?.favoriteCount) ||
+        toNumber(it?.likeCount) ||
+        toNumber(it?.viewCount) ||
+        toNumber(it?.bidCount) ||
+        0;
+
+    const buildComparator = (sortKey) => {
+        const key = String(sortKey || 'latest');
+
+        let cmp2;
+        if (key === 'deadline') cmp2 = (a, b) => deadlineBase(a) - deadlineBase(b);
+        else if (key === 'price_asc') cmp2 = (a, b) => priceBase(a) - priceBase(b);
+        else if (key === 'price_desc') cmp2 = (a, b) => priceBase(b) - priceBase(a);
+        else if (key === 'popular') cmp2 = (a, b) => popularBase(b) - popularBase(a);
+        else cmp2 = (a, b) => latestBase(b) - latestBase(a); // latest
+
+        return (a, b) => {
+            // 1) DRAFT는 항상 뒤로
+            const r1 = (isDraft(a) ? 1 : 0) - (isDraft(b) ? 1 : 0);
+            if (r1 !== 0) return r1;
+
+            // 2) 사용자가 선택한 정렬
+            const r2 = cmp2(a, b);
+            if (r2 !== 0) return r2;
+
+            // 3) tie-breaker
+            const aid = String(a?.auctionId ?? a?.id ?? '');
+            const bid = String(b?.auctionId ?? b?.id ?? '');
+            return aid.localeCompare(bid);
+        };
+    };
+
+    const sortWithDraftLast = (items, sortKey) => {
+        if (!Array.isArray(items) || items.length === 0) return [];
+        return [...items].sort(buildComparator(sortKey));
+    };
+
+    // ===== 전체 탭에서만 "전체를 다 가져와서" DRAFT를 진짜 맨 뒤로 보내기 =====
+    const FULL_FETCH_PAGE_SIZE = 200;
+    const FULL_FETCH_MAX_PAGES = 30; // 200 * 30 = 6000개 상한 (판매자 본인 목록이면 충분)
+    const fetchAllAuctionsForSeller = async ({ sortKey }) => {
+        const all = [];
+        for (let p = 0; p < FULL_FETCH_MAX_PAGES; p++) {
+            const data = await api.getAuctions({
+                sellerId,
+                page: p,
+                size: FULL_FETCH_PAGE_SIZE,
+                sort: 'latest', // 서버 정렬은 의미 없음(어차피 클라에서 재정렬)
+                status: null,
+            });
+
+            const chunk = Array.isArray(data?.content) ? data.content : [];
+            if (chunk.length === 0) break;
+
+            all.push(...chunk);
+
+            const pageInfo = data?.pageInfo ?? {};
+            const totalPages = Number(pageInfo?.totalPages ?? 0);
+            const hasNext = Boolean(pageInfo?.hasNext);
+
+            // pageInfo가 신뢰 가능하면 조기 종료
+            if (totalPages && p >= totalPages - 1) break;
+            if (pageInfo && 'hasNext' in pageInfo && !hasNext) break;
+        }
+
+        return sortWithDraftLast(all, sortKey);
+    };
+
     // ===== Loaders =====
     const loadCountsAndSummary = async () => {
-        const [all, live, closed, endedUnsoldCount, draft] = await Promise.all([
+        const [all, live, closed, draft] = await Promise.all([
             api.fetchCount({ sellerId, status: null }),
             api.fetchCount({ sellerId, status: 'LIVE' }),
             api.fetchCount({ sellerId, status: 'ENDED_SOLD' }),
-            api.fetchCount({ sellerId, status: 'ENDED_UNSOLD' }),
             api.fetchCount({ sellerId, status: 'DRAFT' }),
         ]);
 
-        const endedData = await api.getAuctions({
-            sellerId,
-            page: 0,
-            size: 200,
-            sort: 'latest',
-            status: 'ENDED_UNSOLD',
-        });
-        const endedUnsoldItems = Array.isArray(endedData?.content) ? endedData.content : [];
-        const endedNoBidsCount = endedUnsoldItems.filter((it) => it?.endReason === 'NO_BIDS').length;
-
-        // 탭 카운트
         $tabAllCount.textContent = String(all);
         $tabLiveCount.textContent = String(live);
         $tabClosedCount.textContent = String(closed);
-        $tabEndedCount.textContent = String(endedNoBidsCount);
         $tabDraftCount.textContent = String(draft);
 
-        // 요약 카드
         $sumLive.textContent = String(live);
         $sumClosed.textContent = String(closed);
         $sumDraft.textContent = String(draft);
 
-        // 총 수익
         const revenue = await api.fetchRevenue({ sellerId }).catch(() => 0);
         $sumRevenue.textContent = list.formatWon(revenue);
+    };
+
+    const renderClientPaged = ({ items }) => {
+        const total = items.length;
+
+        if (total === 0) {
+            list.renderRows({ tbodyEl: $tbody, items: [] });
+            showEmpty(state.activeTab);
+            list.updateRangeText({ rangeTextEl: $rangeText, total: 0, start: 0, end: 0 });
+            $paginationNav.innerHTML = '';
+            return;
+        }
+
+        const totalPages = Math.ceil(total / state.size);
+        const currentPage = Math.min(state.page, totalPages - 1);
+
+        const slice = items.slice(currentPage * state.size, currentPage * state.size + state.size);
+
+        hideEmpty();
+        list.renderRows({ tbodyEl: $tbody, items: slice });
+
+        const start = currentPage * state.size + 1;
+        const end = currentPage * state.size + slice.length;
+        list.updateRangeText({ rangeTextEl: $rangeText, total, start, end });
+
+        list.renderPagination(
+            {
+                paginationEl: $paginationNav,
+                pageInfo: {
+                    currentPage,
+                    totalPages,
+                    hasPrevious: currentPage > 0,
+                    hasNext: currentPage < totalPages - 1,
+                },
+            },
+            (p) => {
+                state.page = p;
+                loadList();
+            }
+        );
     };
 
     const loadList = async () => {
         const status = tabToStatus[state.activeTab];
 
         try {
-            // 검색어가 있으면: 0페이지에서 크게 받아서 클라에서 필터 + 클라 페이지네이션
-            if (state.search && state.search.trim().length > 0) {
+            // =========================
+            // 1) "전체 탭(all)" + "검색어 없음" => 전체 fetch 후 클라 정렬/페이지
+            //    (여기서 DRAFT를 진짜 전체 기준 맨 뒤로 보장)
+            // =========================
+            const isAllTab = state.activeTab === 'all';
+            const hasSearch = state.search && state.search.trim().length > 0;
+
+            if (isAllTab && !hasSearch) {
+                const allSorted = await fetchAllAuctionsForSeller({ sortKey: state.sort });
+                renderClientPaged({ items: allSorted });
+                return;
+            }
+
+            // =========================
+            // 2) 검색어 있으면: 크게 받아서 클라 필터 + 클라 페이지
+            // =========================
+            if (hasSearch) {
                 const data = await api.getAuctions({
                     sellerId,
                     page: 0,
-                    size: 200,
+                    size: 500, // 검색은 더 넉넉하게
                     sort: state.sort,
                     status,
                 });
 
                 const raw = Array.isArray(data?.content) ? data.content : [];
                 const q = state.search.trim().toLowerCase();
-                let filtered = raw.filter((it) => String(it?.title ?? '').toLowerCase().includes(q));
 
-                // 유찰 탭일 경우 NO_BIDS만 필터링
-                if (state.activeTab === 'ended') {
-                    filtered = filtered.filter((it) => it?.endReason === 'NO_BIDS');
-                }
+                const filtered = raw.filter((it) => String(it?.title ?? '').toLowerCase().includes(q));
 
-                const total = filtered.length;
-                if (total === 0) {
-                    list.renderRows({ tbodyEl: $tbody, items: [] });
-                    showEmpty(state.activeTab);
-                    list.updateRangeText({ rangeTextEl: $rangeText, total: 0, start: 0, end: 0 });
-                    $paginationNav.innerHTML = '';
-                    return;
-                }
+                // ✅ 검색에서도 DRAFT는 뒤로
+                const sorted = sortWithDraftLast(filtered, state.sort);
 
-                const totalPages = Math.ceil(total / state.size);
-                const currentPage = Math.min(state.page, totalPages - 1);
-
-                const slice = filtered.slice(
-                    currentPage * state.size,
-                    currentPage * state.size + state.size
-                );
-
-                hideEmpty();
-                list.renderRows({ tbodyEl: $tbody, items: slice });
-
-                const start = currentPage * state.size + 1;
-                const end = currentPage * state.size + slice.length;
-                list.updateRangeText({ rangeTextEl: $rangeText, total, start, end });
-
-                list.renderPagination(
-                    {
-                        paginationEl: $paginationNav,
-                        pageInfo: {
-                            currentPage,
-                            totalPages,
-                            hasPrevious: currentPage > 0,
-                            hasNext: currentPage < totalPages - 1,
-                        },
-                    },
-                    (p) => {
-                        state.page = p;
-                        loadList();
-                    }
-                );
-
+                renderClientPaged({ items: sorted });
                 return;
             }
 
-            // 검색어 없으면: 서버 페이지네이션 그대로 사용
+            // =========================
+            // 3) 그 외(live/closed/draft 탭) => 서버 페이지네이션
+            //    (draft 탭은 애초에 DRAFT만 오므로 문제 없음)
+            // =========================
             const data = await api.getAuctions({
                 sellerId,
                 page: state.page,
@@ -203,12 +322,7 @@
                 status,
             });
 
-            let items = Array.isArray(data?.content) ? data.content : [];
-
-            // 유찰 탭일 경우 NO_BIDS만 필터링
-            if (state.activeTab === 'ended') {
-                items = items.filter((it) => it?.endReason === 'NO_BIDS');
-            }
+            const items = Array.isArray(data?.content) ? data.content : [];
             const pageInfo = data?.pageInfo ?? {};
             const total = Number(pageInfo?.totalElements ?? 0);
 
@@ -310,7 +424,6 @@
         await loadList();
     };
 
-    // defer 로드라 DOMContentLoaded 없이도 대부분 안전하지만, 방어적으로 유지
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {

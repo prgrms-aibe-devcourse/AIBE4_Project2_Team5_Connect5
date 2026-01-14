@@ -2,6 +2,9 @@ package kr.eolmago.repository.deal.impl;
 
 import com.querydsl.core.types.Projections;
 import com.querydsl.jpa.impl.JPAQueryFactory;
+import kr.eolmago.domain.entity.deal.Deal;
+import kr.eolmago.domain.entity.deal.enums.DealStatus;
+import kr.eolmago.domain.entity.report.enums.ReportStatus;
 import kr.eolmago.domain.entity.user.QSocialLogin;
 import kr.eolmago.domain.entity.user.QUser;
 import kr.eolmago.domain.entity.user.QUserProfile;
@@ -11,12 +14,15 @@ import kr.eolmago.repository.deal.DealRepositoryCustom;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static kr.eolmago.domain.entity.auction.QAuction.auction;
 import static kr.eolmago.domain.entity.auction.QAuctionImage.auctionImage;
 import static kr.eolmago.domain.entity.auction.QAuctionItem.auctionItem;
 import static kr.eolmago.domain.entity.deal.QDeal.deal;
+import static kr.eolmago.domain.entity.report.QReport.report;
 import static kr.eolmago.domain.entity.user.QSocialLogin.socialLogin;
 import static kr.eolmago.domain.entity.user.QUser.user;
 import static kr.eolmago.domain.entity.user.QUserProfile.userProfile;
@@ -128,5 +134,36 @@ public class DealRepositoryImpl implements DealRepositoryCustom {
                 .fetchOne();
 
         return Optional.ofNullable(result);
+    }
+
+    /**
+     * 자동 완료 가능한 거래 조회
+     *
+     * 조건:
+     * 1. CONFIRMED 상태
+     * 2. shippedAt이 threshold 이전
+     * 3. 해당 auction에 진행 중인 신고가 없음 (PENDING, UNDER_REVIEW)
+     */
+    @Override
+    public List<Deal> findCompletableDeals(OffsetDateTime shippedAtThreshold) {
+        return queryFactory
+                .selectFrom(deal)
+                .where(
+                        // 1. CONFIRMED 상태
+                        deal.status.eq(DealStatus.CONFIRMED),
+
+                        // 2. shippedAt이 threshold 이전 (배송 후 N일 경과)
+                        deal.shippedAt.lt(shippedAtThreshold),
+
+                        // 3. 진행 중인 신고가 없음
+                        queryFactory.selectOne()
+                                .from(report)
+                                .where(
+                                        report.auction.eq(deal.auction),
+                                        report.status.in(ReportStatus.PENDING, ReportStatus.UNDER_REVIEW)
+                                )
+                                .notExists()
+                )
+                .fetch();
     }
 }

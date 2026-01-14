@@ -1,6 +1,7 @@
 package kr.eolmago.repository.user.impl;
 
 import com.querydsl.jpa.impl.JPAQueryFactory;
+import kr.eolmago.domain.entity.user.QUserPenalty;
 import kr.eolmago.domain.entity.user.User;
 import kr.eolmago.domain.entity.user.UserPenalty;
 import kr.eolmago.domain.entity.user.enums.PenaltyType;
@@ -62,5 +63,16 @@ public class UserPenaltyRepositoryImpl implements UserPenaltyRepositoryCustom {
                 .fetchFirst();
 
         return Optional.ofNullable(penalty);
+    }
+
+    @Override
+    public List<UserPenalty> findPenaltyHistoryByUser(User user) {
+        QUserPenalty penalty = QUserPenalty.userPenalty;
+
+        return queryFactory
+                .selectFrom(penalty)
+                .where(penalty.user.eq(user))
+                .orderBy(penalty.startedAt.desc())
+                .fetch();
     }
 }

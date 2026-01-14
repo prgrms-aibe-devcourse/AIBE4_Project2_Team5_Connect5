@@ -2,6 +2,7 @@ package kr.eolmago.repository.auction.impl;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
+import kr.eolmago.domain.entity.auction.enums.AuctionEndReason;
 import kr.eolmago.domain.entity.auction.enums.AuctionStatus;
 import kr.eolmago.domain.entity.auction.enums.ItemCategory;
 import kr.eolmago.dto.api.auction.response.AuctionListDto;
@@ -102,8 +103,12 @@ public class AuctionSearchRepositoryCustomImpl implements AuctionSearchRepositor
 
         // WHERE 절 생성
         String whereClause = buildWhereClause(category, brands, minPrice, maxPrice, status);
-        // item_name, title, description 모두 검색 대상에 포함
-        whereClause += "AND to_tsvector('simple', ai.item_name || ' ' || COALESCE(a.title, '') || ' ' || COALESCE(a.description, '')) @@ to_tsquery('simple', :processedKeyword) ";
+        // item_name, title 검색
+        whereClause += """
+            AND (
+                to_tsvector('simple', ai.item_name) @@ to_tsquery('simple', :processedKeyword)
+                OR to_tsvector('simple', COALESCE(a.title, '')) @@ to_tsquery('simple', :processedKeyword)
+            ) """;
 
         // ORDER BY 절 생성
         String orderBy = buildOrderBy(sort);
@@ -429,7 +434,8 @@ public class AuctionSearchRepositoryCustomImpl implements AuctionSearchRepositor
                     (Integer) row[9],                           // bid_count
                     (Integer) row[10],                           // favorite_count
                     convertToOffsetDateTime(row[11]),            // end_at
-                    AuctionStatus.valueOf((String) row[12])     // status
+                    AuctionStatus.valueOf((String) row[12]),     // status
+                    AuctionEndReason.valueOf((String) row[13])   // endReason
             );
             dtos.add(dto);
         }

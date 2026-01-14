@@ -44,8 +44,8 @@
 
                         <a id="create-auction-btn"
                            th:href="@{/seller/auctions/create}"
-                           th:data-user-role="${userRole}"
-                           th:data-user-status="${userStatus}"
+                           th:data-user-role="${userRole != null ? userRole : 'ANONYMOUS'}"
+                           th:data-user-status="${userStatus != null ? userStatus : ''}"
                            class="inline-flex items-center justify-center rounded-lg border border-gray-400 bg-white/90 px-5 py-2.5 text-sm font-semibold text-gray-900 hover:bg-white transition">
                             물품 등록
                         </a>
