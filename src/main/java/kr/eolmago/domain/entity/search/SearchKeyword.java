@@ -60,11 +60,11 @@ public class SearchKeyword extends CreatedAtEntity {
      * @param keyword 검색어
      * @return KeywordType (BRAND, MODEL, GENERAL)
      */
-    private static KeywordType determineKeywordType(String keyword) {
+    public static KeywordType determineKeywordType(String keyword) {
         String lowerKeyword = keyword.toLowerCase();
 
         // 브랜드 키워드 (명세서에서 브랜드 가중치 +100 적용)
-        if (lowerKeyword.matches(".*(아이폰|갤럭시|픽셀|샤오미|apple|samsung|google|xiaomi).*")) {
+        if (lowerKeyword.matches(".*(아이폰|갤럭시|엘지|픽셀|샤오미|소니|모토로라|apple|samsung|lg|google|xiaomi|sony|motorola).*")) {
             return KeywordType.BRAND;
         }
 

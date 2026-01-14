@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Tag(name = "리뷰 API", description = "거래 리뷰 관련 API")
@@ -71,5 +72,11 @@ public class ReviewApiController {
         UUID userId = userDetails.getUserId();
         reviewService.deleteReview(reviewId, userId);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/deal/{dealId}/exists")
+    public ResponseEntity<Map<String, Boolean>> existsReviewForDeal(@PathVariable Long dealId) {
+        boolean hasReview = reviewService.existsReviewForDeal(dealId);
+        return ResponseEntity.ok(Map.of("hasReview", hasReview));
     }
 }

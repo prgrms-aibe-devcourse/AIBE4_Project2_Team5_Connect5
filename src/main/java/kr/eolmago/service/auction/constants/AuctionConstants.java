@@ -14,4 +14,15 @@ public final class AuctionConstants {
     public static final int MAX_BID_AMOUNT = 10_000_000; // 입찰 금액 상한
     public static final int SWEEP_PAGE_SIZE = 500;
     public static final long RESULT_WAIT_POLL_MS = 50L;
+
+    // ==== 검색 ====
+    // Trigram 유사도 임계값
+    public static final double TRIGRAM_THRESHOLD_SHORT = 0.5;   // 짧은 키워드 (엄격)
+    public static final double TRIGRAM_THRESHOLD_MEDIUM = 0.3;  // 중간 길이
+    public static final double TRIGRAM_THRESHOLD_LONG = 0.25;   // 긴 키워드 (관대)
+
+    // 키워드 길이 기준
+    public static final int KEYWORD_LENGTH_SHORT = 2;   // 짧은 키워드 기준
+    public static final int KEYWORD_LENGTH_MEDIUM = 4;  // 중간 길이 키워드 기준
+
 }

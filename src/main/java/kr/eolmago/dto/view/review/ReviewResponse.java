@@ -1,7 +1,7 @@
 package kr.eolmago.dto.view.review;
 
 import kr.eolmago.domain.entity.review.Review;
-
+import kr.eolmago.domain.entity.user.User;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -14,7 +14,9 @@ public record ReviewResponse(
         String dealTitle,
         Long dealFinalPrice,
         UUID sellerId,
+        String sellerNickname,
         UUID buyerId,
+        String buyerNickname,
         int rating,
         String content,
         OffsetDateTime createdAt,
@@ -22,18 +24,28 @@ public record ReviewResponse(
 ) {
 
     public static ReviewResponse from(Review review) {
+        String sellerNickname = extractNickname(review.getSeller());
+        String buyerNickname = extractNickname(review.getBuyer());
+
         return new ReviewResponse(
                 review.getReviewId(),
                 review.getDeal().getDealId(),
-                // 경매 제목: Auction → title 사용
                 review.getDeal().getAuction().getTitle(),
                 review.getDeal().getFinalPrice(),
                 review.getSeller().getUserId(),
+                sellerNickname,
                 review.getBuyer().getUserId(),
+                buyerNickname,
                 review.getRating(),
                 review.getContent(),
                 review.getCreatedAt(),
                 review.getUpdatedAt()
         );
+    }
+    private static String extractNickname(User user) {
+        if (user == null) return "-";
+        if (user.getUserProfile() == null) return "-";
+        String nick = user.getUserProfile().getNickname();
+        return (nick == null || nick.isBlank()) ? "-" : nick;
     }
 }

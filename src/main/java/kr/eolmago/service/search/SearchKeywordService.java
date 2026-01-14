@@ -1,8 +1,10 @@
 package kr.eolmago.service.search;
 
 import kr.eolmago.domain.entity.search.SearchKeyword;
+import kr.eolmago.domain.entity.search.enums.KeywordType;
 import kr.eolmago.dto.api.search.response.AutocompleteResponse;
 import kr.eolmago.dto.api.search.response.PopularKeywordResponse;
+import kr.eolmago.global.util.ChosungUtils;
 import kr.eolmago.repository.search.SearchKeywordRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,11 +15,12 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
+
+import static kr.eolmago.service.search.constants.SearchConstants.*;
 
 /**
  * 검색 부가 서비스
@@ -41,18 +44,16 @@ public class SearchKeywordService {
     private final SearchKeywordRepository searchKeywordRepository;
     private final RedisTemplate<String, String> redisTemplate;
 
-    // Redis Key 상수
-    private static final String AUTOCOMPLETE_KEY = "autocomplete:all"; // 전체 자동완성
-    private static final String SEARCH_DEDUPE_PREFIX = "search:dedupe:";  // 중복 방지
-
     /**
      * 자동완성 조회
      *
      * 동작 흐름:
-     * 1. Redis에서 prefix로 시작하는 검색어 조회
-     * 2. 점수(검색량) 기준 내림차순 정렬
-     * 3. 상위 10개 반환
-     * 4. Redis 실패 시 DB Fallback
+     * 1. 초성 검색 여부 판단
+     *    - 초성만 입력 (예: "ㅇㅇㅍ") → DB 직접 조회 (PostgreSQL 초성 함수 사용)
+     *    - 일반 텍스트 (예: "아이폰") → Redis → DB Fallback
+     * 2. Redis에서 prefix로 시작하는 검색어 조회
+     * 3. 점수(검색량) 기준 내림차순 정렬
+     * 4. 상위 10개 반환
      *
      * Redis 구조:
      * - Key: "autocomplete:all"
@@ -61,22 +62,30 @@ public class SearchKeywordService {
      * - Score: 검색량 + 브랜드가중치 + 정확도
      * - recordSearch()에서 Redis 업데이트
      *
-     * @param prefix 검색어 앞부분 (예: "아이")
+     * @param prefix 검색어 앞부분 (예: "아이" 또는 "ㅇㅇ")
      * @return 자동완성 후보 목록 (최대 10개)
      */
     public List<AutocompleteResponse> getAutoComplete(String prefix) {
         log.debug("자동완성 조회: prefix={}", prefix);
 
-        // Redis에서 자동완성 조회 (O(log N))
+        // 초성 검색은 Redis를 건너뛰고 바로 DB 조회
+        if (ChosungUtils.isChosungOnly(prefix)) {
+            log.debug("초성 검색 감지 → DB 직접 조회: prefix={}", prefix);
+            return getFallbackAutoComplete(prefix);
+        }
+
+        // 일반 검색: Redis에서 자동완성 조회 (O(log N))
         ZSetOperations<String, String> zSetOps = redisTemplate.opsForZSet();
 
         try {
             // 점수 역순 정렬(높은 점수=인기 검색어)
             Set<ZSetOperations.TypedTuple<String>> results =
-                    zSetOps.reverseRangeByScoreWithScores(AUTOCOMPLETE_KEY,
+                    zSetOps.reverseRangeByScoreWithScores(
+                            AUTOCOMPLETE_KEY,
                             Double.NEGATIVE_INFINITY,
                             Double.POSITIVE_INFINITY,
-                            0, 10); // 상위 10개만
+                            0, AUTOCOMPLETE_REDIS_TOP
+                    );
 
             if (results == null || results.isEmpty()) {
                 // Redis 실패 시 DB Fallback
@@ -91,7 +100,7 @@ public class SearchKeywordService {
                             tuple.getValue(),
                             tuple.getScore()
                     ))
-                    .limit(10)
+                    .limit(AUTOCOMPLETE_LIMIT)
                     .toList();
 
         } catch (Exception e) {
@@ -107,12 +116,26 @@ public class SearchKeywordService {
      * - Redis 장애
      * - Redis에 데이터 없음
      *
+     * 동작:
+     * 1. 초성만 입력된 경우 → 초성 검색
+     * 2. 일반 텍스트 입력 → 일반 prefix 검색
+     *
      * @param prefix 검색어 앞부분
      * @return DB 조회 결과
      */
     private List<AutocompleteResponse> getFallbackAutoComplete(String prefix) {
-        return searchKeywordRepository.findByKeywordPrefix(prefix, 10)
-                .stream()
+        List<SearchKeyword> keywords;
+
+        // 초성 검색 여부 판단
+        if (ChosungUtils.isChosungOnly(prefix)) {
+            log.debug("초성 검색: prefix={}", prefix);
+            keywords = searchKeywordRepository.findByChosungPrefix(prefix, AUTOCOMPLETE_LIMIT);
+        } else {
+            log.debug("일반 검색: prefix={}", prefix);
+            keywords = searchKeywordRepository.findByKeywordPrefix(prefix, AUTOCOMPLETE_LIMIT);
+        }
+
+        return keywords.stream()
                 .map(AutocompleteResponse::from)
                 .toList();
     }
@@ -209,7 +232,7 @@ public class SearchKeywordService {
     private void setDedupeKey(String keyword, UUID userId) {
         try {
             String dedupeKey = SEARCH_DEDUPE_PREFIX + keyword + ":" + userId;
-            redisTemplate.opsForValue().set(dedupeKey, "1", 10, TimeUnit.SECONDS);
+            redisTemplate.opsForValue().set(dedupeKey, "1", SEARCH_DEDUPE_TTL_SECONDS, TimeUnit.SECONDS);
         } catch (Exception e) {
             log.warn("Redis 중복방지 키 설정 실패 (무시): keyword={}", keyword, e);
             // 필수 기능 아니므로 무시
@@ -245,10 +268,10 @@ public class SearchKeywordService {
         }
 
         // 2. 브랜드 가중치 계산
-        int brandWeight = isBrandKeyword(keyword) ? 100 : 0;
+        int brandWeight = isBrandKeyword(keyword) ? BRAND_WEIGHT : 0;
 
         // 3. 새 점수 계산 (검색 1회 + 브랜드 가중치)
-        double newScore = currentScore + 1 + brandWeight;
+        double newScore = currentScore + SEARCH_INCREMENT + brandWeight;
 
         // 4. Redis 업데이트
         zSetOps.add(AUTOCOMPLETE_KEY, keyword, newScore);
@@ -257,37 +280,25 @@ public class SearchKeywordService {
     }
 
     /**
-     * DB 통계 업데이트
+     * DB 통계 업데이트 (UPSERT)
+     *
+     * 개선 사항:
+     * - PostgreSQL의 INSERT ... ON CONFLICT DO UPDATE 활용
+     * - DB 레벨에서 원자적으로 처리 (동시성 이슈 해결)
+     * - Race Condition 없음 (조회 → 수정 사이의 갭 제거)
+     * - Lost Update 없음 (DB가 원자적으로 처리)
      *
      * 동작:
-     * 1. DB에서 검색어 조회
-     * 2. 존재하면 → incrementSearchCount()
-     * 3. 없으면 → create() 후 저장
-     *
-     * 트랜잭션:
-     * - @Transactional: 조회 → 수정 원자성 보장
-     * - 동시성 이슈: Optimistic Lock 또는 Pessimistic Lock 고려 (향후)
+     * - 검색어가 없으면: INSERT (search_count = 1, keyword_type 자동 판단)
+     * - 검색어가 있으면: UPDATE (search_count + 1, last_searched_at 갱신)
      *
      * @param keyword 검색어
      */
     private void updateDatabaseStatistics(String keyword) {
-        Optional<SearchKeyword> existing = searchKeywordRepository.findByKeyword(keyword);
+        String keywordType = SearchKeyword.determineKeywordType(keyword).name();
 
-        if (existing.isPresent()) {
-            // 기존 검색어 - 카운트 증가
-            SearchKeyword searchKeyword = existing.get();
-            searchKeyword.incrementSearchCount();
-            // save() 불필요 - JPA 더티 체킹이 자동 UPDATE
-
-            log.debug("기존 검색어 카운트 증가: keyword={}, count={}",
-                    keyword, searchKeyword.getSearchCount());
-        } else {
-            // 신규 검색어 - 생성 (count=1)
-            SearchKeyword newKeyword = SearchKeyword.create(keyword);
-            searchKeywordRepository.save(newKeyword);
-
-            log.debug("신규 검색어 생성: keyword={}, count=1", keyword);
-        }
+        searchKeywordRepository.upsertSearchCount(keyword, keywordType);
+        log.debug("검색어 통계 업데이트 완료: keyword={}", keyword);
     }
 
     /**
@@ -295,7 +306,6 @@ public class SearchKeywordService {
      *
      * 동작:
      * - 키워드에 브랜드명 포함 여부 체크
-     * - SearchKeyword.determineKeywordType() 로직과 동일
      *
      * 용도:
      * - Redis 점수 계산 시 브랜드 가중치 적용
@@ -304,23 +314,75 @@ public class SearchKeywordService {
      * @return true: 브랜드 키워드, false: 일반 키워드
      */
     private boolean isBrandKeyword(String keyword) {
-        String lowerKeyword = keyword.toLowerCase();
-        return lowerKeyword.matches(".*(아이폰|갤럭시|픽셀|샤오미|apple|samsung|google|xiaomi).*");
+        return SearchKeyword.determineKeywordType(keyword) == KeywordType.BRAND;
     }
 
     /**
-     * 인기 검색어 Top 10 조회
+     * 인기 검색어 Top 10 조회 (Redis → DB Fallback)
      *
      * 동작:
-     * - DB에서 searchCount 기준 상위 10개 조회
-     * - 순위 정보 추가 (1~10)
+     * 1. Redis에서 score 기준 상위 10개 조회 시도
+     * 2. Redis 실패/데이터 없음 → DB Fallback
+     * 3. 순위 정보 추가 (1~10)
      *
      * @return 인기 검색어 목록 (순위 포함)
      */
     public List<PopularKeywordResponse> getPopularKeywords() {
         log.debug("인기 검색어 조회");
 
-        List<SearchKeyword> keywords = searchKeywordRepository.findTopBySearchCount(10);
+        // 1. Redis에서 상위 10개 조회 시도
+        try {
+            ZSetOperations<String, String> zSetOps = redisTemplate.opsForZSet();
+
+            // 점수 역순으로 상위 10개 (0~9 인덱스)
+            Set<ZSetOperations.TypedTuple<String>> results =
+                    zSetOps.reverseRangeWithScores(
+                            AUTOCOMPLETE_KEY,
+                            0,
+                            POPULAR_KEYWORDS_LIMIT - 1);
+
+            if (results != null && !results.isEmpty()) {
+                log.info("Redis에서 인기 검색어 조회 성공: {} 건", results.size());
+                return convertRedisToPopularKeywordResponse(results);
+            }
+            log.debug("Redis 인기 검색어 결과 없음, DB Fallback 실행");
+
+        } catch (Exception e) {
+            log.error("Redis 인기 검색어 조회 실패, DB Fallback", e);
+        }
+
+        // 2. Redis 실패 시 DB Fallback
+        return getFallbackPopularKeywords();
+    }
+
+    /**
+     * Redis 결과 → Response 변환
+     *
+     * @param results Redis Sorted Set 결과
+     * @return 인기 검색어 응답 목록
+     */
+    private List<PopularKeywordResponse> convertRedisToPopularKeywordResponse(
+            Set<ZSetOperations.TypedTuple<String>> results) {
+        int[] rank = {1};
+
+        return results.stream()
+                .map(tuple -> PopularKeywordResponse.ofRedis(
+                        tuple.getValue(),
+                        tuple.getScore(),
+                        rank[0]++
+                ))
+                .toList();
+    }
+
+    /**
+     * DB Fallback 인기 검색어 조회
+     *
+     * @return 인기 검색어 응답 목록
+     */
+    private List<PopularKeywordResponse> getFallbackPopularKeywords() {
+        log.debug("DB에서 인기 검색어 조회");
+
+        List<SearchKeyword> keywords = searchKeywordRepository.findTopBySearchCount(POPULAR_KEYWORDS_LIMIT);
 
         // 순위 정보 추가 (1부터 시작)
         return IntStream.range(0, keywords.size())

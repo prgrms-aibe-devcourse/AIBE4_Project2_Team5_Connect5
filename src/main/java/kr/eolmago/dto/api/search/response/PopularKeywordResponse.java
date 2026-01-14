@@ -21,7 +21,7 @@ public record PopularKeywordResponse(
         Integer searchCount // 검색 횟수
 ) {
     /**
-     * SearchKeyword + 순위 → DTO 변환
+     * SearchKeyword + 순위 → DTO 변환 (DB 데이터)
      *
      * @param searchKeyword SearchKeyword 엔티티
      * @param rank 순위 (1부터 시작)
@@ -32,6 +32,22 @@ public record PopularKeywordResponse(
                 rank,
                 searchKeyword.getKeyword(),
                 searchKeyword.getSearchCount()
+        );
+    }
+
+    /**
+     * Redis 데이터 → DTO 변환
+     *
+     * @param keyword 검색어
+     * @param score Redis 점수 (searchCount + brandWeight)
+     * @param rank 순위 (1부터 시작)
+     * @return PopularKeywordResponse
+     */
+    public static PopularKeywordResponse ofRedis(String keyword, Double score, int rank) {
+        return new PopularKeywordResponse(
+                rank,
+                keyword,
+                score != null ? score.intValue() : 0
         );
     }
 }

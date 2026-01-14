@@ -83,17 +83,14 @@ public class FavoriteRepositoryImpl implements FavoriteRepositoryCustom {
     }
 
     private BooleanExpression statusFilter(String filter) {
-        if (filter == null || filter.isBlank() || filter.equalsIgnoreCase("ALL")) {
-            return null;
-        }
-        if (filter.equalsIgnoreCase("LIVE")) {
-            return auction.status.eq(AuctionStatus.LIVE);
-        }
-        if (filter.equalsIgnoreCase("ENDED")) {
-            // 스펙에 ENDED_SOLD를 쓰고 있으니 그 값을 사용 (프로젝트 enum에 맞춰 조정)
-            return auction.status.eq(AuctionStatus.ENDED_SOLD);
-        }
-        return null;
+        if (filter == null || filter.isBlank()) return null;
+
+        return switch (filter.toUpperCase()) {
+            case "ALL" -> null;
+            case "LIVE" -> auction.status.eq(AuctionStatus.LIVE);
+            case "ENDED" -> auction.status.eq(AuctionStatus.ENDED_SOLD);
+            default -> null;
+        };
     }
 
     private OrderSpecifier<?>[] createOrderSpecifiers(String sort) {

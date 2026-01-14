@@ -20,6 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.UUID;
 
+import static kr.eolmago.service.auction.constants.AuctionConstants.*;
+
 /**
  * 경매 통합 검색 Service
  *
@@ -307,17 +309,24 @@ public class AuctionSearchService {
 
     /**
      * 키워드 길이에 따라 동적으로 threshold 조정
+     *
+     * 로직:
+     * - 짧은 키워드 (≤2글자): 엄격한 임계값 (0.5)
+     * - 중간 키워드 (≤4글자): 중간 임계값 (0.3)
+     * - 긴 키워드 (5글자+): 관대한 임계값 (0.25)
+     *
+     * @param keyword 검색 키워드
+     * @return Trigram 유사도 임계값
      */
     private double getDynamicThreshold(String keyword) {
         int length = keyword.length();
-        System.out.println("length: " + length);
 
-        if (length <= 2) {
-            return 0.5;  // 짧은 키워드는 엄격하게
-        } else if (length <= 4) {
-            return 0.3;  // 중간 길이
+        if (length <= KEYWORD_LENGTH_SHORT) {
+            return TRIGRAM_THRESHOLD_SHORT;  // 짧은 키워드는 엄격하게
+        } else if (length <= KEYWORD_LENGTH_MEDIUM) {
+            return TRIGRAM_THRESHOLD_MEDIUM;  // 중간 길이
         } else {
-            return 0.25; // 긴 키워드는 관대하게
+            return TRIGRAM_THRESHOLD_LONG; // 긴 키워드는 관대하게
         }
     }
 
