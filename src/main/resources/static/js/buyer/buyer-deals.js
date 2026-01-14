@@ -72,35 +72,17 @@ function mapBuyerStatusToTab(status) {
 function getBuyerStatusBadgeInfo(status) {
     switch (status) {
         case 'PENDING_CONFIRMATION':
-            return {
-                badgeClass: 'bg-yellow-100 text-yellow-800',
-                badgeLabel: '거래 대기',
-            };
+            return { badgeClass: 'bg-yellow-100 text-yellow-800', badgeLabel: '거래 대기' };
         case 'CONFIRMED':
-            return {
-                badgeClass: 'bg-blue-100 text-blue-800',
-                badgeLabel: '진행 중',
-            };
+            return { badgeClass: 'bg-blue-100 text-blue-800', badgeLabel: '진행 중' };
         case 'COMPLETED':
-            return {
-                badgeClass: 'bg-green-100 text-green-800',
-                badgeLabel: '완료',
-            };
+            return { badgeClass: 'bg-green-100 text-green-800', badgeLabel: '완료' };
         case 'TERMINATED':
-            return {
-                badgeClass: 'bg-red-100 text-red-800',
-                badgeLabel: '취소',
-            };
+            return { badgeClass: 'bg-red-100 text-red-800', badgeLabel: '취소' };
         case 'EXPIRED':
-            return {
-                badgeClass: 'bg-gray-100 text-gray-800',
-                badgeLabel: '만료',
-            };
+            return { badgeClass: 'bg-gray-100 text-gray-800', badgeLabel: '만료' };
         default:
-            return {
-                badgeClass: 'bg-gray-100 text-gray-800',
-                badgeLabel: status || '알수없음',
-            };
+            return { badgeClass: 'bg-gray-100 text-gray-800', badgeLabel: status || '알수없음' };
     }
 }
 
@@ -113,7 +95,7 @@ function escapeHtml(str) {
         .replace(/'/g, '&#39;');
 }
 
-// 🔹 판매 목록과 거의 같은 레이아웃 + 완료 상태에서만 "리뷰 작성" 버튼 노출
+// ✅ 완료 상태에서 "리뷰 작성/리뷰 보기" 분기
 function createBuyerDealCard(deal) {
     const title = deal.auctionTitle || '제목 없는 경매';
     const price = deal.finalPrice != null
@@ -127,9 +109,16 @@ function createBuyerDealCard(deal) {
     const { badgeClass, badgeLabel } = getBuyerStatusBadgeInfo(deal.status);
 
     const detailUrl = `/buyer/deals/${deal.dealId}`;
-    // ✅ 리뷰 작성 페이지 URL (컨트롤러 매핑과 맞춰서 사용)
-    const reviewUrl = `/buyer/deals/${deal.dealId}/review`;
+
     const isCompleted = deal.status === 'COMPLETED';
+    const hasReview = !!deal.hasReview;
+
+    // ✅ 분기: 리뷰 있으면 "보기"는 view 라우트, 없으면 "작성"은 기존 create 라우트
+    const reviewCreateUrl = `/buyer/deals/${deal.dealId}/review`;
+    const reviewViewUrl = `/buyer/deals/${deal.dealId}/review/view`;
+
+    const reviewBtnLabel = hasReview ? '리뷰 보기' : '리뷰 작성';
+    const reviewBtnUrl = hasReview ? reviewViewUrl : reviewCreateUrl;
 
     return `
     <article class="group bg-white rounded-xl shadow-sm hover:shadow-md border border-gray-100 overflow-hidden transition">
@@ -169,12 +158,13 @@ function createBuyerDealCard(deal) {
                 onclick="window.location.href='${detailUrl}'">
                 상세보기
               </button>
+
               ${isCompleted ? `
               <button
                 type="button"
                 class="inline-flex items-center px-4 py-1.5 rounded-full text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700"
-                onclick="window.location.href='${reviewUrl}'">
-                리뷰 작성
+                onclick="window.location.href='${reviewBtnUrl}'">
+                ${reviewBtnLabel}
               </button>
               ` : ''}
             </div>
@@ -216,21 +206,13 @@ function renderBuyerDealLists(deals) {
         if (el) el.innerHTML = '';
     });
 
-    const countMap = {
-        all: deals.length,
-        pending: 0,
-        ongoing: 0,
-        completed: 0,
-        cancelled: 0,
-    };
+    const countMap = { all: deals.length, pending: 0, ongoing: 0, completed: 0, cancelled: 0 };
 
     deals.forEach((deal) => {
         const cardHtml = createBuyerDealCard(deal);
 
         // 전체 탭
-        if (containers.all) {
-            containers.all.insertAdjacentHTML('beforeend', cardHtml);
-        }
+        if (containers.all) containers.all.insertAdjacentHTML('beforeend', cardHtml);
 
         // 상태별 탭
         const tab = mapBuyerStatusToTab(deal.status);
@@ -252,10 +234,7 @@ function renderBuyerDealLists(deals) {
         const emptyEl = empties[key];
         if (!listEl || !emptyEl) return;
 
-        if (listEl.children.length === 0) {
-            emptyEl.classList.remove('hidden');
-        } else {
-            emptyEl.classList.add('hidden');
-        }
+        if (listEl.children.length === 0) emptyEl.classList.remove('hidden');
+        else emptyEl.classList.add('hidden');
     });
 }

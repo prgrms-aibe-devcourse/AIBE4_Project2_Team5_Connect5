@@ -20,12 +20,9 @@ document.addEventListener("DOMContentLoaded", () => {
         cancelled: document.getElementById("cancelled-count"),
     };
 
-    let allDeals = [];
-
     setupTabs(tabButtons, tabContents);
     fetchSellerDeals()
         .then((deals) => {
-            allDeals = deals;
             renderAllTabs(deals, tabContents, countSpans);
         })
         .catch((err) => {
@@ -52,7 +49,6 @@ async function fetchSellerDeals() {
 }
 
 function normalizeDeal(deal) {
-    // 백엔드 DTO 구조가 약간 달라도 대응 가능하도록 널 가드
     return {
         dealId: deal.dealId,
         auctionId: deal.auctionId ?? deal.auction_id ?? null,
@@ -61,7 +57,8 @@ function normalizeDeal(deal) {
         status: deal.status,
         finalPrice: deal.finalPrice ?? deal.price ?? null,
         createdAt: deal.createdAt ?? deal.created_at ?? null,
-        hasReview: deal.hasReview ?? false,
+        // ✅ 백엔드에서 내려주도록 추가 (없으면 false 처리)
+        hasReview: !!(deal.hasReview ?? false),
     };
 }
 
@@ -83,33 +80,25 @@ function setupTabs(tabButtons, tabContents) {
 
             Object.entries(tabContents).forEach(([key, el]) => {
                 if (!el) return;
-                if (key === tab) {
-                    el.classList.remove("hidden");
-                } else {
-                    el.classList.add("hidden");
-                }
+                if (key === tab) el.classList.remove("hidden");
+                else el.classList.add("hidden");
             });
         });
     });
 
-    // 초기: 전체 탭
     const defaultBtn = document.querySelector('.seller-deal-tab-btn[data-tab="all"]');
-    if (defaultBtn) {
-        defaultBtn.click();
-    }
+    if (defaultBtn) defaultBtn.click();
 }
 
 function renderAllTabs(deals, tabContents, countSpans) {
     const grouped = groupDealsByStatus(deals);
 
-    // count 반영
     if (countSpans.all) countSpans.all.textContent = grouped.all.length;
     if (countSpans.pending) countSpans.pending.textContent = grouped.pending.length;
     if (countSpans.ongoing) countSpans.ongoing.textContent = grouped.ongoing.length;
     if (countSpans.completed) countSpans.completed.textContent = grouped.completed.length;
     if (countSpans.cancelled) countSpans.cancelled.textContent = grouped.cancelled.length;
 
-    // 각 탭 렌더링
     renderDealList(tabContents.all, grouped.all, "전체 거래가 없습니다");
     renderDealList(tabContents.pending, grouped.pending, "거래 대기 중인 거래가 없습니다");
     renderDealList(tabContents.ongoing, grouped.ongoing, "진행 중인 거래가 없습니다");
@@ -118,13 +107,7 @@ function renderAllTabs(deals, tabContents, countSpans) {
 }
 
 function groupDealsByStatus(deals) {
-    const result = {
-        all: [],
-        pending: [],
-        ongoing: [],
-        completed: [],
-        cancelled: [],
-    };
+    const result = { all: [], pending: [], ongoing: [], completed: [], cancelled: [] };
 
     deals.forEach((deal) => {
         result.all.push(deal);
@@ -144,7 +127,6 @@ function groupDealsByStatus(deals) {
                 result.cancelled.push(deal);
                 break;
             default:
-                // 알 수 없는 상태는 일단 전체에만 포함
                 break;
         }
     });
@@ -178,7 +160,7 @@ function showEmptyState(container, message) {
     <div class="text-center py-12 bg-gray-50 rounded-lg">
       <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 01.707-.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
       </svg>
       <h3 class="mt-4 text-sm font-semibold text-gray-900">${message}</h3>
       <p class="mt-2 text-sm text-gray-600">거래가 생성되면 이곳에 표시됩니다.</p>
@@ -214,8 +196,7 @@ function createDealCard(deal) {
         thumbnail.src = deal.thumbnailUrl;
         thumbnail.alt = deal.auctionTitle ?? "거래 썸네일";
     } else {
-        thumbnail.src =
-            "https://via.placeholder.com/96x96.png?text=No+Image"; // 임시 플레이스홀더
+        thumbnail.src = "https://via.placeholder.com/96x96.png?text=No+Image";
         thumbnail.alt = "이미지 없음";
     }
 
@@ -267,19 +248,29 @@ function createDealCard(deal) {
     });
     actionsRow.appendChild(detailBtn);
 
-    // 완료 상태인 경우 리뷰 보기 버튼 노출 (이미 리뷰가 있다면 '리뷰 보기', 없다면 '리뷰 확인')
+    // ✅ 판매자: COMPLETED + 리뷰가 실제로 존재할 때만 "리뷰 보기" 버튼 활성
     if (deal.status === "COMPLETED") {
         const reviewBtn = document.createElement("button");
         reviewBtn.type = "button";
+
+        const canView = !!deal.hasReview;
+
         reviewBtn.className =
-            "inline-flex items-center px-3 py-1.5 border border-indigo-600 rounded-md text-xs font-medium text-indigo-600 bg-white hover:bg-indigo-50";
+            "inline-flex items-center px-3 py-1.5 border rounded-md text-xs font-medium bg-white " +
+            (canView
+                ? "border-indigo-600 text-indigo-600 hover:bg-indigo-50"
+                : "border-gray-300 text-gray-400 cursor-not-allowed");
 
-        reviewBtn.textContent = deal.hasReview ? "리뷰 보기" : "리뷰 확인";
+        reviewBtn.textContent = canView ? "리뷰 보기" : "리뷰 없음";
 
-        reviewBtn.addEventListener("click", () => {
-            // 판매자는 "리뷰를 받는 쪽"이므로, 나중에 리뷰 상세/목록 페이지로 연결
-            window.location.href = `/seller/reviews?dealId=${deal.dealId}`;
-        });
+        if (canView) {
+            reviewBtn.addEventListener("click", () => {
+                // ✅ 404 원인: /seller/reviews 가 아니라, 우리가 새로 만드는 view 라우트로 이동
+                window.location.href = `/seller/deals/${deal.dealId}/review/view`;
+            });
+        } else {
+            reviewBtn.disabled = true;
+        }
 
         actionsRow.appendChild(reviewBtn);
     }
@@ -297,31 +288,16 @@ function createDealCard(deal) {
 function getStatusBadgeInfo(status) {
     switch (status) {
         case "PENDING_CONFIRMATION":
-            return {
-                badgeClass: "bg-yellow-50 text-yellow-800 border border-yellow-100",
-                badgeLabel: "거래 대기",
-            };
+            return { badgeClass: "bg-yellow-50 text-yellow-800 border border-yellow-100", badgeLabel: "거래 대기" };
         case "CONFIRMED":
-            return {
-                badgeClass: "bg-blue-50 text-blue-800 border border-blue-100",
-                badgeLabel: "진행 중",
-            };
+            return { badgeClass: "bg-blue-50 text-blue-800 border border-blue-100", badgeLabel: "진행 중" };
         case "COMPLETED":
-            return {
-                badgeClass: "bg-emerald-50 text-emerald-800 border border-emerald-100",
-                badgeLabel: "완료",
-            };
+            return { badgeClass: "bg-emerald-50 text-emerald-800 border border-emerald-100", badgeLabel: "완료" };
         case "TERMINATED":
         case "EXPIRED":
-            return {
-                badgeClass: "bg-gray-50 text-gray-500 border border-gray-100",
-                badgeLabel: "취소/만료",
-            };
+            return { badgeClass: "bg-gray-50 text-gray-500 border border-gray-100", badgeLabel: "취소/만료" };
         default:
-            return {
-                badgeClass: "bg-gray-50 text-gray-500 border border-gray-100",
-                badgeLabel: status ?? "알 수 없음",
-            };
+            return { badgeClass: "bg-gray-50 text-gray-500 border border-gray-100", badgeLabel: status ?? "알 수 없음" };
     }
 }
 

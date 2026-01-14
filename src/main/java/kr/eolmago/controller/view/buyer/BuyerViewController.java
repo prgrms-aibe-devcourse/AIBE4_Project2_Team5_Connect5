@@ -1,8 +1,10 @@
 package kr.eolmago.controller.view.buyer;
 
 import kr.eolmago.dto.api.deal.response.BuyerDealDetailResponse;
+import kr.eolmago.dto.view.review.ReviewResponse;
 import kr.eolmago.global.security.CustomUserDetails;
 import kr.eolmago.service.deal.BuyerDealService;
+import kr.eolmago.service.review.ReviewService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
@@ -19,20 +21,18 @@ import java.util.UUID;
 public class BuyerViewController {
 
     private final BuyerDealService buyerDealService;
+    private final ReviewService reviewService;
 
-    // 입찰/낙찰 내역 페이지
     @GetMapping("/bids")
     public String bids() {
         return "pages/buyer/buyer-bids";
     }
 
-    // 구매자 거래 목록 페이지
     @GetMapping("/deals")
     public String deals() {
         return "pages/buyer/buyer-deals";
     }
 
-    // 거래 상세 페이지
     @GetMapping("/deals/{dealId}")
     public String buyerDealDetail(@PathVariable Long dealId,
                                   @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -61,7 +61,22 @@ public class BuyerViewController {
         model.addAttribute("role", "BUYER");
         model.addAttribute("deal", deal);
 
-        // 리뷰 작성 페이지 템플릿
         return "pages/user/mypage/buyer-reviews_create";
+    }
+
+    // ✅ 거래 리뷰 보기 페이지 (새로 추가)
+    @GetMapping("/deals/{dealId}/review/view")
+    public String buyerDealReviewView(@PathVariable Long dealId,
+                                      @AuthenticationPrincipal CustomUserDetails userDetails,
+                                      Model model) {
+
+        UUID buyerId = userDetails.getUserId();
+        ReviewResponse review = reviewService.getReviewByDealIdForBuyer(dealId, buyerId);
+
+        model.addAttribute("dealId", dealId);
+        model.addAttribute("role", "BUYER");
+        model.addAttribute("review", review);
+
+        return "pages/reviews/review-detail";
     }
 }

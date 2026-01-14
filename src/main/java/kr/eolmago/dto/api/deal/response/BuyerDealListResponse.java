@@ -40,7 +40,10 @@ public record BuyerDealListResponse(
             String auctionTitle,
 
             @Schema(description = "경매 썸네일 이미지 URL", example = "https://cdn.example.com/img/xxx.jpg")
-            String thumbnailUrl
+            String thumbnailUrl,
+
+            @Schema(description = "리뷰 존재 여부", example = "true")
+            boolean hasReview
     ) {
     }
 }

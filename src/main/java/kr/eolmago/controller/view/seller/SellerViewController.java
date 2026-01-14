@@ -1,7 +1,10 @@
 package kr.eolmago.controller.view.seller;
 
+import kr.eolmago.dto.api.deal.response.SellerDealDetailResponse;
+import kr.eolmago.dto.view.review.ReviewResponse;
 import kr.eolmago.global.security.CustomUserDetails;
 import kr.eolmago.service.deal.SellerDealService;
+import kr.eolmago.service.review.ReviewService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -20,6 +23,7 @@ import java.util.UUID;
 public class SellerViewController {
 
     private final SellerDealService sellerDealService;
+    private final ReviewService reviewService;
 
     @Value("${supabase.url:}")
     private String supabaseUrl;
@@ -66,37 +70,48 @@ public class SellerViewController {
         model.addAttribute("supabaseAnonKey", supabaseAnonKey);
     }
 
-    // 내 경매 페이지
     @GetMapping("/auctions")
     public String sellerAuctions(Model model) {
         applyCommonModel(model);
         return "pages/seller/seller-auctions";
     }
 
-    // 판매 거래 관리 페이지
     @GetMapping("/deals")
-    public String sellerDeals(Model model) {
+    public String deals(Model model) {
         applyCommonModel(model);
         return "pages/seller/seller-deals";
     }
 
-    // 판매 거래 상세 페이지 (통합 페이지 사용)
     @GetMapping("/deals/{dealId}")
     public String sellerDealDetail(@PathVariable Long dealId,
-                                    @AuthenticationPrincipal CustomUserDetails userDetails,
-                                    Model model) {
-        UUID sellerId = userDetails.getUserId();
-        var deal = sellerDealService.getDealDetail(dealId, sellerId);
+                                   @AuthenticationPrincipal CustomUserDetails userDetails,
+                                   Model model) {
 
+        UUID sellerId = userDetails.getUserId();
+        SellerDealDetailResponse deal = sellerDealService.getDealDetail(dealId, sellerId);
+
+        applyCommonModel(model);
         model.addAttribute("dealId", dealId);
         model.addAttribute("role", "SELLER");
         model.addAttribute("deal", deal);
+
         return "pages/deal/deal-detail";
     }
 
-//    // 유찰된 경매 상세 페이지 (예전 주석 예시)
-//    @GetMapping("/auctions/{auctionId}/failed")
-//    public String auctionFailed(@PathVariable UUID auctionId) {
-//        return "pages/seller/auction-failed-detail";
-//    }
+    // 판매자 리뷰 상세 보기
+    @GetMapping("/deals/{dealId}/review/view")
+    public String sellerReviewView(@PathVariable Long dealId,
+                                   @AuthenticationPrincipal CustomUserDetails userDetails,
+                                   Model model) {
+
+        UUID sellerId = userDetails.getUserId();
+        ReviewResponse review = reviewService.getReviewByDealIdForSeller(dealId, sellerId);
+
+        applyCommonModel(model);
+        model.addAttribute("dealId", dealId);
+        model.addAttribute("role", "SELLER");
+        model.addAttribute("review", review);
+
+        return "pages/reviews/review-detail";
+    }
 }
