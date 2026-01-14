@@ -10,6 +10,8 @@ import kr.eolmago.global.exception.ErrorCode;
 import kr.eolmago.repository.auction.AuctionRepository;
 import kr.eolmago.repository.deal.DealRepository;
 import kr.eolmago.repository.user.UserRepository;
+import kr.eolmago.service.notification.publish.NotificationPublishCommand;
+import kr.eolmago.service.notification.publish.NotificationPublisher;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +30,7 @@ public class DealCreationService {
     private final DealRepository dealRepository;
     private final AuctionRepository auctionRepository;
     private final UserRepository userRepository;
+    private final NotificationPublisher notificationPublisher;
 
     /**
      * 경매로부터 거래 생성
@@ -70,6 +73,9 @@ public class DealCreationService {
         );
 
         Deal savedDeal = dealRepository.save(deal);
+
+        notificationPublisher.publish(NotificationPublishCommand.dealConfirmed(sellerId, savedDeal.getDealId()));
+        notificationPublisher.publish(NotificationPublishCommand.dealConfirmed(buyerId, savedDeal.getDealId()));
 
         return new DealCreationResponse(
                 true,
