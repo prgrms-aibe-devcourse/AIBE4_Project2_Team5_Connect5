@@ -141,7 +141,6 @@
         tbodyEl.innerHTML = '';
 
         const rows = items.map((it) => {
-            const auctionId = it?.auctionId;
             const href = resolveRowHref(it);
 
             const title = escapeHtml(it?.title ?? '');
@@ -178,24 +177,11 @@
               '<div class=\\'grid h-full w-full place-items-center text-[10px] font-black tracking-widest text-slate-400\\'>IMAGE</div>';">`
                 : `<div class="grid h-full w-full place-items-center text-[10px] font-black tracking-widest text-slate-400">IMAGE</div>`;
 
-            let rightCellHtml = `<td class="w-28 px-4 py-4 align-middle text-right"></td>`;
-            // 재등록 버튼은 유찰(NO_BIDS)일 때만 표시
-            if (it?.status === 'ENDED_UNSOLD' && it?.endReason === 'NO_BIDS' && auctionId) {
-                rightCellHtml = `
-          <td class="w-28 px-4 py-4 align-middle text-right">
-            <button type="button"
-              class="sa-relist-btn whitespace-nowrap inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-extrabold text-slate-900 hover:bg-slate-50"
-              data-auction-id="${escapeHtml(auctionId)}">
-              재등록
-            </button>
-          </td>
-        `;
-            }
-
             const trAttrs = href ? `data-href="${escapeHtml(href)}" role="link" tabindex="0"` : '';
             const trClass =
                 'border-b border-slate-100 last:border-b-0 cursor-pointer hover:bg-slate-50';
 
+            // ✅ 컬럼을 4개만 렌더링 (마지막 액션 td 제거)
             return `
         <tr ${trAttrs} class="${trClass}">
           <td class="px-4 py-4 align-middle">
@@ -231,8 +217,6 @@
             <div class="font-semibold text-slate-700">${escapeHtml(endAtText)}</div>
             <div class="mt-1">${scheduleSubHtml}</div>
           </td>
-
-          ${rightCellHtml}
         </tr>
       `;
         });
@@ -303,12 +287,9 @@
         );
     };
 
-    const bindRowInteractions = ({ tbodyEl, onRelist }) => {
+    const bindRowInteractions = ({ tbodyEl }) => {
         // 행 클릭 이동
         tbodyEl.addEventListener('click', (e) => {
-            const relistBtn = e.target.closest('.sa-relist-btn');
-            if (relistBtn) return;
-
             const tr = e.target.closest('tr[data-href]');
             if (!tr) return;
 
@@ -329,35 +310,6 @@
                 e.preventDefault();
                 const href = tr.dataset.href;
                 if (href) window.location.href = href;
-            }
-        });
-
-        // 유찰 재등록 버튼
-        tbodyEl.addEventListener('click', async (e) => {
-            const btn = e.target.closest('.sa-relist-btn');
-            if (!btn) return;
-
-            e.preventDefault();
-            e.stopPropagation();
-
-            const auctionId = btn.dataset.auctionId;
-            if (!auctionId) return;
-
-            if (btn.disabled) return;
-
-            const prevText = btn.textContent;
-            btn.disabled = true;
-            btn.classList.add('opacity-60', 'cursor-not-allowed');
-            btn.textContent = '처리중';
-
-            try {
-                await onRelist(auctionId);
-            } catch (err) {
-                console.error(err);
-                btn.disabled = false;
-                btn.classList.remove('opacity-60', 'cursor-not-allowed');
-                btn.textContent = prevText;
-                window.alert('재등록에 실패했습니다. 잠시 후 다시 시도해주세요.');
             }
         });
     };

@@ -20,14 +20,6 @@ export class Ui {
         this.auctionId = root?.dataset?.auctionId ?? null;
         this.meUserId = this.#normalizeUuid(root?.dataset?.meUserId ?? null);
 
-        this.userRole = this.#normalizeUserRole(
-            root?.dataset?.userRole ??
-            root?.dataset?.meRole ??
-            root?.dataset?.role ??
-            root?.dataset?.principalRole ??
-            null
-        );
-
         // overlay
         this.loadingOverlay = root.querySelector("#loading-overlay");
 
@@ -147,57 +139,9 @@ export class Ui {
         this._closingLock = false;
     }
 
-    // 입찰 시 최우선 체크
-
-    #normalizeUserRole(v) {
-        if (v === null || v === undefined) return null;
-        const s = String(v).trim();
-        if (!s) return null;
-        return s.toUpperCase();
-    }
-
-    #getUserRole() {
-        // 1) constructor에서 읽은 값 우선
-        if (this.userRole) return this.userRole;
-
-        // 2) dataset에서 재조회(렌더/바인딩 타이밍 이슈 대비)
-        const fromDataset = this.#normalizeUserRole(
-            this.root?.dataset?.userRole ??
-            this.root?.dataset?.meRole ??
-            this.root?.dataset?.role ??
-            this.root?.dataset?.principalRole ??
-            null
-        );
-        if (fromDataset) {
-            this.userRole = fromDataset; // 캐시
-            return fromDataset;
-        }
-
-        // 3) 전역 변수 폴백 (있을 경우)
-        const fromWindow = this.#normalizeUserRole(
-            window?.USER_ROLE ??
-            window?.__USER_ROLE__ ??
-            null
-        );
-        if (fromWindow) {
-            this.userRole = fromWindow; // 캐시
-            return fromWindow;
-        }
-
-        return null;
-    }
-
-    #requireLoginOrRedirect() {
-        // 로그인 체크 (최우선) - ANONYMOUS, 빈 문자열, null 체크
-        const userRole = this.#getUserRole();
-
-        if (!userRole || userRole === "" || userRole === "ANONYMOUS") {
-            alert("로그인이 필요합니다.");
-            window.location.href = "/login";
-            return false;
-        }
-        return true;
-    }
+    /* -----------------------------
+     * Common UI helpers
+     * ----------------------------- */
 
     setLoading(isLoading) {
         if (!this.loadingOverlay) return;
@@ -467,10 +411,7 @@ export class Ui {
 
     renderSeller(data) {
         if (this.sellerNickname) this.sellerNickname.textContent = safeText(data?.sellerNickname);
-        if (this.sellerAvatar) this.sellerAvatar.src = safeText(
-            data?.sellerProfileImageUrl,
-            "/images/avatar-placeholder.png"
-        );
+        if (this.sellerAvatar) this.sellerAvatar.src = safeText(data?.sellerProfileImageUrl, "/images/avatar-placeholder.png");
         if (this.sellerTradeCount) this.sellerTradeCount.textContent = String(data?.sellerTradeCount ?? 0);
     }
 
@@ -694,11 +635,7 @@ export class Ui {
 
     applyHighestUi(data) {
         // LIVE가 아니거나 유찰/취소이면 최고입찰 관련 UI 모두 숨김
-        if (
-            String(data?.status ?? "") !== "LIVE" ||
-            this.isUnsoldAuction(data) ||
-            this.isCancelledAuction(data)
-        ) {
+        if (String(data?.status ?? "") !== "LIVE" || this.isUnsoldAuction(data) || this.isCancelledAuction(data)) {
             this.hideHighestUi();
             return;
         }
@@ -914,9 +851,6 @@ export class Ui {
 
         // 입찰하기
         this.bidSubmit?.addEventListener("click", async () => {
-            // 로그인 체크 (최우선) - 비로그인이면 여기서 즉시 차단/리다이렉트
-            if (!this.#requireLoginOrRedirect()) return;
-
             const d = this.data ?? {};
             if (this.isUnsoldAuction(d) || this.isCancelledAuction(d)) return;
 
@@ -993,11 +927,7 @@ export class Ui {
             } finally {
                 const latest = this.data ?? data;
 
-                if (
-                    String(latest?.status ?? "") === "LIVE" &&
-                    !this.isUnsoldAuction(latest) &&
-                    !this.isCancelledAuction(latest)
-                ) {
+                if (String(latest?.status ?? "") === "LIVE" && !this.isUnsoldAuction(latest) && !this.isCancelledAuction(latest)) {
                     this.updateBidButtonUi(latest);
                 } else if (this.bidSubmit) {
                     if (this.isUnsoldAuction(latest)) {
