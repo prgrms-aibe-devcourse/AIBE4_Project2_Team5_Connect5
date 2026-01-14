@@ -82,14 +82,22 @@ public class AdminService {
     }
 
     /**
-     * 제재 이력 조회
+     * 전체 제재 이력 조회 (페이지네이션 + 필터링)
+     */
+    public PageResponse<PenaltyHistoryResponse> getAllPenalties(PenaltyType type, Pageable pageable) {
+        Page<UserPenalty> penaltyPage = userPenaltyRepository.findAllPenaltiesWithFilters(type, pageable);
+        return PageResponse.of(penaltyPage, this::toPenaltyHistoryResponseWithUser);
+    }
+
+    /**
+     * 특정 유저의 제재 이력 조회
      */
     public List<PenaltyHistoryResponse> getPenaltyHistory(UUID userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다."));
         List<UserPenalty> penalties = userPenaltyRepository.findPenaltyHistoryByUser(user);
         return penalties.stream()
-                .map(this::toPenaltyHistoryResponse)
+                .map(this::toPenaltyHistoryResponseWithUser)
                 .toList();
     }
 
@@ -160,7 +168,10 @@ public class AdminService {
                 .build();
     }
 
-    private PenaltyHistoryResponse toPenaltyHistoryResponse(UserPenalty penalty) {
+    private PenaltyHistoryResponse toPenaltyHistoryResponseWithUser(UserPenalty penalty) {
+        User user = penalty.getUser();
+        UserProfile profile = user.getUserProfile();
+
         return PenaltyHistoryResponse.builder()
                 .penaltyId(penalty.getPenaltyId())
                 .type(penalty.getType())
@@ -168,6 +179,9 @@ public class AdminService {
                 .startedAt(penalty.getStartedAt())
                 .expiresAt(penalty.getExpiresAt())
                 .isActive(isActivePenalty(penalty))
+                .userId(user.getUserId())
+                .nickname(profile != null ? profile.getNickname() : "알 수 없음")
+                .profileImageUrl(profile != null ? profile.getProfileImageUrl() : null)
                 .build();
     }
 

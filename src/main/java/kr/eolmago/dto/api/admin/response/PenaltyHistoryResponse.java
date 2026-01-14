@@ -4,6 +4,7 @@ import kr.eolmago.domain.entity.user.enums.PenaltyType;
 import lombok.Builder;
 
 import java.time.OffsetDateTime;
+import java.util.UUID;
 
 @Builder
 public record PenaltyHistoryResponse(
@@ -12,5 +13,8 @@ public record PenaltyHistoryResponse(
         String reason,
         OffsetDateTime startedAt,
         OffsetDateTime expiresAt,
-        boolean isActive
+        boolean isActive,
+        UUID userId,
+        String nickname,
+        String profileImageUrl
 ) {}

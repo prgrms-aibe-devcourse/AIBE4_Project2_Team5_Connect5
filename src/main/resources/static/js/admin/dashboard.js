@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 상태 변수 ---
     let currentUserPage = 0;
     let currentReportPage = 0;
+    let currentPenaltyPage = 0;
     const pageSize = 10;
     let userGrowthChart = null;
     let transactionVolumeChart = null;
@@ -12,26 +13,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 이벤트 리스너 ---
     // 사용자 검색
-    const searchBtn = document.getElementById('searchBtn');
-    if (searchBtn) {
-        searchBtn.addEventListener('click', () => {
-            currentUserPage = 0;
-            loadUsers();
-        });
-    } else {
-        console.warn('searchBtn not found');
-    }
+    document.getElementById('searchBtn').addEventListener('click', () => {
+        currentUserPage = 0;
+        loadUsers();
+    });
 
     // 신고 검색
-    const searchReportBtn = document.getElementById('searchReportBtn');
-    if (searchReportBtn) {
-        searchReportBtn.addEventListener('click', () => {
-            currentReportPage = 0;
-            loadReports();
-        });
-    } else {
-        console.warn('searchReportBtn not found');
-    }
+    document.getElementById('searchReportBtn').addEventListener('click', () => {
+        currentReportPage = 0;
+        loadReports();
+    });
+
+    // 제재 이력 검색
+    document.getElementById('searchPenaltyBtn').addEventListener('click', () => {
+        const userId = document.getElementById('searchPenaltyUserId').value.trim();
+        if (userId) {
+            loadUserPenalties(userId);
+        } else {
+            currentPenaltyPage = 0;
+            loadPenalties();
+        }
+    });
 
     // 탭 전환
     ['users', 'reports', 'penalties', 'stats'].forEach(tabName => {
@@ -40,58 +42,6 @@ document.addEventListener('DOMContentLoaded', () => {
             tabButton.addEventListener('click', () => switchTab(tabName));
         }
     });
-
-    // 모달 닫기
-    const modalCloseBtn = document.getElementById('modal-close-btn');
-    if (modalCloseBtn) {
-        modalCloseBtn.addEventListener('click', () => {
-            document.getElementById('user-manage-modal').classList.add('hidden');
-        });
-    } else {
-        console.warn('modal-close-btn not found');
-    }
-
-    // 모달 저장
-    const modalSaveBtn = document.getElementById('modal-save-btn');
-    if (modalSaveBtn) {
-        modalSaveBtn.addEventListener('click', async () => {
-            const userId = document.getElementById('modal-user-id').value;
-            const status = document.getElementById('modal-user-status').value;
-
-            try {
-                const response = await fetch(`/api/admin/users/${userId}/status?status=${status}`, {
-                    method: 'PATCH'
-                });
-
-                if (!response.ok) throw new Error(`Failed to update user status: ${response.statusText}`);
-
-                alert('사용자 상태가 변경되었습니다.');
-                document.getElementById('user-manage-modal').classList.add('hidden');
-                loadUsers(); // 목록 새로고침
-            } catch (error) {
-                console.error('Error updating user status:', error);
-                alert('사용자 상태 변경에 실패했습니다.');
-            }
-        });
-    } else {
-        console.warn('modal-save-btn not found');
-    }
-
-    // 사용자 관리 버튼에 대한 이벤트 위임
-    const userList = document.getElementById('userList');
-    if (userList) {
-        userList.addEventListener('click', (event) => {
-            const button = event.target.closest('.manage-user-btn');
-            if (button) {
-                const userId = button.dataset.userId;
-                const nickname = button.dataset.nickname;
-                const status = button.dataset.status;
-                openUserManageModal(userId, nickname, status);
-            }
-        });
-    } else {
-        console.warn('userList not found');
-    }
 
     // --- 사용자 관리 기능 ---
     async function loadUsers() {
@@ -107,7 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await fetch(`/api/admin/users?${params}`, { credentials: 'same-origin' });
             if (!response.ok) throw new Error(`Failed to load users: ${response.statusText}`);
-            
+
             const data = await response.json();
             renderUserTable(data.content);
             renderPagination('pagination', data.pageInfo, (page) => {
@@ -130,33 +80,15 @@ document.addEventListener('DOMContentLoaded', () => {
         users.forEach(user => {
             const tr = document.createElement('tr');
             tr.className = 'hover:bg-gray-50';
-            //onclick 속성 제거, data-* 속성 및 클래스 추가
             tr.innerHTML = `
                 <td class="px-6 py-4 whitespace-nowrap"><div class="flex items-center"><div class="h-10 w-10 flex-shrink-0"><img class="h-10 w-10 rounded-full bg-gray-200" src="${user.profileImageUrl || '/images/profile/base.png'}" alt="프로필 이미지"></div><div class="ml-4"><div class="text-sm font-medium text-gray-900">${escapeHtml(user.nickname)}</div><div class="text-sm text-gray-500">${user.userId.substring(0, 8)}...</div></div></div></td>
                 <td class="px-6 py-4 whitespace-nowrap"><div class="text-sm text-gray-900">${escapeHtml(user.email)}</div><div class="text-sm text-gray-500">${user.phone || '-'}</div></td>
                 <td class="px-6 py-4 whitespace-nowrap">${getStatusBadge(user.status, 'user')}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatDate(user.createdAt)}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button class="manage-user-btn text-indigo-600 hover:text-indigo-900 font-medium"
-                            data-user-id="${user.userId}"
-                            data-nickname="${escapeHtml(user.nickname)}"
-                            data-status="${user.status}">
-                        관리
-                    </button>
-                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><button onclick="manageUser('${user.userId}')" class="text-indigo-600 hover:text-indigo-900 font-medium">관리</button></td>
             `;
             tbody.appendChild(tr);
         });
-    }
-
-    // 모달을 여는 함수
-    function openUserManageModal(userId, nickname, status) {
-        document.getElementById('modal-user-id').value = userId;
-        document.getElementById('modal-user-info').textContent = `사용자: ${nickname} (${userId})`;
-        document.getElementById('modal-user-status').value = status;
-
-        const modal = document.getElementById('user-manage-modal');
-        modal.classList.remove('hidden');
     }
 
     // --- 신고 관리 기능 ---
@@ -197,7 +129,102 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td class="px-6 py-4"><div class="text-sm text-gray-900">${report.reason}</div><div class="text-xs text-gray-500 truncate max-w-xs">${escapeHtml(report.description)}</div></td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatDate(report.createdAt)}</td>
                 <td class="px-6 py-4 whitespace-nowrap">${getStatusBadge(report.status, 'report')}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><button onclick="manageReport(${report.reportId})" class="text-indigo-600 hover:text-indigo-900">상세보기</button></td>
+                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><button onclick="manageReport('${report.reportId}')" class="text-indigo-600 hover:text-indigo-900">상세보기</button></td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // --- 제재 이력 관리 기능 ---
+    async function loadPenalties() {
+        const type = document.getElementById('filterPenaltyType').value;
+        const params = new URLSearchParams({ page: currentPenaltyPage, size: pageSize });
+        if (type) params.append('type', type);
+
+        try {
+            const response = await fetch(`/api/admin/penalties?${params}`, { credentials: 'same-origin' });
+            if (!response.ok) throw new Error(`Failed to load penalties: ${response.statusText}`);
+
+            const data = await response.json();
+            renderPenaltyTable(data.content);
+            renderPagination('penaltyPagination', data.pageInfo, (page) => {
+                currentPenaltyPage = page;
+                loadPenalties();
+            });
+        } catch (error) {
+            console.error('Error loading penalties:', error);
+            document.getElementById('penaltyList').innerHTML = `<tr><td colspan="6" class="text-center py-4">제재 이력을 불러올 수 없습니다.</td></tr>`;
+        }
+    }
+
+    async function loadUserPenalties(userIdOrNickname) {
+        try {
+            // userId로 시도
+            const response = await fetch(`/api/admin/users/${userIdOrNickname}/penalties`, { credentials: 'same-origin' });
+
+            if (!response.ok) {
+                if (response.status === 400) {
+                    alert('올바른 사용자 ID(UUID)를 입력해주세요.');
+                } else {
+                    throw new Error(`Failed to load user penalties: ${response.statusText}`);
+                }
+                return;
+            }
+
+            const penalties = await response.json();
+            renderPenaltyTable(penalties);
+
+            // 특정 유저 조회 시 페이지네이션 숨김
+            document.getElementById('penaltyPagination').innerHTML = '';
+        } catch (error) {
+            console.error('Error loading user penalties:', error);
+            document.getElementById('penaltyList').innerHTML = `<tr><td colspan="6" class="text-center py-4">해당 사용자의 제재 이력을 찾을 수 없습니다.</td></tr>`;
+        }
+    }
+
+    function renderPenaltyTable(penalties) {
+        const tbody = document.getElementById('penaltyList');
+        tbody.innerHTML = '';
+
+        if (!penalties || penalties.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4">제재 이력이 없습니다.</td></tr>`;
+            return;
+        }
+
+        penalties.forEach(penalty => {
+            const tr = document.createElement('tr');
+            tr.className = 'hover:bg-gray-50';
+            tr.innerHTML = `
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex items-center">
+                        <div class="h-10 w-10 flex-shrink-0">
+                            <img class="h-10 w-10 rounded-full bg-gray-200" 
+                                 src="${penalty.profileImageUrl || '/images/profile/base.png'}" 
+                                 alt="프로필">
+                        </div>
+                        <div class="ml-4">
+                            <div class="text-sm font-medium text-gray-900">${escapeHtml(penalty.nickname)}</div>
+                            <div class="text-xs text-gray-500">${penalty.userId.substring(0, 8)}...</div>
+                        </div>
+                    </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    ${getPenaltyTypeBadge(penalty.type)}
+                </td>
+                <td class="px-6 py-4">
+                    <div class="text-sm text-gray-900">${escapeHtml(penalty.reason)}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    ${formatDateTime(penalty.startedAt)}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    ${penalty.expiresAt ? formatDateTime(penalty.expiresAt) : '<span class="text-red-600 font-semibold">영구</span>'}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    ${penalty.isActive
+                ? '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">활성</span>'
+                : '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">만료</span>'}
+                </td>
             `;
             tbody.appendChild(tr);
         });
@@ -215,7 +242,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const resultTextContainer = document.createElement('div');
         resultTextContainer.innerHTML = `<p class="text-sm text-gray-700">Showing <span class="font-medium">${pageNum * size + 1}</span> to <span class="font-medium">${Math.min((pageNum + 1) * size, totalElements)}</span> of <span class="font-medium">${totalElements}</span> results</p>`;
-        
+
         const navContainer = document.createElement('div');
         const nav = document.createElement('nav');
         nav.className = 'relative z-0 inline-flex rounded-md shadow-sm -space-x-px';
@@ -280,6 +307,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (tabName === 'reports') {
             loadReports();
+        } else if (tabName === 'penalties') {
+            loadPenalties();
         } else if (tabName === 'stats') {
             renderCharts();
         }
@@ -310,9 +339,23 @@ document.addEventListener('DOMContentLoaded', () => {
         return status;
     }
 
+    function getPenaltyTypeBadge(type) {
+        const badges = {
+            SUSPENDED: '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">정지</span>',
+            BANNED: '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">차단</span>'
+        };
+        return badges[type] || type;
+    }
+
     function formatDate(dateString) {
         if (!dateString) return '-';
         return new Date(dateString).toLocaleDateString('ko-KR');
+    }
+
+    function formatDateTime(dateString) {
+        if (!dateString) return '-';
+        const date = new Date(dateString);
+        return date.toLocaleDateString('ko-KR') + ' ' + date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
     }
 
     function escapeHtml(text) {
@@ -322,6 +365,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return div.innerHTML;
     }
 
-    // 전역 manageUser 함수 제거
+    window.manageUser = (userId) => alert(`사용자 관리 모달을 엽니다: ${userId}`);
     window.manageReport = (reportId) => alert(`신고 상세 보기 모달을 엽니다: ${reportId}`);
 });
