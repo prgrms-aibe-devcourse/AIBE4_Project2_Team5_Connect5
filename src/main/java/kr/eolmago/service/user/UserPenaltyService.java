@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -59,5 +60,11 @@ public class UserPenaltyService {
         );
 
         userPenaltyRepository.save(penalty);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<UserPenalty> getActivePenalty(User user) {
+        OffsetDateTime now = OffsetDateTime.now();
+        return userPenaltyRepository.findActivePenaltyByUser(user, now);
     }
 }

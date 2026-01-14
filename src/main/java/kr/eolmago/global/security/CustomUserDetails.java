@@ -20,14 +20,16 @@ public class CustomUserDetails implements UserDetails, OAuth2User {
     private final String email;
     private final String password;
     private final String profileImageUrl;
+    private final String status;
     private final Collection<? extends GrantedAuthority> authorities;
     private Map<String, Object> attributes;
 
-    private CustomUserDetails(String id, String email, String password, String profileImageUrl, Collection<? extends GrantedAuthority> authorities) {
+    private CustomUserDetails(String id, String email, String password, String profileImageUrl, String status, Collection<? extends GrantedAuthority> authorities) {
         this.id = id;
         this.email = email;
         this.password = password;
         this.profileImageUrl = profileImageUrl;
+        this.status = status;
         this.authorities = authorities;
     }
 
@@ -40,6 +42,7 @@ public class CustomUserDetails implements UserDetails, OAuth2User {
                 socialLogin.getEmail(),
                 null,
                 userProfile.getProfileImageUrl(),
+                user.getStatus().name(),
                 authorities
         );
     }

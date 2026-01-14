@@ -2,8 +2,9 @@ package kr.eolmago.repository.deal.impl;
 
 import com.querydsl.core.types.Projections;
 import com.querydsl.jpa.impl.JPAQueryFactory;
-import kr.eolmago.domain.entity.auction.enums.ItemCategory;
-import kr.eolmago.domain.entity.auction.enums.ItemCondition;
+import kr.eolmago.domain.entity.deal.Deal;
+import kr.eolmago.domain.entity.deal.enums.DealStatus;
+import kr.eolmago.domain.entity.report.enums.ReportStatus;
 import kr.eolmago.domain.entity.user.QSocialLogin;
 import kr.eolmago.domain.entity.user.QUser;
 import kr.eolmago.domain.entity.user.QUserProfile;
@@ -13,12 +14,15 @@ import kr.eolmago.repository.deal.DealRepositoryCustom;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static kr.eolmago.domain.entity.auction.QAuction.auction;
 import static kr.eolmago.domain.entity.auction.QAuctionImage.auctionImage;
 import static kr.eolmago.domain.entity.auction.QAuctionItem.auctionItem;
 import static kr.eolmago.domain.entity.deal.QDeal.deal;
+import static kr.eolmago.domain.entity.report.QReport.report;
 import static kr.eolmago.domain.entity.user.QSocialLogin.socialLogin;
 import static kr.eolmago.domain.entity.user.QUser.user;
 import static kr.eolmago.domain.entity.user.QUserProfile.userProfile;
@@ -39,9 +43,9 @@ public class DealRepositoryImpl implements DealRepositoryCustom {
         var sellerProfile = userProfile;
         var buyerProfile = new QUserProfile("buyerProfile");
 
-        // 1. Deal 기본 정보 조회 (이미지 제외)
-        var dealInfo = queryFactory
-                .select(
+        DealDetailDto result = queryFactory
+                .select(Projections.constructor(
+                        DealDetailDto.class,
                         deal.dealId,
                         deal.finalPrice,
                         deal.status.stringValue(),
@@ -64,8 +68,8 @@ public class DealRepositoryImpl implements DealRepositoryCustom {
                         deal.buyer.userId,
                         sellerProfile.nickname,
                         buyerProfile.nickname,
-                        auctionItem.auctionItemId  // 이미지 조회를 위해 필요
-                )
+                        auctionImage.imageUrl                               // 썸네일 이미지 URL
+                ))
                 .from(deal)
                 .innerJoin(deal.auction, auction)
                 .innerJoin(auction.auctionItem, auctionItem)
@@ -73,49 +77,12 @@ public class DealRepositoryImpl implements DealRepositoryCustom {
                 .innerJoin(deal.buyer, buyer)
                 .innerJoin(sellerProfile).on(sellerProfile.user.eq(seller))
                 .innerJoin(buyerProfile).on(buyerProfile.user.eq(buyer))
+                .leftJoin(auctionImage).on(auctionImage.auctionItem.eq(auctionItem)
+                        .and(auctionImage.displayOrder.eq(0)))
                 .where(deal.dealId.eq(dealId))
                 .fetchOne();
 
-        if (dealInfo == null) {
-            return Optional.empty();
-        }
-
-        // 2. 이미지 URL 리스트 조회 (displayOrder 순서대로)
-        var imageUrls = queryFactory
-                .select(auctionImage.imageUrl)
-                .from(auctionImage)
-                .where(auctionImage.auctionItem.auctionItemId.eq(dealInfo.get(22, Long.class)))
-                .orderBy(auctionImage.displayOrder.asc())
-                .fetch();
-
-        // 3. DealDetailDto 생성
-        DealDetailDto result = new DealDetailDto(
-                dealInfo.get(0, Long.class),
-                dealInfo.get(1, Long.class),
-                dealInfo.get(2, String.class),
-                dealInfo.get(3, String.class),
-                dealInfo.get(4, Boolean.class),
-                dealInfo.get(5, Boolean.class),
-                dealInfo.get(6, String.class),
-                dealInfo.get(7, String.class),
-                dealInfo.get(8, String.class),
-                dealInfo.get(9, String.class),
-                dealInfo.get(10, String.class),
-                dealInfo.get(11, String.class),
-                dealInfo.get(12, java.util.UUID.class),
-                dealInfo.get(13, String.class),
-                dealInfo.get(14, String.class),
-                dealInfo.get(15, ItemCategory.class),
-                dealInfo.get(16, ItemCondition.class),
-                dealInfo.get(17, java.util.Map.class),
-                dealInfo.get(18, java.util.UUID.class),
-                dealInfo.get(19, java.util.UUID.class),
-                dealInfo.get(20, String.class),
-                dealInfo.get(21, String.class),
-                imageUrls  // 이미지 URL 리스트
-        );
-
-        return Optional.of(result);
+        return Optional.ofNullable(result);
     }
 
     /**
@@ -167,5 +134,36 @@ public class DealRepositoryImpl implements DealRepositoryCustom {
                 .fetchOne();
 
         return Optional.ofNullable(result);
+    }
+
+    /**
+     * 자동 완료 가능한 거래 조회
+     *
+     * 조건:
+     * 1. CONFIRMED 상태
+     * 2. shippedAt이 threshold 이전
+     * 3. 해당 auction에 진행 중인 신고가 없음 (PENDING, UNDER_REVIEW)
+     */
+    @Override
+    public List<Deal> findCompletableDeals(OffsetDateTime shippedAtThreshold) {
+        return queryFactory
+                .selectFrom(deal)
+                .where(
+                        // 1. CONFIRMED 상태
+                        deal.status.eq(DealStatus.CONFIRMED),
+
+                        // 2. shippedAt이 threshold 이전 (배송 후 N일 경과)
+                        deal.shippedAt.lt(shippedAtThreshold),
+
+                        // 3. 진행 중인 신고가 없음
+                        queryFactory.selectOne()
+                                .from(report)
+                                .where(
+                                        report.auction.eq(deal.auction),
+                                        report.status.in(ReportStatus.PENDING, ReportStatus.UNDER_REVIEW)
+                                )
+                                .notExists()
+                )
+                .fetch();
     }
 }

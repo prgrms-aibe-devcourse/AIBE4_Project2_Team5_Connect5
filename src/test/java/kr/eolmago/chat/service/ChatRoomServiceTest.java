@@ -8,13 +8,16 @@ import kr.eolmago.global.exception.ErrorCode;
 import kr.eolmago.repository.chat.ChatMessageRepository;
 import kr.eolmago.service.chat.ChatService;
 import kr.eolmago.service.chat.ChatStreamPublisher;
+import kr.eolmago.service.chat.ChatSystemUserProvider;
 import kr.eolmago.service.chat.exception.ChatException;
 import kr.eolmago.service.chat.validation.ChatValidator;
+import kr.eolmago.service.notification.publish.NotificationPublisher;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-class ChatServiceTest {
+class ChatRoomServiceTest {
 
 	private ChatRoomServiceTestDoubles doubles;
 	private ChatService sut;
@@ -23,11 +26,11 @@ class ChatServiceTest {
 	void setUp() {
 		doubles = ChatRoomServiceTestDoubles.create();
 
-		// createOrGetRoom 테스트에서는 아래 두 의존성은 사용되지 않으므로 mock이면 충분
 		ChatMessageRepository chatMessageRepository = mock(ChatMessageRepository.class);
 		ChatStreamPublisher chatStreamPublisher = mock(ChatStreamPublisher.class);
+		ChatSystemUserProvider systemUserProvider = mock(ChatSystemUserProvider.class);
+		NotificationPublisher notificationPublisher = mock(NotificationPublisher.class);
 
-		// Validator는 의존성 없으니 실객체
 		ChatValidator chatValidator = new ChatValidator();
 
 		sut = new ChatService(
@@ -36,7 +39,9 @@ class ChatServiceTest {
 			doubles.auctionRepository,
 			doubles.userRepository,
 			chatStreamPublisher,
-			chatValidator
+			chatValidator,
+			systemUserProvider,
+			notificationPublisher
 		);
 	}
 
@@ -60,25 +65,23 @@ class ChatServiceTest {
 	}
 
 	@Test
-	@DisplayName("방이 없고 buyer가 없으면 requester를 buyer로 간주해 방 생성")
-	void buyerNull_createsRoom() {
+	@DisplayName("방이 없고 buyer가 있으면 참여자 요청으로 새 채팅방 생성")
+	void noRoom_createsNewRoom_whenParticipant() {
 		// given
-		ChatRoomScenario s = given()
-			.auctionBuyerNull()
-			.requesterUserExists();
+		ChatRoomScenario s = given().auctionWithBuyer();
 
 		// when
-		Long roomId = sut.createOrGetRoom(s.auctionId, s.requesterId);
+		Long roomId = sut.createOrGetRoom(s.auctionId, s.buyerId);
 
 		// then
 		ChatRoom saved = doubles.findRoomOrThrow(roomId);
 		assertThat(saved.getSeller().getUserId()).isEqualTo(s.sellerId);
-		assertThat(saved.getBuyer().getUserId()).isEqualTo(s.requesterId);
+		assertThat(saved.getBuyer().getUserId()).isEqualTo(s.buyerId);
 	}
 
 	@Test
-	@DisplayName("buyer가 없고 requester가 seller면 예외(CH203)")
-	void sellerCannotCreateAsBuyer_throws() {
+	@DisplayName("buyer가 없으면 채팅방 생성 불가 예외(CH204: NOT_AVAILABLE_YET)")
+	void buyerNull_throwsNotAvailableYet() {
 		// given
 		ChatRoomScenario s = given().auctionBuyerNull();
 
@@ -86,7 +89,7 @@ class ChatServiceTest {
 		assertThatThrownBy(() -> sut.createOrGetRoom(s.auctionId, s.sellerId))
 			.isInstanceOf(ChatException.class)
 			.extracting("errorCode")
-			.isEqualTo(ErrorCode.CHAT_SELLER_CANNOT_CREATE_AS_BUYER);
+			.isEqualTo(ErrorCode.CHAT_ROOM_NOT_AVAILABLE_YET);
 	}
 
 	@Test
@@ -107,15 +110,15 @@ class ChatServiceTest {
 	void race_returnsIdFromRefetch() {
 		// given
 		ChatRoomScenario s = given()
-			.auctionBuyerNull()
-			.requesterUserExists()
+			.auctionWithBuyer()
 			.saveRaceOccurs();
 
 		// when
-		Long roomId = sut.createOrGetRoom(s.auctionId, s.requesterId);
+		Long roomId = sut.createOrGetRoom(s.auctionId, s.buyerId);
 
 		// then
 		ChatRoom room = doubles.findRoomOrThrow(roomId);
-		assertThat(room.getBuyer().getUserId()).isEqualTo(s.requesterId);
+		assertThat(room.getSeller().getUserId()).isEqualTo(s.sellerId);
+		assertThat(room.getBuyer().getUserId()).isEqualTo(s.buyerId);
 	}
 }

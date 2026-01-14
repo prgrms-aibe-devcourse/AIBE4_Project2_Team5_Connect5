@@ -4,7 +4,10 @@ import kr.eolmago.domain.entity.deal.Deal;
 import kr.eolmago.domain.entity.deal.enums.DealStatus;
 import kr.eolmago.domain.entity.review.Review;
 import kr.eolmago.domain.entity.user.User;
+import kr.eolmago.dto.api.review.request.ReviewCreateRequest;
 import kr.eolmago.dto.view.review.ReviewResponse;
+import kr.eolmago.global.exception.BusinessException;
+import kr.eolmago.global.exception.ErrorCode;
 import kr.eolmago.repository.deal.DealRepository;
 import kr.eolmago.repository.review.ReviewRepository;
 import kr.eolmago.repository.user.UserRepository;
@@ -14,11 +17,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 /**
- * Review Service
- * 비즈니스 로직과 검증 담당
+ * 리뷰 서비스
  */
 @Service
 @RequiredArgsConstructor
@@ -30,41 +31,48 @@ public class ReviewService {
     private final UserRepository userRepository;
 
     /**
-     * 후기 작성
+     * 리뷰 생성
+     *
+     * - 거래 상태가 COMPLETED 인 경우에만 작성 가능
+     * - 이미 해당 거래에 대해 동일한 작성자 역할(구매자/판매자)의 리뷰가 있으면 예외(필요 시 추가)
      */
     @Transactional
     public ReviewResponse createReview(
             Long dealId,
-            UUID sellerId,
-            UUID buyerId,
-            int rating,
-            String content
+            UUID reviewerId,
+            ReviewCreateRequest request
     ) {
-        // 비즈니스 검증: Entity 존재 확인
+        // 거래 조회
         Deal deal = dealRepository.findById(dealId)
-                .orElseThrow(() -> new IllegalArgumentException("거래를 찾을 수 없습니다"));
-        User seller = userRepository.findByUserId(sellerId)
-                .orElseThrow(() -> new IllegalArgumentException("판매자를 찾을 수 없습니다"));
-        User buyer = userRepository.findByUserId(buyerId)
-                .orElseThrow(() -> new IllegalArgumentException("구매자를 찾을 수 없습니다"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.DEAL_NOT_FOUND));
 
-        // 비즈니스 검증: 거래 완료 확인
+        // 거래 상태 검증: 완료가 아니면 리뷰 불가
         if (deal.getStatus() != DealStatus.COMPLETED) {
-            throw new IllegalStateException("완료된 거래만 후기를 작성할 수 있습니다");
+            // TODO: ErrorCode에 REVIEW_NOT_ALLOWED 같은 코드가 생기면 교체
+            throw new BusinessException(ErrorCode.DEAL_UNAUTHORIZED);
         }
 
-        // 비즈니스 검증: 평점 범위
-        if (rating < 1 || rating > 5) {
-            throw new IllegalArgumentException("평점은 1~5 사이여야 합니다");
+        // 사용자 조회
+        User seller = userRepository.findById(deal.getSeller().getUserId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        User buyer = userRepository.findById(deal.getBuyer().getUserId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        // 내가 이 거래의 참여자인지 검증
+        if (!seller.getUserId().equals(reviewerId) && !buyer.getUserId().equals(reviewerId)) {
+            // TODO: 나중에 REVIEW_NOT_ALLOWED 같은 에러 코드로 분리 가능
+            throw new BusinessException(ErrorCode.DEAL_UNAUTHORIZED);
         }
 
-        // 정적 팩토리 메서드로 생성
+        // 평점 (int)
+        int rating = request.rating();
+
         Review review = Review.create(
                 deal,
                 seller,
                 buyer,
-                (short) rating,
-                content
+                rating,
+                request.content()
         );
 
         Review saved = reviewRepository.save(review);
@@ -72,71 +80,58 @@ public class ReviewService {
     }
 
     /**
-     * 후기 조회
+     * 특정 리뷰 단건 조회
      */
-    public ReviewResponse getReview(Long reviewId) {
-        Review review = findReviewById(reviewId);
+    public ReviewResponse getReview(Long reviewId, UUID userId) {
+        Review review = reviewRepository.findById(reviewId)
+                // TODO: ErrorCode에 REVIEW_NOT_FOUND가 생기면 교체
+                .orElseThrow(() -> new BusinessException(ErrorCode.DEAL_NOT_FOUND));
+
+        // 필요 시 권한 검증 추가 가능
+        // if (!review.getSeller().getUserId().equals(userId)
+        //         && !review.getBuyer().getUserId().equals(userId)) {
+        //     throw new BusinessException(ErrorCode.DEAL_UNAUTHORIZED);
+        // }
+
         return ReviewResponse.from(review);
     }
 
     /**
-     * 전체 후기 목록
-     */
-    public List<ReviewResponse> getAllReviews() {
-        return reviewRepository.findAll().stream()
-                .map(ReviewResponse::from)
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * 거래별 후기 목록
-     */
-    public List<ReviewResponse> getReviewsByDeal(Long dealId) {
-        return reviewRepository.findByDeal_DealId(dealId).stream()
-                .map(ReviewResponse::from)
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * 판매자별 후기 목록
-     */
-    public List<ReviewResponse> getReviewsBySeller(UUID sellerId) {
-        return reviewRepository.findBySeller_UserId(sellerId).stream()
-                .map(ReviewResponse::from)
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * 구매자별 후기 목록
+     * 내가 구매자로 참여한 거래들에 대한 리뷰 목록 조회
      */
     public List<ReviewResponse> getReviewsByBuyer(UUID buyerId) {
-        return reviewRepository.findByBuyer_UserId(buyerId).stream()
+        return reviewRepository.findByBuyer_UserId(buyerId)
+                .stream()
                 .map(ReviewResponse::from)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     /**
-     * 후기 삭제
+     * 내가 판매자로 참여한 거래들에 대한 리뷰 목록 조회
+     */
+    public List<ReviewResponse> getReviewsBySeller(UUID sellerId) {
+        return reviewRepository.findBySeller_UserId(sellerId)
+                .stream()
+                .map(ReviewResponse::from)
+                .toList();
+    }
+
+    /**
+     * 리뷰 삭제
      */
     @Transactional
     public void deleteReview(Long reviewId, UUID userId) {
-        Review review = findReviewById(reviewId);
+        Review review = reviewRepository.findById(reviewId)
+                // TODO: ErrorCode에 REVIEW_NOT_FOUND가 생기면 교체
+                .orElseThrow(() -> new BusinessException(ErrorCode.DEAL_NOT_FOUND));
 
-        // 비즈니스 검증: 작성자 확인
-        if (!review.getSeller().getUserId().equals(userId) &&
-            !review.getBuyer().getUserId().equals(userId)) {
-            throw new IllegalArgumentException("후기 관련자만 삭제할 수 있습니다");
+        // 작성자(구매자 또는 판매자)만 삭제 가능
+        if (!review.getBuyer().getUserId().equals(userId)
+                && !review.getSeller().getUserId().equals(userId)) {
+            // TODO: 나중에 REVIEW_NOT_ALLOWED 같은 코드로 교체 가능
+            throw new BusinessException(ErrorCode.DEAL_UNAUTHORIZED);
         }
 
         reviewRepository.delete(review);
-    }
-
-    // ========================================
-    // Private Helper
-    // ========================================
-
-    private Review findReviewById(Long reviewId) {
-        return reviewRepository.findById(reviewId)
-                .orElseThrow(() -> new IllegalArgumentException("후기를 찾을 수 없습니다"));
     }
 }

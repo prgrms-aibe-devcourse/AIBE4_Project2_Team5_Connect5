@@ -10,6 +10,7 @@ public class HomeController {
 
     @GetMapping("/")
     public String home() {
+        // userRole, userStatus는 NavModelAdvice가 자동으로 설정하므로 제거
         return "pages/home";
     }
 }

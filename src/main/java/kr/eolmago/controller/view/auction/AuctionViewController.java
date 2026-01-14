@@ -1,7 +1,6 @@
 package kr.eolmago.controller.view.auction;
 
 import kr.eolmago.domain.entity.auction.enums.AuctionStatus;
-import kr.eolmago.domain.entity.auction.enums.ItemCategory;
 import kr.eolmago.dto.api.auction.request.AuctionSearchRequest;
 import kr.eolmago.dto.api.auction.response.AuctionListResponse;
 import kr.eolmago.dto.api.common.PageResponse;
@@ -10,7 +9,6 @@ import kr.eolmago.global.security.CustomUserDetails;
 import kr.eolmago.service.auction.AuctionSearchService;
 import kr.eolmago.service.auction.AuctionService;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -98,8 +96,14 @@ public class AuctionViewController {
     }
 
     @GetMapping("/{auctionId}")
-    public String auctionDetail(@PathVariable UUID auctionId, Model model) {
+    public String auctionDetail(
+            @PathVariable UUID auctionId,
+            Model model,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+
         model.addAttribute("auctionId", auctionId);
+        // userRole, userStatus는 NavModelAdvice가 자동으로 설정
+
         return "pages/auction/auction-detail";
     }
 }

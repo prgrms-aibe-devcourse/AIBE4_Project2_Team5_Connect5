@@ -9,7 +9,7 @@
 <body>
 <div layout:fragment="content"
      id="auction-detail-page"
-     th:attr="data-auction-id=${auctionId}, data-me-user-id=${#authentication?.principal?.id}"
+     th:attr="data-auction-id=${auctionId}, data-me-user-id=${userId}"
      class="bg-slate-50">
 
     <div class="mx-auto max-w-7xl px-6 py-10">
@@ -223,6 +223,8 @@
 
                             <button id="bid-submit"
                                     type="button"
+                                    th:data-user-role="${userRole ?: 'ANONYMOUS'}"
+                                    th:data-user-status="${userStatus ?: ''}"
                                     class="mt-4 inline-flex w-full items-center justify-center rounded-xl bg-slate-900 px-4 py-3 text-sm font-extrabold text-white hover:bg-black disabled:bg-slate-300">
                                 입찰하기
                             </button>
@@ -347,6 +349,61 @@
     </div>
 
     <div id="confirm-toast-overlay" class="fixed inset-0 z-[65] hidden bg-black/30"></div>
+
+    <!-- Report Modal -->
+    <div id="report-modal" class="fixed inset-0 z-[80] hidden items-center justify-center bg-black/40 backdrop-blur-sm">
+        <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl ring-1 ring-slate-200">
+            <h2 class="text-lg font-bold text-slate-900">신고하기</h2>
+            <p class="mt-1 text-sm text-slate-600">신고 사유를 선택해 주세요.</p>
+
+            <form id="report-form" class="mt-4 space-y-4">
+                <!-- Target Type -->
+                <div>
+                    <label class="block text-sm font-semibold text-slate-800">신고 대상</label>
+                    <div class="mt-2 flex gap-4">
+                        <label class="flex items-center gap-2">
+                            <input type="radio" name="reportTarget" value="AUCTION" checked class="h-4 w-4 border-slate-300 text-slate-900 focus:ring-slate-900">
+                            <span class="text-sm text-slate-700">경매 게시물</span>
+                        </label>
+                        <label class="flex items-center gap-2">
+                            <input type="radio" name="reportTarget" value="USER_PROFILE" class="h-4 w-4 border-slate-300 text-slate-900 focus:ring-slate-900">
+                            <span class="text-sm text-slate-700">사용자</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Reason -->
+                <div>
+                    <label class="block text-sm font-semibold text-slate-800">신고 사유</label>
+                    <select id="report-reason" class="mt-2 block w-full rounded-xl border-0 bg-slate-50 py-2.5 pl-3 pr-10 text-sm text-slate-800 ring-1 ring-slate-200 focus:ring-2 focus:ring-slate-900">
+                        <option value="FRAUD_SUSPECT">사기 의심</option>
+                        <option value="ITEM_NOT_AS_DESCRIBED">설명/사진 불일치</option>
+                        <option value="ABUSIVE_LANGUAGE">욕설/비매너</option>
+                        <option value="SPAM_AD">광고/도배</option>
+                        <option value="ILLEGAL_ITEM">불법/금지 품목</option>
+                        <option value="COUNTERFEIT">가품 의심</option>
+                        <option value="PERSONAL_INFO">개인정보 노출</option>
+                        <option value="OTHER">기타</option>
+                    </select>
+                </div>
+
+                <!-- Description -->
+                <div>
+                    <label class="block text-sm font-semibold text-slate-800">상세 설명</label>
+                    <textarea id="report-description" rows="4" class="mt-2 block w-full rounded-xl border-0 bg-slate-50 p-3 text-sm text-slate-800 ring-1 ring-slate-200 placeholder:text-slate-400 focus:ring-2 focus:ring-slate-900" placeholder="신고 내용을 상세히 적어주세요 (최소 10자)"></textarea>
+                </div>
+
+                <div class="mt-6 flex gap-3">
+                    <button type="button" id="report-cancel" class="flex-1 rounded-xl bg-slate-100 px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-200">
+                        취소
+                    </button>
+                    <button type="submit" class="flex-1 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white hover:bg-black">
+                        신고하기
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <script type="module" src="/js/auction/detail/index.js"></script>
 </div>

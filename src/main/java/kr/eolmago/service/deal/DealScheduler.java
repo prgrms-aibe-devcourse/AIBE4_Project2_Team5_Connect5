@@ -21,11 +21,11 @@ public class DealScheduler {
 
     /**
      * 거래 확정 기한 만료 체크 스케줄러
-     * 1분마다 실행되어 confirmByAt이 지난 PENDING_CONFIRMATION 상태의 거래를 TERMINATED로 변경
+     * 1분마다 실행되어 confirmByAt이 지난 PENDING_CONFIRMATION 상태의 거래를 EXPIRED로 변경
      */
     @Scheduled(fixedDelay = 60000) // 1분마다 실행
     @Transactional
-    public void terminateExpiredDeals() {
+    public void expireDeals() {
         OffsetDateTime now = OffsetDateTime.now();
         
         // PENDING_CONFIRMATION 상태이면서 confirmByAt이 현재 시간보다 이전인 거래 조회
@@ -42,10 +42,10 @@ public class DealScheduler {
 
         for (Deal deal : expiredDeals) {
             try {
-                deal.terminate("거래 확정 기한 만료로 인한 자동 종료");
-                log.info("거래 ID: {} 자동 종료 처리 완료", deal.getDealId());
+                deal.expire();
+                log.info("거래 ID: {} 만료 처리 완료", deal.getDealId());
             } catch (Exception e) {
-                log.error("거래 ID: {} 자동 종료 처리 중 오류 발생", deal.getDealId(), e);
+                log.error("거래 ID: {} 만료 처리 중 오류 발생", deal.getDealId(), e);
             }
         }
         
@@ -53,9 +53,13 @@ public class DealScheduler {
     }
 
     /**
-     * 자동 거래 완료 처리
+     * 자동 거래 완료(COMPLETE) 처리
      *
-     * CONFIRMED 상태이면서, 배송 시작 후 7일이 지난 거래를 자동으로 COMPLETED로 전환
+     * 조건:
+     * 1. CONFIRMED 상태
+     * 2. 배송 시작 후 7일 경과 (shippedAt + 7일)
+     * 3. 진행 중인 신고/분쟁이 없음
+     *
      * 매 시간 정각에 실행
      */
     @Scheduled(cron = "0 0 * * * *")  // 매 시간 정각 (0분 0초)
@@ -66,11 +70,8 @@ public class DealScheduler {
         OffsetDateTime now = OffsetDateTime.now();
         OffsetDateTime autoCompleteThreshold = now.minusDays(7);  // 7일 전
 
-        // CONFIRMED 상태이면서, shippedAt이 7일 이전인 거래 조회
-        List<Deal> dealsToComplete = dealRepository.findByStatusAndShippedAtBefore(
-                DealStatus.CONFIRMED,
-                autoCompleteThreshold
-        );
+        // 자동 완료 가능한 거래 조회
+        List<Deal> dealsToComplete = dealRepository.findCompletableDeals(autoCompleteThreshold);
 
         int completedCount = 0;
         for (Deal deal : dealsToComplete) {

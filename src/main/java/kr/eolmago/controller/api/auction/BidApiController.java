@@ -10,6 +10,7 @@ import kr.eolmago.service.auction.BidService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,6 +26,7 @@ public class BidApiController {
 
     @Operation(summary = "입찰 생성")
     @PostMapping("/{auctionId}/bids")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public ResponseEntity<BidCreateResponse> createBid (
             @PathVariable UUID auctionId,
             @Valid @RequestBody BidCreateRequest request,

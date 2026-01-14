@@ -11,7 +11,13 @@ import kr.eolmago.global.exception.BusinessException;
 import kr.eolmago.global.exception.ErrorCode;
 import kr.eolmago.repository.auction.*;
 import kr.eolmago.repository.user.UserRepository;
+import kr.eolmago.service.auction.event.AuctionSoldEvent;
+import kr.eolmago.service.notification.publish.NotificationPublishCommand;
+import kr.eolmago.service.notification.publish.NotificationPublisher;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +28,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -34,14 +41,16 @@ public class AuctionCloseService {
     private final AuctionItemRepository auctionItemRepository;
     private final AuctionImageRepository auctionImageRepository;
     private final UserRepository userRepository;
+    private final NotificationPublisher notificationPublisher;
+
+    private final ApplicationEventPublisher eventPublisher;
 
     // 트랜잭션 전파 - 항상 새로운 트랜잭션을 시작
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void closeAuction(UUID auctionId) {
 
-        // FOR UPDATE 구문 사용(동시성 제어)
         Auction auction = auctionCloseRepository.findByIdForUpdate(auctionId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.AUCTION_NOT_FOUND));
+            .orElseThrow(() -> new BusinessException(ErrorCode.AUCTION_NOT_FOUND));
 
         if (auction.getStatus() != AuctionStatus.LIVE) {
             return;
@@ -52,21 +61,54 @@ public class AuctionCloseService {
             return;
         }
 
-        // 최고가 입찰 선택
         Bid highestBid = bidRepository
-                .findTopByAuctionOrderByAmountDescCreatedAtAsc(auction)
-                .orElse(null);
+            .findTopByAuctionOrderByAmountDescCreatedAtAsc(auction)
+            .orElse(null);
 
-        if (highestBid != null) {
-            // 낙찰(ENDED_SOLD)
-            User buyer = highestBid.getBidder();
-            Long finalPrice = (long) highestBid.getAmount();
-            auction.closeAsSold(buyer, finalPrice);
-        } else {
-            // 유찰(ENDED_UNSOLD)
+        if (highestBid == null) {
             auction.closeAsUnsold();
+            notificationPublisher.publish(
+                NotificationPublishCommand.auctionUnsold(
+                    auction.getSeller().getUserId(),
+                    auction.getAuctionId()
+                )
+            );
+            return;
         }
+
+        User buyer = highestBid.getBidder();
+        Long finalPrice = (long) highestBid.getAmount();
+
+        auction.closeAsSold(buyer, finalPrice);
+
+        notificationPublisher.publish(
+            NotificationPublishCommand.auctionSold(
+                auction.getSeller().getUserId(),
+                auction.getAuctionId(),
+                finalPrice
+            )
+        );
+
+        notificationPublisher.publish(
+            NotificationPublishCommand.auctionWon(
+                buyer.getUserId(),
+                auction.getAuctionId(),
+                finalPrice
+            )
+        );
+
+        AuctionSoldEvent event = new AuctionSoldEvent(
+            auction.getAuctionId(),
+            auction.getSeller().getUserId(),
+            buyer.getUserId()
+        );
+
+        log.info("[AUC_SOLD_PUBLISH] auctionId={}, sellerId={}, buyerId={}, finalPrice={}",
+            event.auctionId(), event.sellerId(), event.buyerId(), finalPrice);
+
+        eventPublisher.publishEvent(event);
     }
+
 
     // 유찰 경매 재등록
     @Transactional
@@ -150,5 +192,12 @@ public class AuctionCloseService {
         }
 
         auction.cancelBySeller();
+
+        notificationPublisher.publish(
+            NotificationPublishCommand.auctionCanceled(
+                sellerId,
+                auction.getAuctionId()
+            )
+        );
     }
 }

@@ -10,6 +10,8 @@ import kr.eolmago.dto.api.report.response.ReportResponse;
 import kr.eolmago.repository.auction.AuctionRepository;
 import kr.eolmago.repository.report.ReportRepository;
 import kr.eolmago.repository.user.UserRepository;
+import kr.eolmago.service.notification.publish.NotificationPublishCommand;
+import kr.eolmago.service.notification.publish.NotificationPublisher;
 import kr.eolmago.service.user.UserPenaltyService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -29,6 +31,7 @@ public class ReportService {
     private final UserRepository userRepository;
     private final AuctionRepository auctionRepository;
     private final UserPenaltyService userPenaltyService;
+    private final NotificationPublisher notificationPublisher;
 
     // 신고 접수
     public Long createReport(UUID reporterId, CreateReportRequest request) {
@@ -48,7 +51,13 @@ public class ReportService {
                 request.description()
         );
 
-        return reportRepository.save(report).getReportId();
+        Long reportId = reportRepository.save(report).getReportId();
+
+        notificationPublisher.publish(
+            NotificationPublishCommand.reportReceived(reporterId, reportId)
+        );
+
+        return reportId;
     }
 
     // 내가 한 신고 목록 조회
@@ -108,7 +117,16 @@ public class ReportService {
 
         reportRepository.save(report);
 
-        // ToDo 신고자에게 처리 완료 알림
+        notificationPublisher.publish(
+            NotificationPublishCommand.reportActionCompleted(report.getReporter().getUserId(), reportId)
+        );
+
+        int days = resolveSuspendDays(action);
+        if (days >= 0) { // -1이면 알림 안 보냄, 0이면 영구정지
+            notificationPublisher.publish(
+                NotificationPublishCommand.reportSuspended(report.getReportedUser().getUserId(), reportId, days)
+            );
+        }
     }
 
     // 신고 기각 (관리자)
@@ -121,5 +139,20 @@ public class ReportService {
         report.updateStatus(ReportStatus.REJECTED);
         report.UpdateActionMemo(memo);
         report.updateResolvedAt(OffsetDateTime.now());
+
+        reportRepository.save(report);
+
+        notificationPublisher.publish(
+            NotificationPublishCommand.reportRejected(report.getReporter().getUserId(), reportId)
+        );
+    }
+
+    private int resolveSuspendDays(ReportAction action) {
+        return switch (action) {
+            case SUSPEND_1D -> 1;
+            case SUSPEND_7D -> 7;
+            case BAN -> 0;
+            default -> -1;
+        };
     }
 }

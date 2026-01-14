@@ -10,6 +10,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import kr.eolmago.domain.entity.auction.Auction;
 import kr.eolmago.domain.entity.chat.ChatRoom;
+import kr.eolmago.domain.entity.chat.ChatRoomType;
 import kr.eolmago.domain.entity.user.User;
 import kr.eolmago.repository.auction.AuctionRepository;
 import kr.eolmago.repository.chat.ChatRoomRepository;
@@ -26,7 +27,9 @@ final class ChatRoomServiceTestDoubles {
 	private final Map<UUID, User> usersById = new HashMap<>();
 
 	private final Map<Long, ChatRoom> roomsById = new HashMap<>();
-	private final Map<UUID, ChatRoom> roomsByAuctionId = new HashMap<>();
+	private final Map<UUID, ChatRoom> auctionRoomsByAuctionId = new HashMap<>();
+	private final Map<UUID, ChatRoom> notificationRoomsByTargetUserId = new HashMap<>();
+
 	private final AtomicLong roomIdSeq = new AtomicLong(1);
 
 	private final Set<UUID> raceAuctionIds = new HashSet<>();
@@ -55,8 +58,8 @@ final class ChatRoomServiceTestDoubles {
 		raceAuctionIds.add(auctionId);
 	}
 
-	ChatRoom seedRoom(Auction auction, User seller, User buyer) {
-		ChatRoom room = ChatRoom.create(auction, seller, buyer);
+	ChatRoom seedAuctionRoom(Auction auction, User seller, User buyer) {
+		ChatRoom room = ChatRoom.createAuctionRoom(auction, seller, buyer);
 		saveInternal(room);
 		return room;
 	}
@@ -77,51 +80,62 @@ final class ChatRoomServiceTestDoubles {
 		when(chatRoomRepository.findById(anyLong()))
 			.thenAnswer(inv -> Optional.ofNullable(roomsById.get(inv.getArgument(0))));
 
-		when(chatRoomRepository.findByAuctionAuctionId(any(UUID.class)))
-			.thenAnswer(inv -> Optional.ofNullable(roomsByAuctionId.get(inv.getArgument(0))));
+		when(chatRoomRepository.findRoomViewById(anyLong()))
+			.thenAnswer(inv -> Optional.ofNullable(roomsById.get(inv.getArgument(0))));
 
-		// getMyRooms는 이번 테스트에서 직접 검증하진 않지만, 서비스가 컴파일/실행되도록 최소 구현
-		when(chatRoomRepository.findMyRooms(any(UUID.class)))
+		when(chatRoomRepository.findByAuctionAuctionIdAndRoomType(any(UUID.class), any(ChatRoomType.class)))
 			.thenAnswer(inv -> {
-				UUID userId = inv.getArgument(0);
-				List<ChatRoom> result = new ArrayList<>();
-				for (ChatRoom room : roomsById.values()) {
-					boolean isSeller = room.getSeller().getUserId().equals(userId);
-					boolean isBuyer = room.getBuyer().getUserId().equals(userId);
-					if (isSeller || isBuyer) result.add(room);
-				}
-				return result;
+				UUID auctionId = inv.getArgument(0);
+				ChatRoomType type = inv.getArgument(1);
+				if (type != ChatRoomType.AUCTION) return Optional.empty();
+				return Optional.ofNullable(auctionRoomsByAuctionId.get(auctionId));
+			});
+
+		when(chatRoomRepository.findByRoomTypeAndTargetUserId(any(ChatRoomType.class), any(UUID.class)))
+			.thenAnswer(inv -> {
+				ChatRoomType type = inv.getArgument(0);
+				UUID targetUserId = inv.getArgument(1);
+				if (type != ChatRoomType.NOTIFICATION) return Optional.empty();
+				return Optional.ofNullable(notificationRoomsByTargetUserId.get(targetUserId));
 			});
 
 		when(chatRoomRepository.save(any(ChatRoom.class)))
-			.thenAnswer(inv -> {
-				ChatRoom room = inv.getArgument(0);
-				UUID auctionId = extractAuctionId(room);
+			.thenAnswer(inv -> saveWithPossibleRace(inv.getArgument(0)));
 
-				// 경합 시뮬레이션: 첫 save는 예외를 던지되, "누군가 먼저 저장했다" 상태를 만들어 둠
-				if (auctionId != null && raceAuctionIds.contains(auctionId) && racedAlready.add(auctionId)) {
-					saveInternal(room);
-					throw new DataIntegrityViolationException("race");
-				}
+		when(chatRoomRepository.saveAndFlush(any(ChatRoom.class)))
+			.thenAnswer(inv -> saveWithPossibleRace(inv.getArgument(0)));
+	}
 
-				saveInternal(room);
-				return room;
-			});
+	private ChatRoom saveWithPossibleRace(ChatRoom room) {
+		UUID auctionId = extractAuctionId(room);
+
+		if (auctionId != null && raceAuctionIds.contains(auctionId) && racedAlready.add(auctionId)) {
+			saveInternal(room);
+			throw new DataIntegrityViolationException("race");
+		}
+
+		saveInternal(room);
+		return room;
 	}
 
 	private void saveInternal(ChatRoom room) {
 		assignRoomIdIfMissing(room);
 		roomsById.put(room.getChatRoomId(), room);
 
-		UUID auctionId = extractAuctionId(room);
-		if (auctionId != null) {
-			roomsByAuctionId.put(auctionId, room);
+		if (room.getRoomType() == ChatRoomType.AUCTION) {
+			UUID auctionId = extractAuctionId(room);
+			if (auctionId != null) auctionRoomsByAuctionId.put(auctionId, room);
+		}
+
+		if (room.getRoomType() == ChatRoomType.NOTIFICATION) {
+			UUID targetUserId = room.getTargetUserId();
+			if (targetUserId != null) notificationRoomsByTargetUserId.put(targetUserId, room);
 		}
 	}
 
 	private void assignRoomIdIfMissing(ChatRoom room) {
-		long current = room.getChatRoomId() == null ? 0L : room.getChatRoomId();
-		if (current > 0) return;
+		Long id = room.getChatRoomId();
+		if (id != null && id > 0) return;
 
 		long newId = roomIdSeq.getAndIncrement();
 		setField(room, "chatRoomId", newId);
@@ -129,12 +143,8 @@ final class ChatRoomServiceTestDoubles {
 
 	private UUID extractAuctionId(ChatRoom room) {
 		Object auctionObj = invokeGetter(room, "getAuction");
-		if (auctionObj == null) {
-			auctionObj = getField(room, "auction");
-		}
-		if (auctionObj instanceof Auction auction) {
-			return auction.getAuctionId();
-		}
+		if (auctionObj == null) auctionObj = getField(room, "auction");
+		if (auctionObj instanceof Auction auction) return auction.getAuctionId();
 		return null;
 	}
 
