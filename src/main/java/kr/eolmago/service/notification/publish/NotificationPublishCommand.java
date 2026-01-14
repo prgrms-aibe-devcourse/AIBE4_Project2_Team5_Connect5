@@ -289,4 +289,16 @@ public record NotificationPublishCommand(
 			String.valueOf(roomId)
 		);
 	}
+
+	public static NotificationPublishCommand favoriteAdded(UUID userId, UUID auctionId) {
+		return new NotificationPublishCommand(
+			userId,
+			NotificationType.FAVORITE_ADDED,
+			"⭐ 관심 경매에 추가되었습니다",
+			"관심 경매로 등록되었습니다.\n마감 결과를 알림으로 알려드릴게요.",
+			"/auctions/" + auctionId,
+			RelatedEntityType.AUCTION,
+			auctionId.toString()
+		);
+	}
 }

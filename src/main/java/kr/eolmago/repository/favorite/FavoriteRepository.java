@@ -27,5 +27,12 @@ public interface FavoriteRepository extends JpaRepository<Favorite, Long>, Favor
     List<UUID> findFavoritedAuctionIds(
             @Param("userId") UUID userId,
             @Param("auctionIds") List<UUID> auctionIds
-    );;
+    );
+
+    @Query("""
+        select f.user.userId
+        from Favorite f
+        where f.auction.auctionId = :auctionId
+    """)
+    List<UUID> findUserIdsByAuctionId(@Param("auctionId") UUID auctionId);
 }
