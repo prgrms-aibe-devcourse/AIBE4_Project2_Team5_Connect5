@@ -4,12 +4,18 @@
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layouts/base}">
 <head>
-    <title layout:fragment="title">리뷰 상세</title>
+    <title layout:fragment="title">받은 리뷰</title>
 </head>
 
 <body>
 <div layout:fragment="content">
     <div class="space-y-6">
+
+        <!-- ✅ 공용 JS 설정값 -->
+        <input type="hidden" id="reviewRole" value="SELLER">
+        <input type="hidden" id="reviewListApi" value="/api/seller/reviews">
+        <input type="hidden" id="dealBasePath" value="/seller/deals">
+
         <!-- 헤더 -->
         <div class="flex items-center justify-between">
             <div>
@@ -53,39 +59,22 @@
             </div>
         </div>
 
-        <!-- 필터 옵션 -->
+        <!-- ✅ 정렬 버튼 -->
         <div class="flex items-center gap-2 border-b border-gray-200 pb-4">
             <button type="button"
-                    class="seller-review-filter-btn rounded-md px-4 py-2 text-sm font-semibold bg-gray-900 text-white"
-                    data-filter="all">
-                전체
+                    class="review-sort-btn rounded-md px-4 py-2 text-sm font-semibold bg-gray-900 text-white"
+                    data-sort="latest">
+                최신순
             </button>
             <button type="button"
-                    class="seller-review-filter-btn rounded-md px-4 py-2 text-sm font-medium bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
-                    data-filter="5">
-                ⭐⭐⭐⭐⭐
-            </button>
-            <button type="button"
-                    class="seller-review-filter-btn rounded-md px-4 py-2 text-sm font-medium bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
-                    data-filter="4">
-                ⭐⭐⭐⭐
-            </button>
-            <button type="button"
-                    class="seller-review-filter-btn rounded-md px-4 py-2 text-sm font-medium bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
-                    data-filter="3">
-                ⭐⭐⭐
-            </button>
-            <button type="button"
-                    class="seller-review-filter-btn rounded-md px-4 py-2 text-sm font-medium bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
-                    data-filter="low">
-                ⭐⭐ 이하
+                    class="review-sort-btn rounded-md px-4 py-2 text-sm font-medium bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
+                    data-sort="rating">
+                별점순
             </button>
         </div>
 
         <!-- 리뷰 목록 -->
-        <div id="reviews-list" class="space-y-4">
-            <!-- JavaScript로 동적 렌더링 -->
-        </div>
+        <div id="reviews-list" class="space-y-4"></div>
 
         <!-- 빈 상태 -->
         <div id="empty-state" class="hidden text-center py-12 bg-gray-50 rounded-lg">
@@ -106,7 +95,7 @@
 </div>
 
 <th:block layout:fragment="scripts">
-    <script src="/js/user/mypage/seller-reviews.js"></script>
+    <script src="/js/user/mypage/reviews.js"></script>
 </th:block>
 </body>
 </html>
