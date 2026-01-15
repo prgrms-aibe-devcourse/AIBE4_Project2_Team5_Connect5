@@ -61,7 +61,7 @@ public class DealController {
         return ResponseEntity.ok().build();
     }
 
-    @Operation(summary = "구매자 수령 확인 (거래 완료 처리)")
+    @Operation(summary = "구매자 수령 확인(거래 완료)")
     @PostMapping("/api/buyer/deals/{dealId}/receive-confirm")
     public ResponseEntity<Void> buyerReceiveConfirm(
             @PathVariable Long dealId,

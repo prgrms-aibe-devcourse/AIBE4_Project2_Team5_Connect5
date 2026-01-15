@@ -1,4 +1,4 @@
-package kr.eolmago.controller.api.notification;
+package kr.eolmago.dto.api.notification.request;
 
 import kr.eolmago.domain.entity.notification.enums.NotificationType;
 import kr.eolmago.domain.entity.notification.enums.RelatedEntityType;
