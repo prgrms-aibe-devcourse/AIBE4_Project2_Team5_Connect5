@@ -28,7 +28,6 @@ public class SellerCredibilityService {
 
     private final DealRepository dealRepository;
     private final ReportRepository reportRepository;
-    private final UserPenaltyRepository userPenaltyRepository;
 
     public SellerCredibilityResponse getSellerCredibility(UUID auctionId) {
         UUID sellerId = auctionRepository.findSellerIdByAuctionId(auctionId)
@@ -42,14 +41,12 @@ public class SellerCredibilityService {
 
         long completedDealCount = dealRepository.countBySellerIdAndStatus(sellerId, DealStatus.COMPLETED);
         long reportCount = reportRepository.countByReportedUserId(sellerId);
-        long penaltyCount = userPenaltyRepository.countByUserId(sellerId);
 
         return new SellerCredibilityResponse(
                 sellerAccount,
                 nickname,
                 completedDealCount,
-                reportCount,
-                penaltyCount
+                reportCount
         );
     }
 

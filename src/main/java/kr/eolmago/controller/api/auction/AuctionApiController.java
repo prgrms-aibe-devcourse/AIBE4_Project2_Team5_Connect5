@@ -142,7 +142,6 @@ public class AuctionApiController {
 
     @Operation(summary = "판매자 신용도 조회")
     @GetMapping("/{auctionId}/seller-credibility")
-    @PreAuthorize("hasAnyRole('GUEST', 'USER', 'ADMIN')")
     public ResponseEntity<SellerCredibilityResponse> getSellerCredibility(
             @PathVariable UUID auctionId
     ) {

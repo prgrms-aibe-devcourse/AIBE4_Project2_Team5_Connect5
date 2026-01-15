@@ -111,15 +111,4 @@ public class UserPenaltyRepositoryImpl implements UserPenaltyRepositoryCustom {
 
         return new PageImpl<>(penalties, pageable, total != null ? total : 0);
     }
-
-    @Override
-    public long countByUserId(UUID userId) {
-        Long cnt = queryFactory
-                .select(userPenalty.penaltyId.count())
-                .from(userPenalty)
-                .where(userPenalty.user.userId.eq(userId))
-                .fetchOne();
-
-        return cnt != null ? cnt : 0L;
-    }
 }

@@ -4,7 +4,6 @@ public record SellerCredibilityResponse(
         String sellerAccount,
         String nickname,
         long completedDealCount,
-        long reportCount,
-        long penaltyCount
+        long reportCount
 ) {
 }
