@@ -14,14 +14,4 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long>, ChatR
 	Optional<ChatRoom> findByAuctionAuctionIdAndRoomType(UUID auctionId, ChatRoomType roomType);
 
 	Optional<ChatRoom> findByRoomTypeAndTargetUserId(ChatRoomType roomType, UUID targetUserId);
-
-	@Query("""
-		select r
-		from ChatRoom r
-		join fetch r.seller s
-		left join fetch r.buyer b
-		left join fetch r.auction a
-		where r.chatRoomId = :roomId
-	""")
-	Optional<ChatRoom> findRoomViewById(@Param("roomId") Long roomId);
 }

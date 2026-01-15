@@ -48,11 +48,12 @@ public record DealDetailDto(
     }
 
     /**
-     * 상품 상태 표시 (S급, A급 등)
+     * 상품 상태 표시
      */
     public String getItemCondition() {
         return condition != null ? condition.name() + "급" : null;
     }
+
     /**
      * specs에서 브랜드 정보를 추출
      */

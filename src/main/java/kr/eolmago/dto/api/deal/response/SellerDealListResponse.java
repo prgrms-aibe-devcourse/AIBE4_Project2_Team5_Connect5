@@ -5,9 +5,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * 판매자 거래 목록 응답 DTO
- */
 @Schema(description = "판매자 거래 목록 응답")
 public record SellerDealListResponse(
 

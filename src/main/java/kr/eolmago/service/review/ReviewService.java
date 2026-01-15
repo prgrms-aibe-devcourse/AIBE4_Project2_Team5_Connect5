@@ -72,8 +72,7 @@ public class ReviewService {
     }
 
     /**
-     * (공통) dealId로 리뷰 상세 조회
-     * - buyer 또는 seller만 조회 가능
+     * dealId로 리뷰 상세 조회
      */
     public ReviewResponse getReviewDetailByDealId(Long dealId, UUID userId) {
         Review review = reviewRepository.findByDeal_DealId(dealId)
@@ -87,10 +86,6 @@ public class ReviewService {
         return ReviewResponse.from(review);
     }
 
-    /**
-     * BuyerViewController가 호출하는 메서드 (시그니처 맞춤용)
-     * - buyer만 조회 가능하게 강제
-     */
     public ReviewResponse getReviewByDealIdForBuyer(Long dealId, UUID buyerId) {
         Review review = reviewRepository.findByDeal_DealIdAndBuyer_UserId(dealId, buyerId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.DEAL_NOT_FOUND)); // 프로젝트 에러코드 정책에 맞게 조정

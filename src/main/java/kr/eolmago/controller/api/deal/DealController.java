@@ -28,10 +28,6 @@ public class DealController {
     private final SellerDealService sellerDealService;
     private final DealPdfService dealPdfService;
 
-    // =========================
-    // Buyer: /api/buyer/deals
-    // =========================
-
     @Operation(summary = "구매자 거래 목록 조회")
     @GetMapping("/api/buyer/deals")
     public ResponseEntity<BuyerDealListResponse> getBuyerDeals(
@@ -41,7 +37,7 @@ public class DealController {
         return ResponseEntity.ok(buyerDealService.getBuyerDeals(buyerId));
     }
 
-    @Operation(summary = "구매자 거래 상세 조회 (목록용)")
+    @Operation(summary = "구매자 거래 상세 조회")
     @GetMapping("/api/buyer/deals/list/{dealId}")
     public ResponseEntity<BuyerDealListResponse.DealDto> getBuyerDealListDetail(
             @PathVariable Long dealId,
@@ -71,7 +67,7 @@ public class DealController {
         return ResponseEntity.ok().build();
     }
 
-    @Operation(summary = "구매자 거래 상세 조회 (상세 페이지용)")
+    @Operation(summary = "구매자 거래 상세 조회")
     @GetMapping("/api/buyer/deals/{dealId}")
     public ResponseEntity<BuyerDealDetailResponse> getBuyerDealDetail(
             @PathVariable Long dealId,
@@ -81,7 +77,7 @@ public class DealController {
         return ResponseEntity.ok(buyerDealService.getDealDetail(dealId, buyerId));
     }
 
-    @Operation(summary = "구매자 거래확정서 PDF 다운로드", description = "완료된 거래(COMPLETED)의 거래확정서를 PDF로 다운로드합니다")
+    @Operation(summary = "구매자 거래확정서 PDF 다운로드")
     @GetMapping("/api/buyer/deals/{dealId}/pdf")
     public ResponseEntity<byte[]> downloadBuyerPdf(
             @PathVariable Long dealId,
@@ -97,10 +93,6 @@ public class DealController {
         return ResponseEntity.ok().headers(headers).body(pdfBytes);
     }
 
-    // =========================
-    // Seller: /api/seller/deals
-    // =========================
-
     @Operation(summary = "판매자 거래 목록 조회")
     @GetMapping("/api/seller/deals")
     public ResponseEntity<SellerDealListResponse> getSellerDeals(
@@ -110,7 +102,7 @@ public class DealController {
         return ResponseEntity.ok(sellerDealService.getSellerDeals(sellerId));
     }
 
-    @Operation(summary = "판매자 거래 상세 조회 (목록용)")
+    @Operation(summary = "판매자 거래 상세 조회")
     @GetMapping("/api/seller/deals/list/{dealId}")
     public ResponseEntity<SellerDealListResponse.DealDto> getSellerDealListDetail(
             @PathVariable Long dealId,
@@ -130,7 +122,7 @@ public class DealController {
         return ResponseEntity.ok().build();
     }
 
-    @Operation(summary = "판매자 거래 상세 조회 (상세 페이지용)")
+    @Operation(summary = "판매자 거래 상세 조회")
     @GetMapping("/api/seller/deals/{dealId}")
     public ResponseEntity<SellerDealDetailResponse> getSellerDealDetail(
             @PathVariable Long dealId,
@@ -140,7 +132,7 @@ public class DealController {
         return ResponseEntity.ok(sellerDealService.getDealDetail(dealId, sellerId));
     }
 
-    @Operation(summary = "판매자 거래확정서 PDF 다운로드", description = "확정 이후(CONFIRMED, COMPLETED) 거래의 거래확정서를 PDF로 다운로드합니다")
+    @Operation(summary = "판매자 거래확정서 PDF 다운로드")
     @GetMapping("/api/seller/deals/{dealId}/pdf")
     public ResponseEntity<byte[]> downloadSellerPdf(
             @PathVariable Long dealId,

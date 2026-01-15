@@ -5,6 +5,8 @@ import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
+import kr.eolmago.domain.entity.auction.Favorite;
+import kr.eolmago.domain.entity.auction.QFavorite;
 import kr.eolmago.domain.entity.auction.enums.AuctionStatus;
 import kr.eolmago.dto.api.favorite.response.FavoriteAuctionDto;
 import kr.eolmago.repository.favorite.FavoriteRepositoryCustom;
@@ -16,6 +18,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static kr.eolmago.domain.entity.auction.QAuction.auction;
@@ -110,5 +113,42 @@ public class FavoriteRepositoryImpl implements FavoriteRepositoryCustom {
         orders.add(auction.auctionId.desc());
 
         return orders.toArray(new OrderSpecifier[0]);
+    }
+
+    @Override
+    public Optional<Favorite> findByUserAndAuction(UUID userId, UUID auctionId) {
+        QFavorite f = QFavorite.favorite;
+        Favorite result = queryFactory
+                .selectFrom(f)
+                .where(
+                        f.user.userId.eq(userId),
+                        f.auction.auctionId.eq(auctionId)
+                )
+                .fetchOne();
+
+        return Optional.ofNullable(result);
+    }
+
+    @Override
+    public List<UUID> findFavoritedAuctionIds(UUID userId, List<UUID> auctionIds) {
+        QFavorite f = QFavorite.favorite;
+        return queryFactory
+                .select(f.auction.auctionId)
+                .from(f)
+                .where(
+                        f.user.userId.eq(userId),
+                        f.auction.auctionId.in(auctionIds)
+                )
+                .fetch();
+    }
+
+    @Override
+    public List<UUID> findUserIdsByAuctionId(UUID auctionId) {
+        QFavorite f = QFavorite.favorite;
+        return queryFactory
+                .select(f.user.userId)
+                .from(f)
+                .where(f.auction.auctionId.eq(auctionId))
+                .fetch();
     }
 }

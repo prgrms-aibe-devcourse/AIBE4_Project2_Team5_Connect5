@@ -1,5 +1,6 @@
 package kr.eolmago.controller.api.user;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -30,6 +31,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/users")
+@Tag(name = "User Profile", description = "유저 프로필")
 @RequiredArgsConstructor
 public class UserProfileController {
 

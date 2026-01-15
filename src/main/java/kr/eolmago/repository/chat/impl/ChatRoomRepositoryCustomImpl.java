@@ -10,13 +10,16 @@ import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import kr.eolmago.domain.entity.auction.QAuction;
 import kr.eolmago.domain.entity.auction.QAuctionImage;
 import kr.eolmago.domain.entity.auction.QAuctionItem;
+import kr.eolmago.domain.entity.chat.ChatRoom;
 import kr.eolmago.domain.entity.chat.ChatRoomType;
 import kr.eolmago.domain.entity.chat.QChatMessage;
 import kr.eolmago.domain.entity.chat.QChatRoom;
+import kr.eolmago.domain.entity.user.QUser;
 import kr.eolmago.repository.chat.ChatRoomRepositoryCustom;
 import kr.eolmago.repository.chat.ChatRoomSummaryProjection;
 import lombok.RequiredArgsConstructor;
@@ -151,4 +154,24 @@ public class ChatRoomRepositoryCustomImpl implements ChatRoomRepositoryCustom {
 		em.clear();
 		return (int) updated;
 	}
+
+    @Override
+    public Optional<ChatRoom> findRoomViewById(Long roomId) {
+        QChatRoom r = QChatRoom.chatRoom;
+
+        QUser s = new QUser("seller");
+        QUser b = new QUser("buyer");
+        QAuction a = QAuction.auction;
+
+        ChatRoom result = queryFactory
+                .selectFrom(r)
+                .distinct()
+                .join(r.seller, s).fetchJoin()
+                .leftJoin(r.buyer, b).fetchJoin()
+                .leftJoin(r.auction, a).fetchJoin()
+                .where(r.chatRoomId.eq(roomId))
+                .fetchOne();
+
+        return Optional.ofNullable(result);
+    }
 }

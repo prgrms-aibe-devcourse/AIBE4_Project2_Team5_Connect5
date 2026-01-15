@@ -190,10 +190,6 @@ public class DealService {
         return DealResponse.from(deal);
     }
 
-    // ========================================
-    // Private Helper
-    // ========================================
-
     private Deal findDealById(Long dealId) {
         return dealRepository.findById(dealId)
                 .orElseThrow(() -> new IllegalArgumentException("거래를 찾을 수 없습니다"));

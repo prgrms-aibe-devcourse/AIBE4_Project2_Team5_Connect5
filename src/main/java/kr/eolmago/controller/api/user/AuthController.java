@@ -1,5 +1,6 @@
 package kr.eolmago.controller.api.user;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import kr.eolmago.dto.api.user.request.LoginRequest;
@@ -21,6 +22,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/auth")
+@Tag(name = "Auth", description = "권한")
 @RequiredArgsConstructor
 public class AuthController {
 
@@ -28,36 +30,6 @@ public class AuthController {
     private final JwtService jwtService;
 
     public static final String REFRESH_TOKEN_COOKIE = "refreshToken";
-
-    private void addCookie(
-            HttpServletResponse response,
-            String name,
-            String value,
-            long maxAge
-    ) {
-        ResponseCookie cookie = ResponseCookie.from(name, value)
-                .httpOnly(true)
-                .secure(false)
-                .path("/")
-                .maxAge(maxAge)
-                .sameSite("Lax")
-                .build();
-        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
-    }
-
-    private void removeCookie(
-            HttpServletResponse response,
-            String name
-    ) {
-        ResponseCookie cookie = ResponseCookie.from(name, "")
-                .httpOnly(true)
-                .secure(false)
-                .path("/")
-                .maxAge(0)
-                .sameSite("Lax")
-                .build();
-        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
-    }
 
     @PostMapping("/login")
     public ResponseEntity<TokenResponse> login(
@@ -124,5 +96,35 @@ public class AuthController {
             @RequestParam UUID userId
     ) {
         authService.logout(userId);
+    }
+
+    private void addCookie(
+            HttpServletResponse response,
+            String name,
+            String value,
+            long maxAge
+    ) {
+        ResponseCookie cookie = ResponseCookie.from(name, value)
+                .httpOnly(true)
+                .secure(false)
+                .path("/")
+                .maxAge(maxAge)
+                .sameSite("Lax")
+                .build();
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+    }
+
+    private void removeCookie(
+            HttpServletResponse response,
+            String name
+    ) {
+        ResponseCookie cookie = ResponseCookie.from(name, "")
+                .httpOnly(true)
+                .secure(false)
+                .path("/")
+                .maxAge(0)
+                .sameSite("Lax")
+                .build();
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
 }

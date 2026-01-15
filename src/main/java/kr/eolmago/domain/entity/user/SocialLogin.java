@@ -18,7 +18,7 @@ public class SocialLogin extends CreatedAtEntity {
     @Column(nullable = false, updatable = false)
     private Long socialId;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false) // 연관관계 필수
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 

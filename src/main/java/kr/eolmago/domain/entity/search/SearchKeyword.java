@@ -45,21 +45,13 @@ public class SearchKeyword extends CreatedAtEntity {
         return searchKeyword;
     }
 
-    /**
-     * 검색 횟수 증가
-     * lastSearchedAt도 현재 시간으로 업데이트
-     */
+    // 검색 횟수 증가
     public void incrementSearchCount() {
         this.searchCount++;
         this.lastSearchedAt = OffsetDateTime.now();
     }
 
-    /**
-     * 키워드 타입 자동 결정
-     *
-     * @param keyword 검색어
-     * @return KeywordType (BRAND, MODEL, GENERAL)
-     */
+    // 키워드 타입 자동 결정
     public static KeywordType determineKeywordType(String keyword) {
         String lowerKeyword = keyword.toLowerCase();
 

@@ -4,11 +4,7 @@ import kr.eolmago.domain.entity.deal.enums.DealStatus;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
-/**
- * 거래확정서 PDF 생성용 DTO
- *
- * Deal, User, AuctionItem, UserProfile, SocialLogin을 조인하여 한 번에 조회
- */
+// 거래확정서 PDF 생성용 DTO
 public record DealPdfDto(
     Long dealId,
     UUID auctionId,

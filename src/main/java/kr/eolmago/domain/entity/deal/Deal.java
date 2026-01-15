@@ -90,25 +90,17 @@ public class Deal extends AuditableEntity {
         deal.confirmByAt = confirmByAt;
         return deal;
     }
-    /**
-     * 판매자 확인 처리
-     */
+
     public void confirmBySeller() {
         this.sellerConfirmedAt = OffsetDateTime.now();
         checkBothConfirmed();
     }
 
-    /**
-     * 구매자 확인 처리
-     */
     public void confirmByBuyer() {
         this.buyerConfirmedAt = OffsetDateTime.now();
         checkBothConfirmed();
     }
 
-    /**
-     * 양쪽 모두 확인했는지 체크하고 상태 변경
-     */
     private void checkBothConfirmed() {
         if (sellerConfirmedAt != null && buyerConfirmedAt != null) {
             this.confirmedAt = OffsetDateTime.now();
@@ -116,85 +108,31 @@ public class Deal extends AuditableEntity {
         }
     }
 
-    /**
-     * 거래 완료 처리
-     */
+    // 거래 완료
     public void complete() {
-        if (this.status != DealStatus.CONFIRMED) {
-            throw new IllegalStateException("확정된 거래만 완료할 수 있습니다");
-        }
         this.status = DealStatus.COMPLETED;
         this.completedAt = OffsetDateTime.now();
     }
 
-    /**
-     * 거래 종료 처리 (취소)
-     */
+    // 거래 종료
     public void terminate(String reason) {
-        if (this.status == DealStatus.COMPLETED) {
-            throw new IllegalStateException("이미 완료된 거래는 종료할 수 없습니다");
-        }
         this.status = DealStatus.TERMINATED;
         this.terminatedAt = OffsetDateTime.now();
         this.terminationReason = reason;
     }
 
-    /**
-     * 거래 만료 처리
-     */
+    // 거래 만료
     public void expire() {
         this.status = DealStatus.EXPIRED;
         this.expiredAt = OffsetDateTime.now();
     }
 
-    /**
-     * 배송 시작
-     */
-    public void startShipping(String shippingNumber, String carrierCode) {
-        if (this.status != DealStatus.CONFIRMED) {
-            throw new IllegalStateException("확정된 거래만 배송할 수 있습니다");
-        }
-        this.shippedAt = OffsetDateTime.now();
-        this.shippingNumber = shippingNumber;
-        this.shippingCarrierCode = carrierCode;
-    }
-
-    // ========================================
-    // 비즈니스 로직 메서드
-    // ========================================
-
-    /**
-     * 특정 사용자가 거래 당사자인지 확인
-     */
-    public boolean isParticipant(UUID userId) {
-        return this.seller.getUserId().equals(userId)
-                || this.buyer.getUserId().equals(userId);
-    }
-
-    /**
-     * 판매자인지 확인
-     */
-    public boolean isSeller(UUID userId) {
-        return this.seller.getUserId().equals(userId);
-    }
-
-    /**
-     * 구매자인지 확인
-     */
-    public boolean isBuyer(UUID userId) {
-        return this.buyer.getUserId().equals(userId);
-    }
-
-    /**
-     * 완료 가능 여부
-     */
+    // 완료 가능 여부
     public boolean canComplete() {
         return this.status == DealStatus.CONFIRMED;
     }
 
-    /**
-     * 종료 가능 여부
-     */
+    // 종료 가능 여부
     public boolean canTerminate() {
         return this.status != DealStatus.COMPLETED;
     }

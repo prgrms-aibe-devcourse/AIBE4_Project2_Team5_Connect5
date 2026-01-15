@@ -4,9 +4,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.util.UUID;
 
-/**
- * 거래 생성 응답 DTO
- */
 @Schema(description = "거래 생성 응답")
 public record DealCreationResponse(
         

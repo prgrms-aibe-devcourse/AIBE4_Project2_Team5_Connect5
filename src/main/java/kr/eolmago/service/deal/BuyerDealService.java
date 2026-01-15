@@ -38,7 +38,7 @@ public class BuyerDealService {
     public BuyerDealListResponse getBuyerDeals(UUID buyerId) {
         List<Deal> deals = dealRepository.findByBuyer_UserId(buyerId);
 
-        // ✅ hasReview 배치 계산
+        // hasReview 배치 계산
         Set<Long> reviewedDealIds = new HashSet<>();
         if (!deals.isEmpty()) {
             List<Long> dealIds = deals.stream().map(Deal::getDealId).toList();
@@ -57,7 +57,7 @@ public class BuyerDealService {
     }
 
     /**
-     * 구매자의 특정 거래 상세 조회 (목록용)
+     * 구매자의 특정 거래 상세 조회
      */
     public BuyerDealListResponse.DealDto getDealListDetail(Long dealId, UUID buyerId) {
         Deal deal = dealRepository.findById(dealId)
@@ -101,7 +101,7 @@ public class BuyerDealService {
     }
 
     /**
-     * 구매자 수령 확인 → 거래 완료(COMPLETED) 처리
+     * 구매자 수령 확인
      */
     @Transactional
     public void receiveConfirm(Long dealId, UUID buyerId) {
@@ -125,9 +125,6 @@ public class BuyerDealService {
         sellerProfile.incrementTradeCount();
     }
 
-    /**
-     * Deal 엔티티 → BuyerDealListResponse.DealDto 변환
-     */
     private BuyerDealListResponse.DealDto toDealDto(Deal deal, boolean hasReview) {
         String createdAt = deal.getCreatedAt() != null
                 ? deal.getCreatedAt().toString()

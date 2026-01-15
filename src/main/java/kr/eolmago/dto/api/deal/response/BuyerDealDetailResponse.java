@@ -62,9 +62,6 @@ public record BuyerDealDetailResponse(
 
         String thumbnailUrl
 ) {
-        /**
-         * DealDetailDto로부터 BuyerDealDetailResponse 생성
-         */
         public static BuyerDealDetailResponse from(DealDetailDto dto) {
                 return new BuyerDealDetailResponse(
                         dto.dealId(),

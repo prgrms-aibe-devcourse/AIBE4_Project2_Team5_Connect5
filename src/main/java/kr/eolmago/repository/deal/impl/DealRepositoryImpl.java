@@ -85,9 +85,6 @@ public class DealRepositoryImpl implements DealRepositoryCustom {
 
     /**
      * PDF 생성을 위한 Deal 정보 조회
-     *
-     * Deal + Auction + AuctionItem + User + UserProfile + SocialLogin을 조인하여
-     * 한 번의 쿼리로 필요한 모든 데이터 조회
      */
     @Override
     public Optional<DealPdfDto> findPdfDataByDealId(Long dealId) {

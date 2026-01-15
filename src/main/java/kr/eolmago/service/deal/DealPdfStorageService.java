@@ -7,11 +7,6 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-/**
- * Deal PDF Supabase Storage Service
- *
- * PDF 파일을 Supabase Storage에 업로드하는 서비스
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -21,11 +16,6 @@ public class DealPdfStorageService {
 
     /**
      * PDF 파일을 Supabase에 업로드
-     *
-     * @param pdfBytes PDF 바이트 배열
-     * @param dealId 거래 ID
-     * @param fileName 파일명
-     * @return Supabase에 저장된 PDF의 Public URL
      */
     public String uploadPdfToSupabase(byte[] pdfBytes, Long dealId, String fileName) {
         log.debug("PDF 업로드 시작: dealId={}, fileName={}, size={}", dealId, fileName, pdfBytes.length);
@@ -70,20 +60,13 @@ public class DealPdfStorageService {
 
     /**
      * 파일 경로 생성
-     *
-     * @param dealId 거래 ID
-     * @param fileName 파일명
-     * @return deal_documents/{dealId}/{fileName}
      */
     private String generateFilePath(Long dealId, String fileName) {
         return "deal_documents/" + dealId + "/" + fileName;
     }
 
     /**
-     * Supabase에서 PDF 삭제 (선택적)
-     *
-     * @param dealId 거래 ID
-     * @param fileName 파일명
+     * Supabase에서 PDF 삭제
      */
     public void deletePdfFromSupabase(Long dealId, String fileName) {
         log.debug("PDF 삭제 시작: dealId={}, fileName={}", dealId, fileName);

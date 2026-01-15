@@ -36,19 +36,11 @@ public interface DealRepository extends JpaRepository<Deal, Long>, DealRepositor
 
     /**
      * 특정 경매로 생성된 거래 존재 여부 확인
-     *
-     * 용도: 중복 생성 방지
-     *
-     * @param auction 경매 엔티티
-     * @return 존재 여부
      */
     boolean existsByAuction(Auction auction);
 
     /**
-     * 경매로 거래 조회 (Optional)
-     *
-     * @param auction 경매 엔티티
-     * @return 거래 (Optional)
+     * 경매로 거래 조회
      */
     Optional<Deal> findByAuction(Auction auction);
 }

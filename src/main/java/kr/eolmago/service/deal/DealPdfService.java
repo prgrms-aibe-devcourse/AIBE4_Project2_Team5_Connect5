@@ -215,10 +215,6 @@ public class DealPdfService {
         }
     }
 
-    // ============================================
-    // 헬퍼 메서드
-    // ============================================
-
     private void addTableRow(Table table, PdfFont font, String key, String value) {
         table.addCell(new Paragraph(key).setFont(font).setBold());
         // null 값은 "-"로 처리 (iText Paragraph는 null을 받을 수 없음)
