@@ -95,4 +95,8 @@ public class UserProfile extends AuditableEntity {
     public void incrementReportCount() {
         this.reportCount++;
     }
+
+    public void incrementTradeCount() {
+        this.tradeCount++;
+    }
 }

@@ -4,6 +4,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.UUID;
+
+import kr.eolmago.dto.api.notification.request.DevNotificationRequest;
 import kr.eolmago.global.security.CustomUserDetails;
 import kr.eolmago.service.notification.publish.NotificationPublishCommand;
 import kr.eolmago.service.notification.publish.NotificationPublisher;

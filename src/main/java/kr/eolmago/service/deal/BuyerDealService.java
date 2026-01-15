@@ -2,6 +2,7 @@ package kr.eolmago.service.deal;
 
 import kr.eolmago.domain.entity.auction.AuctionImage;
 import kr.eolmago.domain.entity.deal.Deal;
+import kr.eolmago.domain.entity.user.UserProfile;
 import kr.eolmago.dto.api.deal.response.BuyerDealDetailResponse;
 import kr.eolmago.dto.api.deal.response.BuyerDealListResponse;
 import kr.eolmago.dto.api.deal.response.DealDetailDto;
@@ -10,6 +11,7 @@ import kr.eolmago.global.exception.ErrorCode;
 import kr.eolmago.repository.auction.AuctionImageRepository;
 import kr.eolmago.repository.deal.DealRepository;
 import kr.eolmago.repository.review.ReviewRepository;
+import kr.eolmago.repository.user.UserProfileRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,7 +28,9 @@ public class BuyerDealService {
 
     private final DealRepository dealRepository;
     private final AuctionImageRepository auctionImageRepository;
+    private final UserProfileRepository userProfileRepository;
     private final ReviewRepository reviewRepository;
+
 
     /**
      * 구매자의 모든 거래 조회
@@ -113,6 +117,12 @@ public class BuyerDealService {
         }
 
         deal.complete();
+
+        UserProfile sellerProfile = userProfileRepository
+                .findByUser_UserId(deal.getSeller().getUserId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        sellerProfile.incrementTradeCount();
     }
 
     /**

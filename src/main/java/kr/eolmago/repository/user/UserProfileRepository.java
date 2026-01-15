@@ -15,4 +15,6 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, Long>,
 
     // userId로 프로필 존재 여부 확인
     boolean existsByUser_UserId(UUID userId);
+
+    Optional<UserProfile> findByUser_UserId(UUID userId);
 }
