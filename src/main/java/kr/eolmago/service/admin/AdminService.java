@@ -104,7 +104,7 @@ public class AdminService {
                 break;
 
             case SUSPEND_1D:
-                applySuspension(reportedUser, 1, reportReasonText);
+                applySuspension(reportedUser, 1, reportReasonText, report);
                 report.updateAction(action);
                 report.updateStatus(ReportStatus.RESOLVED);
                 report.updateResolvedAt(OffsetDateTime.now());
@@ -115,7 +115,7 @@ public class AdminService {
                 break;
 
             case SUSPEND_7D:
-                applySuspension(reportedUser, 7, reportReasonText);
+                applySuspension(reportedUser, 7, reportReasonText, report);
                 report.updateAction(action);
                 report.updateStatus(ReportStatus.RESOLVED);
                 report.updateResolvedAt(OffsetDateTime.now());
@@ -126,7 +126,7 @@ public class AdminService {
                 break;
 
             case BAN:
-                applyBan(reportedUser, reportReasonText);
+                applyBan(reportedUser, reportReasonText, report);
                 report.updateAction(action);
                 report.updateStatus(ReportStatus.RESOLVED);
                 report.updateResolvedAt(OffsetDateTime.now());
@@ -188,7 +188,7 @@ public class AdminService {
 
     // ================= PRIVATE METHODS ================= //
 
-    private void applySuspension(User user, int days, String reason) {
+    private void applySuspension(User user, int days, String reason, Report report) {
         // 이미 BANNED 상태면 변경 불가
         if (user.getStatus() == UserStatus.BANNED) {
             throw new IllegalStateException("이미 영구 차단된 사용자입니다.");
@@ -198,7 +198,7 @@ public class AdminService {
 
         UserPenalty penalty = UserPenalty.create(
                 user,
-                null,
+                report,
                 PenaltyType.SUSPENDED,
                 reason,
                 OffsetDateTime.now(),
@@ -209,12 +209,12 @@ public class AdminService {
         log.info("사용자 정지 처리: userId={}, days={}", user.getUserId(), days);
     }
 
-    private void applyBan(User user, String reason) {
+    private void applyBan(User user, String reason, Report report) {
         user.updateStatus(UserStatus.BANNED);
 
         UserPenalty penalty = UserPenalty.create(
                 user,
-                null,
+                report,
                 PenaltyType.BANNED,
                 reason,
                 OffsetDateTime.now(),

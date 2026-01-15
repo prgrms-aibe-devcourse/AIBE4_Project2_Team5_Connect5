@@ -5,8 +5,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentReportPage = 0;
     let currentPenaltyPage = 0;
     const pageSize = 10;
-    let userGrowthChart = null;
-    let transactionVolumeChart = null;
     let currentReportId = null;
 
     // --- 초기화 ---
@@ -43,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // 탭 전환
-    ['users', 'reports', 'penalties', 'stats'].forEach(tabName => {
+    ['users', 'reports', 'penalties'].forEach(tabName => {
         const tabButton = document.getElementById(`tab-${tabName}`);
         if (tabButton) {
             tabButton.addEventListener('click', () => switchTab(tabName));
@@ -426,35 +424,31 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function switchTab(tabName) {
-        ['users', 'reports', 'penalties', 'stats'].forEach(name => {
-            document.getElementById('section-' + name).classList.add('hidden');
+        ['users', 'reports', 'penalties'].forEach(name => {
+            const section = document.getElementById('section-' + name);
+            if (section) section.classList.add('hidden');
+            
             const tabBtn = document.getElementById('tab-' + name);
-            tabBtn.classList.remove('bg-slate-900', 'text-white', 'shadow-sm');
-            tabBtn.classList.add('text-gray-600', 'hover:bg-gray-100');
+            if (tabBtn) {
+                tabBtn.classList.remove('bg-slate-900', 'text-white', 'shadow-sm');
+                tabBtn.classList.add('text-gray-600', 'hover:bg-gray-100');
+            }
         });
 
         const activeSection = document.getElementById('section-' + tabName);
-        activeSection.classList.remove('hidden');
+        if (activeSection) activeSection.classList.remove('hidden');
+        
         const activeTab = document.getElementById('tab-' + tabName);
-        activeTab.classList.remove('text-gray-600', 'hover:bg-gray-100');
-        activeTab.classList.add('bg-slate-900', 'text-white', 'shadow-sm');
+        if (activeTab) {
+            activeTab.classList.remove('text-gray-600', 'hover:bg-gray-100');
+            activeTab.classList.add('bg-slate-900', 'text-white', 'shadow-sm');
+        }
 
         if (tabName === 'reports') {
             loadReports();
         } else if (tabName === 'penalties') {
             loadPenalties();
-        } else if (tabName === 'stats') {
-            renderCharts();
         }
-    }
-
-    function renderCharts() {
-        if (userGrowthChart) return;
-        const commonOptions = { responsive: true, maintainAspectRatio: false };
-        const ctxUser = document.getElementById('userGrowthChart').getContext('2d');
-        userGrowthChart = new Chart(ctxUser, { type: 'line', data: { labels: ['5월', '6월', '7월', '8월', '9월', '10월'], datasets: [{ label: '신규 가입자 수', data: [120, 150, 180, 220, 300, 450], borderColor: 'rgb(75, 192, 192)', tension: 0.1 }] }, options: commonOptions });
-        const ctxTransaction = document.getElementById('transactionVolumeChart').getContext('2d');
-        transactionVolumeChart = new Chart(ctxTransaction, { type: 'bar', data: { labels: ['5월', '6월', '7월', '8월', '9월', '10월'], datasets: [{ label: '거래 완료 건수', data: [50, 75, 90, 120, 160, 210], backgroundColor: 'rgba(54, 162, 235, 0.6)' }] }, options: { ...commonOptions, scales: { y: { beginAtZero: true } } } });
     }
 
     function getStatusBadge(status, type) {

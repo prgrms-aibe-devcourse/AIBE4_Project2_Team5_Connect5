@@ -4,8 +4,6 @@
       layout:decorate="~{layouts/base}">
 <head>
     <title layout:fragment="title">관리자 대시보드</title>
-    <!-- Chart.js CDN 추가 -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
@@ -35,12 +33,6 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
                 </svg>
                 <span class="font-medium">제재 이력 조회</span>
-            </button>
-            <button id="tab-stats" class="w-full flex items-center space-x-3 px-4 py-3 text-left rounded-lg text-gray-600 hover:bg-gray-100 transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
-                </svg>
-                <span class="font-medium">통계</span>
             </button>
         </nav>
     </aside>
@@ -286,33 +278,6 @@
             </div>
         </div>
 
-        <!-- 4. 통계 섹션 -->
-        <div id="section-stats" class="space-y-6 max-w-7xl mx-auto hidden">
-            <div class="flex justify-between items-end">
-                <div>
-                    <h1 class="text-2xl font-bold text-gray-900">통계</h1>
-                    <p class="text-sm text-gray-600 mt-1">서비스 주요 지표를 시각적으로 확인합니다.</p>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <!-- 가입자 수 변화 차트 -->
-                <div class="rounded-xl border border-gray-200 bg-white shadow-sm p-6">
-                    <h3 class="text-lg font-bold text-gray-900 mb-4">가입자 수 변화 (최근 6개월)</h3>
-                    <div class="relative h-64 w-full">
-                        <canvas id="userGrowthChart"></canvas>
-                    </div>
-                </div>
-
-                <!-- 거래량 차트 -->
-                <div class="rounded-xl border border-gray-200 bg-white shadow-sm p-6">
-                    <h3 class="text-lg font-bold text-gray-900 mb-4">월별 거래량 (최근 6개월)</h3>
-                    <div class="relative h-64 w-full">
-                        <canvas id="transactionVolumeChart"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
     </main>
     <!-- 사용자 관리 모달 -->
     <div id="user-manage-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">

@@ -9,6 +9,7 @@
 
     const auctionId = root.dataset.auctionId;
     const meUserId = root.dataset.meUserId;
+    const sellerId = root.dataset.sellerId; // 판매자 ID 추가
 
     const openBtn = document.querySelector("#report-button");
     const modal = document.querySelector("#report-modal");
@@ -62,6 +63,11 @@
             return;
         }
 
+        if (!sellerId) {
+            showToast("오류", "판매자 정보를 찾을 수 없어 신고할 수 없습니다.");
+            return;
+        }
+
         if (!confirm("정말 신고하시겠습니까? 허위 신고 시 제재를 받을 수 있습니다.")) {
             return;
         }
@@ -69,10 +75,11 @@
         try {
             isSubmitting = true;
             await submitReport({
-                targetId: auctionId, // 현재는 경매 ID만 사용
-                targetType: targetType,
-                reason: reason,
-                description: description
+                reportedUserId: sellerId, // 피신고자 ID (판매자)
+                auctionId: auctionId,     // 경매 ID
+                type: targetType,         // 신고 대상 타입 (AUCTION or USER_PROFILE)
+                reason: reason,           // 신고 사유
+                description: description  // 상세 설명
             });
             showToast("신고 완료", "신고가 접수되었습니다.");
             close();

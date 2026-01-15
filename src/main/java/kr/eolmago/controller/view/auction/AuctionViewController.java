@@ -2,6 +2,7 @@ package kr.eolmago.controller.view.auction;
 
 import kr.eolmago.domain.entity.auction.enums.AuctionStatus;
 import kr.eolmago.dto.api.auction.request.AuctionSearchRequest;
+import kr.eolmago.dto.api.auction.response.AuctionDetailResponse;
 import kr.eolmago.dto.api.auction.response.AuctionListResponse;
 import kr.eolmago.dto.api.common.PageResponse;
 import kr.eolmago.dto.view.auction.AuctionListFilterRequest;
@@ -109,7 +110,9 @@ public class AuctionViewController {
             Model model,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
 
+        AuctionDetailResponse auctionDetail = auctionService.getAuctionDetail(auctionId);
         model.addAttribute("auctionId", auctionId);
+        model.addAttribute("sellerId", auctionDetail.sellerId());
         // userRole, userStatus는 NavModelAdvice가 자동으로 설정
 
         return "pages/auction/auction-detail";
