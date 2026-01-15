@@ -1,10 +1,12 @@
 package kr.eolmago.service.review;
 
+import kr.eolmago.dto.api.review.response.ReceivedReviewDto;
 import kr.eolmago.dto.api.review.response.ReceivedReviewListResponse;
-import kr.eolmago.repository.review.ReceivedReviewProjection;
 import kr.eolmago.repository.review.ReviewRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -19,40 +21,25 @@ public class ReviewQueryServiceImpl implements ReviewQueryService {
     @Override
     public ReceivedReviewListResponse getReceivedReviews(UUID sellerId, int page, int size) {
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Pageable pageable = PageRequest.of(page, size);
 
-        // ✅ Projection 기반 조회 (fetch join + pageable 문제 회피)
-        Page<ReceivedReviewProjection> result =
+        Page<ReceivedReviewDto> result =
                 reviewRepository.findReceivedReviewsBySellerId(sellerId, pageable);
 
         Double avg = reviewRepository.findAverageRatingBySeller(sellerId);
         long totalCount = reviewRepository.countBySeller_UserId(sellerId);
 
-        // --------- DTO 매핑 ----------
-        // ⚠️ 여기 "ReceivedReviewListResponse" 생성 방식은 너희 DTO에 맞춰 조정하면 됨
-        List<ReceivedReviewListResponse.ReceivedReviewDto> items = result.getContent().stream()
-                .map(p -> ReceivedReviewListResponse.ReceivedReviewDto.builder()
-                        .reviewId(p.getReviewId())
-                        .dealId(p.getDealId())
-                        .rating(p.getRating())
-                        .content(p.getContent())
-                        .createdAt(p.getCreatedAt())
-                        .buyerId(p.getBuyerId())
-                        .buyerNickname(p.getBuyerNickname())
-                        .buyerProfileImageUrl(p.getBuyerProfileImageUrl())
-                        .build()
-                )
-                .toList();
+        List<ReceivedReviewDto> items = result.getContent();
 
-        return ReceivedReviewListResponse.builder()
-                .sellerId(sellerId)
-                .averageRating(avg == null ? 0.0 : avg)
-                .totalCount(totalCount)
-                .page(result.getNumber())
-                .size(result.getSize())
-                .totalPages(result.getTotalPages())
-                .totalElements(result.getTotalElements())
-                .reviews(items)
-                .build();
+        return new ReceivedReviewListResponse(
+                sellerId,
+                avg == null ? 0.0 : avg,
+                totalCount,
+                result.getNumber(),
+                result.getSize(),
+                result.getTotalPages(),
+                result.getTotalElements(),
+                items
+        );
     }
 }
