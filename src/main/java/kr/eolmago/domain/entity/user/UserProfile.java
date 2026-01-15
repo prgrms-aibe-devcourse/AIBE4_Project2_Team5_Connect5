@@ -91,4 +91,8 @@ public class UserProfile extends AuditableEntity {
     public void verifyPhoneNumber() {
         this.phoneVerified = true;
     }
+
+    public void incrementReportCount() {
+        this.reportCount++;
+    }
 }

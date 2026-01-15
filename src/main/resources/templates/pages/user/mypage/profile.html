@@ -59,7 +59,7 @@
                     <p class="text-2xl font-bold text-gray-900 mt-2" id="ratingAvg" th:text="${profile != null ? #numbers.formatDecimal(profile.ratingAvg, 1, 2) : '0.00'}">0.00</p>
                 </div>
                 <div class="rounded-lg bg-slate-50 p-4 text-center">
-                    <p class="text-sm text-gray-600">신고 횟수</p>
+                    <p class="text-sm text-gray-600">제재 횟수</p>
                     <p class="text-2xl font-bold text-gray-900 mt-2" id="reportCount" th:text="${profile != null ? profile.reportCount : '0'}">0</p>
                 </div>
             </div>

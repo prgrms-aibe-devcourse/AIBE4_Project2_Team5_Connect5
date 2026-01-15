@@ -173,6 +173,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('modalActionSection').classList.remove('hidden');
                 document.getElementById('modalAlreadyResolved').classList.add('hidden');
                 document.getElementById('modalReportAction').value = '';
+                document.getElementById('modalAdminNote').value = ''; // 메모 초기화
             }
 
             // 모달 표시
@@ -197,6 +198,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 신고 처리 제출
     async function handleReportSubmit() {
         const action = document.getElementById('modalReportAction').value;
+        const adminNote = document.getElementById('modalAdminNote').value.trim();
 
         if (!action) {
             alert('처리 조치를 선택해주세요.');
@@ -214,7 +216,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            const response = await fetch(`/api/admin/reports/${currentReportId}/resolve?action=${action}`, {
+            const params = new URLSearchParams({ action });
+            if (adminNote) {
+                params.append('adminNote', adminNote);
+            }
+
+            const response = await fetch(`/api/admin/reports/${currentReportId}/resolve?${params.toString()}`, {
                 method: 'PATCH',
                 credentials: 'same-origin'
             });

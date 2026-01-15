@@ -190,15 +190,21 @@
                     </div>
 
                     <!-- 처리 액션 선택 -->
-                    <div id="modalActionSection">
-                        <h3 class="text-sm font-semibold text-gray-700 mb-3">처리 조치 선택</h3>
-                        <select id="modalReportAction" class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10">
-                            <option value="">조치 선택</option>
-                            <option value="NONE">조치 없음 (신고 반려)</option>
-                            <option value="SUSPEND_1D">1일 정지</option>
-                            <option value="SUSPEND_7D">7일 정지</option>
-                            <option value="BAN">영구 차단</option>
-                        </select>
+                    <div id="modalActionSection" class="space-y-4">
+                        <div>
+                            <h3 class="text-sm font-semibold text-gray-700 mb-3">처리 조치 선택</h3>
+                            <select id="modalReportAction" class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10">
+                                <option value="">조치 선택</option>
+                                <option value="NONE">조치 없음 (신고 반려)</option>
+                                <option value="SUSPEND_1D">1일 정지</option>
+                                <option value="SUSPEND_7D">7일 정지</option>
+                                <option value="BAN">영구 차단</option>
+                            </select>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-semibold text-gray-700 mb-3">관리자 메모 (선택)</h3>
+                            <textarea id="modalAdminNote" rows="3" class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10" placeholder="처리 사유, 근거 등을 입력하세요."></textarea>
+                        </div>
 
                         <div class="mt-4 flex gap-3">
                             <button id="modalCancelBtn" class="flex-1 rounded-lg bg-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-300">

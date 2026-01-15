@@ -196,6 +196,12 @@ public class AdminService {
 
         user.updateStatus(UserStatus.SUSPENDED);
 
+        // 신고 횟수 증가
+        UserProfile userProfile = user.getUserProfile();
+        if (userProfile != null) {
+            userProfile.incrementReportCount();
+        }
+
         UserPenalty penalty = UserPenalty.create(
                 user,
                 report,
@@ -211,6 +217,12 @@ public class AdminService {
 
     private void applyBan(User user, String reason, Report report) {
         user.updateStatus(UserStatus.BANNED);
+
+        // 신고 횟수 증가
+        UserProfile userProfile = user.getUserProfile();
+        if (userProfile != null) {
+            userProfile.incrementReportCount();
+        }
 
         UserPenalty penalty = UserPenalty.create(
                 user,
