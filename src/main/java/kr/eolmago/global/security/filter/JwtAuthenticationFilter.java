@@ -47,15 +47,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String uri = request.getRequestURI();
 
+        // 정적 리소스 및 문서 관련 경로만 필터 제외
         return uri.startsWith("/css/")
                 || uri.startsWith("/js/")
                 || uri.startsWith("/images/")
-                || uri.equals("/")
-                || uri.equals("/home")
-                || uri.equals("/login")
-                || uri.startsWith("/auctions")
-                || uri.startsWith("/oauth2/")
-                || uri.startsWith("/login/oauth2/")
+                || uri.startsWith("/favicon.ico")
+                || uri.startsWith("/error")
                 || uri.startsWith("/swagger-ui/")
                 || uri.equals("/swagger-ui.html")
                 || uri.startsWith("/v3/api-docs/")
