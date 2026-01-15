@@ -12,6 +12,8 @@ import kr.eolmago.repository.auction.AuctionRepository;
 import kr.eolmago.repository.auction.BidRepository;
 import kr.eolmago.repository.user.UserRepository;
 import kr.eolmago.service.auction.event.AuctionEndAtChangedEvent;
+import kr.eolmago.service.notification.publish.NotificationPublishCommand;
+import kr.eolmago.service.notification.publish.NotificationPublisher;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -32,6 +34,7 @@ public class BidCommandService {
     private final BidRepository bidRepository;
     private final UserRepository userRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final NotificationPublisher notificationPublisher;
 
     @Transactional
     public BidCreateResponse createBid(UUID auctionId, UUID buyerId, int amount, String requestId) {
@@ -46,9 +49,9 @@ public class BidCommandService {
             return buildBidCreateResponse(bid, false);
         }
 
-        // FOR UPDATE DB 락 사용
+        // FOR UPDATE DB 락
         Auction auction = auctionRepository.findByIdForUpdate(auctionId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.AUCTION_NOT_FOUND));
+            .orElseThrow(() -> new BusinessException(ErrorCode.AUCTION_NOT_FOUND));
 
         if (auction.getStatus() != AuctionStatus.LIVE) {
             throw new BusinessException(ErrorCode.AUCTION_NOT_LIVE);
@@ -58,7 +61,6 @@ public class BidCommandService {
             throw new BusinessException(ErrorCode.SELLER_CANNOT_BID);
         }
 
-        // 최소 입찰가, 최대 입찰가 검증
         int currentHighest = auction.getCurrentPrice();
         int increment = auction.getBidIncrement();
 
@@ -66,9 +68,13 @@ public class BidCommandService {
         if (amount < minAcceptable) throw new BusinessException(ErrorCode.BID_INVALID_AMOUNT);
         if (amount > MAX_BID_AMOUNT) throw new BusinessException(ErrorCode.BID_AMOUNT_EXCEEDS_LIMIT);
 
-        // 입찰 단위 검증, 입찰은 단위의 배수만 가능
         int diff = amount - currentHighest;
-        if (increment > 0 && diff % increment != 0) throw new BusinessException(ErrorCode.BID_INVALID_INCREMENT);
+        if (increment > 0 && diff % increment != 0) {
+            throw new BusinessException(ErrorCode.BID_INVALID_INCREMENT);
+        }
+
+        UUID prevHighestBidderId =
+            bidRepository.findTopBidderIdByAuction(auction).orElse(null);
 
         // 입찰 생성
         User bidder = userRepository.getReferenceById(buyerId);
@@ -78,16 +84,38 @@ public class BidCommandService {
         // 경매 갱신
         auction.updateBid(amount);
 
-        // 자동 연장
+        notificationPublisher.publish(
+            NotificationPublishCommand.bidAccepted(
+                buyerId,
+                auction.getAuctionId(),
+                amount
+            )
+        );
+
+        if (prevHighestBidderId != null && !prevHighestBidderId.equals(buyerId)) {
+            notificationPublisher.publish(
+                NotificationPublishCommand.bidOutbid(
+                    prevHighestBidderId,
+                    auction.getAuctionId()
+                )
+            );
+        }
+
         OffsetDateTime now = OffsetDateTime.now();
         boolean extensionApplied = tryAutoExtension(auction, now);
 
         if (extensionApplied) {
-            eventPublisher.publishEvent(new AuctionEndAtChangedEvent(auction.getAuctionId(), auction.getEndAt()));
+            eventPublisher.publishEvent(
+                new AuctionEndAtChangedEvent(
+                    auction.getAuctionId(),
+                    auction.getEndAt()
+                )
+            );
         }
 
         return buildBidCreateResponse(bid, extensionApplied);
     }
+
 
     // 자동 연장
     private boolean tryAutoExtension(Auction auction, OffsetDateTime now) {
