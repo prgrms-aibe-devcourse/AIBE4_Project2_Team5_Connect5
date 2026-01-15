@@ -213,10 +213,11 @@
                         ${index + 1}
                     </span>
                     <span class="flex-1">${escapeHtml(item.keyword)}</span>
-                    <span class="text-xs text-gray-400">${item.searchCount.toLocaleString()}</span>
                 </button>
             `).join('')}
         `;
+        // 인기검색어 수
+        /*<span class="text-xs text-gray-400">${item.searchCount.toLocaleString()}</span>*/
 
         // 클릭 이벤트 추가
         popularKeywords.querySelectorAll('.autocomplete-item').forEach(item => {

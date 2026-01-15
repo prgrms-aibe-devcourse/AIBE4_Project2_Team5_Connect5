@@ -1,5 +1,6 @@
 package kr.eolmago.service.review;
 
+import jakarta.persistence.EntityNotFoundException;
 import kr.eolmago.domain.entity.deal.Deal;
 import kr.eolmago.domain.entity.deal.enums.DealStatus;
 import kr.eolmago.domain.entity.review.Review;
@@ -14,6 +15,7 @@ import kr.eolmago.repository.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.util.List;
 import java.util.UUID;
@@ -70,7 +72,7 @@ public class ReviewService {
     }
 
     /**
-     * ✅ (공통) dealId로 리뷰 상세 조회
+     * (공통) dealId로 리뷰 상세 조회
      * - buyer 또는 seller만 조회 가능
      */
     public ReviewResponse getReviewDetailByDealId(Long dealId, UUID userId) {
@@ -86,7 +88,7 @@ public class ReviewService {
     }
 
     /**
-     * ✅ BuyerViewController가 호출하는 메서드 (시그니처 맞춤용)
+     * BuyerViewController가 호출하는 메서드 (시그니처 맞춤용)
      * - buyer만 조회 가능하게 강제
      */
     public ReviewResponse getReviewByDealIdForBuyer(Long dealId, UUID buyerId) {
@@ -131,4 +133,29 @@ public class ReviewService {
     public boolean existsReviewForDeal(Long dealId) {
         return reviewRepository.existsByDeal_DealId(dealId);
     }
+
+    public ReviewResponse getReviewDetailForBuyer(Long reviewId, UUID buyerId) {
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new EntityNotFoundException("Review not found: " + reviewId));
+
+        if (!review.getBuyer().getUserId().equals(buyerId)) {
+            throw new AccessDeniedException("본인이 작성한 리뷰가 아닙니다.");
+        }
+
+        // Buyer 입장에서 seller에 대해 작성한 리뷰
+        return ReviewResponse.from(review);
+    }
+
+    public ReviewResponse getReviewDetailForSeller(Long reviewId, UUID sellerId) {
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new EntityNotFoundException("Review not found: " + reviewId));
+
+        if (!review.getSeller().getUserId().equals(sellerId)) {
+            throw new AccessDeniedException("본인이 받은 리뷰가 아닙니다.");
+        }
+
+        // Seller 입장에서 buyer가 작성한 리뷰
+        return ReviewResponse.from(review);
+    }
+
 }

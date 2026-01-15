@@ -36,16 +36,6 @@ public class UserProfileViewController {
         return "pages/user/mypage/favorites";
     }
 
-    @GetMapping("/buyer-reviews")
-    public String buyerReviews() {
-        return "pages/user/mypage/buyer-reviews";
-    }
-
-    @GetMapping("/seller-reviews")
-    public String sellerReviews() {
-        return "pages/user/mypage/seller-reviews";
-    }
-
     @GetMapping("/reports")
     public String reports() {
         return "pages/user/mypage/reports";

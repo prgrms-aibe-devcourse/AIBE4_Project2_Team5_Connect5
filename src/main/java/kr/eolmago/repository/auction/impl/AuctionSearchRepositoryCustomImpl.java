@@ -62,7 +62,8 @@ public class AuctionSearchRepositoryCustomImpl implements AuctionSearchRepositor
             a.bid_count,
             a.favorite_count,
             a.end_at,
-            a.status
+            a.status,
+            a.end_reason
         FROM auctions a
         INNER JOIN auction_items ai ON a.auction_item_id = ai.auction_item_id
         INNER JOIN auction_images img ON img.auction_item_id = ai.auction_item_id AND img.display_order = 0
@@ -428,14 +429,14 @@ public class AuctionSearchRepositoryCustomImpl implements AuctionSearchRepositor
                     (String) row[3],                            // title
                     (String) row[4],                            // image_url
                     (String) row[5],                            // nickname
-                    (Integer) row[6],                          // start_price
+                    (Integer) row[6],                           // start_price
                     (Integer) row[7],                           // current_price
                     (Long) row[8],                              // final_price
                     (Integer) row[9],                           // bid_count
                     (Integer) row[10],                           // favorite_count
                     convertToOffsetDateTime(row[11]),            // end_at
                     AuctionStatus.valueOf((String) row[12]),     // status
-                    AuctionEndReason.valueOf((String) row[13])   // endReason
+                    row[13] != null ? AuctionEndReason.valueOf((String) row[13]) : null   // endReason
             );
             dtos.add(dto);
         }

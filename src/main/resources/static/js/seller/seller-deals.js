@@ -1,5 +1,3 @@
-// src/main/resources/static/js/seller/seller-deals.js
-
 document.addEventListener("DOMContentLoaded", () => {
     console.info("[seller-deals] init");
 

@@ -1,5 +1,3 @@
-// src/main/resources/static/js/buyer/buyer-deals.js
-
 document.addEventListener('DOMContentLoaded', () => {
     initBuyerDealTabs();
     loadBuyerDeals();

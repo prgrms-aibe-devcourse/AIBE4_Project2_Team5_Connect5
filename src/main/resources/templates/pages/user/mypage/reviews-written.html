@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>내가 작성한 리뷰</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body class="bg-gray-50">
+<div class="max-w-3xl mx-auto py-8 px-4">
+    <h1 class="text-2xl font-bold mb-6">내가 작성한 리뷰</h1>
+
+    <div id="reviewList" class="space-y-4">
+
+    </div>
+
+    <div id="emptyMessage" class="text-gray-500 mt-4 hidden">
+        아직 작성한 리뷰가 없습니다.
+    </div>
+</div>
+
+<script th:src="@{/js/user/mypage/reviews-written.js}"></script>
+</body>
+</html>
