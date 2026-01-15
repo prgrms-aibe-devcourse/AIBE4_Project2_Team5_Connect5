@@ -1,13 +1,15 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
+
 <th:block th:fragment="sellerCredibilityModal">
-    <!-- Seller Credibility Modal (박스 없이 텍스트 한줄씩) -->
+
     <div id="seller-credibility-modal"
          class="fixed inset-0 z-[90] hidden items-center justify-center bg-black/40 backdrop-blur-sm p-3 sm:p-6">
 
         <!-- dialog -->
         <div class="w-full max-w-5xl h-[78vh] overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-200">
-            <!-- header bar -->
+
+            <!-- header -->
             <div class="flex items-center justify-between bg-slate-700 px-6 py-4">
                 <h2 class="text-lg sm:text-xl font-extrabold text-white">판매자 정보</h2>
 
@@ -15,8 +17,11 @@
                         type="button"
                         class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-white hover:bg-white/20"
                         aria-label="닫기">
-                    <svg viewBox="0 0 24 24" fill="none" class="h-5 w-5" aria-hidden="true">
-                        <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <svg viewBox="0 0 24 24" fill="none" class="h-5 w-5">
+                        <path d="M6 6l12 12M18 6 6 18"
+                              stroke="currentColor"
+                              stroke-width="2"
+                              stroke-linecap="round"/>
                     </svg>
                 </button>
             </div>
@@ -24,45 +29,39 @@
             <!-- body -->
             <div class="h-[calc(78vh-64px)] overflow-auto bg-white">
                 <div class="mx-auto max-w-3xl px-6 py-8">
-                    <!-- 텍스트 라인들 -->
+
                     <div class="space-y-4 text-sm text-slate-900">
+
                         <p class="flex items-center justify-between gap-4">
                             <span class="font-semibold text-slate-600">판매자 계정</span>
-                            <span id="sc-seller-account" class="font-extrabold text-slate-900">-</span>
+                            <span id="sc-seller-account" class="font-extrabold">-</span>
                         </p>
 
                         <p class="flex items-center justify-between gap-4">
                             <span class="font-semibold text-slate-600">닉네임</span>
-                            <span id="sc-nickname" class="font-extrabold text-slate-900">-</span>
+                            <span id="sc-nickname" class="font-extrabold">-</span>
                         </p>
 
                         <p class="flex items-center justify-between gap-4">
                             <span class="font-semibold text-slate-600">정상 거래</span>
-                            <span class="font-extrabold text-slate-900">
+                            <span class="font-extrabold">
                                 <span id="sc-completed-deal-count">-</span>건
                             </span>
                         </p>
 
                         <p class="flex items-center justify-between gap-4">
-                            <span class="font-semibold text-slate-600">신고 이력</span>
-                            <span class="font-extrabold text-slate-900">
+                            <span class="font-semibold text-slate-600">확정된 신고</span>
+                            <span class="font-extrabold">
                                 <span id="sc-report-count">-</span>건
                             </span>
                         </p>
 
-                        <p class="flex items-center justify-between gap-4">
-                            <span class="font-semibold text-slate-600">제재 이력</span>
-                            <span class="font-extrabold text-slate-900">
-                                <span id="sc-penalty-count">-</span>건
-                            </span>
-                        </p>
                     </div>
 
                     <p class="mt-8 text-xs text-slate-500">
                         거래 안전을 위해, 의심되는 정황이 있으면 신고 기능을 이용해 주세요.
                     </p>
 
-                    <!-- footer button (center) -->
                     <div class="mt-10 flex justify-center">
                         <button id="seller-credibility-close"
                                 type="button"
@@ -70,9 +69,11 @@
                             확인
                         </button>
                     </div>
+
                 </div>
             </div>
         </div>
     </div>
+
 </th:block>
 </html>

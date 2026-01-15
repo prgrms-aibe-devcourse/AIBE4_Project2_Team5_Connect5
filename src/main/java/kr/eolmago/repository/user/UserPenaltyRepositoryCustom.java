@@ -22,6 +22,4 @@ public interface UserPenaltyRepositoryCustom {
     List<UserPenalty> findPenaltyHistoryByUser(User user);
 
     Page<UserPenalty> findAllPenaltiesWithFilters(PenaltyType type, Pageable pageable);
-
-    long countByUserId(UUID userId);
 }

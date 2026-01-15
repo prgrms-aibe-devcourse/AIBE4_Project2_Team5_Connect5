@@ -3,7 +3,9 @@ package kr.eolmago.repository.report.impl;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import kr.eolmago.domain.entity.report.Report;
+import kr.eolmago.domain.entity.report.enums.ReportAction;
 import kr.eolmago.domain.entity.report.enums.ReportStatus;
+import kr.eolmago.domain.entity.report.enums.ReportTargetType;
 import kr.eolmago.domain.entity.user.QUser;
 import kr.eolmago.domain.entity.user.QUserProfile;
 import kr.eolmago.domain.entity.user.User;
@@ -117,7 +119,16 @@ public class ReportRepositoryImpl implements ReportRepositoryCustom {
         Long cnt = queryFactory
                 .select(report.reportId.count())
                 .from(report)
-                .where(report.reportedUser.userId.eq(userId))
+                .where(
+                        report.reportedUser.userId.eq(userId),
+                        report.type.eq(ReportTargetType.AUCTION),
+                        report.action.in(
+                                ReportAction.WARN,
+                                ReportAction.SUSPEND_1D,
+                                ReportAction.SUSPEND_7D,
+                                ReportAction.BAN
+                        )
+                )
                 .fetchOne();
 
         return cnt != null ? cnt : 0L;
