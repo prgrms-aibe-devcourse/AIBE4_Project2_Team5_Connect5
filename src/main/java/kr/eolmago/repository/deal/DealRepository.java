@@ -43,4 +43,10 @@ public interface DealRepository extends JpaRepository<Deal, Long>, DealRepositor
      * 경매로 거래 조회
      */
     Optional<Deal> findByAuction(Auction auction);
+
+    // 완료된 거래 수 (판매자로 참여한 건)
+    int countByStatusAndSeller_UserId(DealStatus status, UUID sellerId);
+
+    // 완료된 거래 수 (구매자로 참여한 건)
+    int countByStatusAndBuyer_UserId(DealStatus status, UUID buyerId);
 }

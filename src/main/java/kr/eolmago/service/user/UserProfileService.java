@@ -7,6 +7,8 @@ import kr.eolmago.domain.entity.user.enums.UserRole;
 import kr.eolmago.dto.api.user.request.UpdateUserProfileRequest;
 import kr.eolmago.dto.api.user.response.UserProfileResponse;
 import kr.eolmago.global.security.CustomUserDetails;
+import kr.eolmago.repository.deal.DealRepository;
+import kr.eolmago.repository.review.ReviewRepository;
 import kr.eolmago.repository.user.SocialLoginRepository;
 import kr.eolmago.repository.user.UserProfileRepository;
 import kr.eolmago.service.notification.publish.NotificationPublisher;
@@ -19,6 +21,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import kr.eolmago.domain.entity.deal.enums.DealStatus;
+import java.math.BigDecimal;
 
 import java.util.UUID;
 
@@ -32,13 +36,16 @@ public class UserProfileService {
     private final UserProfileImageUploadService userProfileImageUploadService;
     private final SocialLoginRepository socialLoginRepository;
     private final NotificationPublisher notificationPublisher;
+    private final DealRepository dealRepository;
+    private final ReviewRepository reviewRepository;
 
     @Transactional(readOnly = true)
     public UserProfileResponse getUserProfile(UUID userId) {
         log.debug("프로필 조회: userId={}", userId);
         UserProfile userProfile = userProfileRepository.findByUserIdWithUser(userId)
                 .orElseThrow(() -> new IllegalArgumentException("프로필을 찾을 수 없습니다"));
-        return UserProfileResponse.from(userProfile);
+
+        return buildUserProfileResponse(userProfile);
     }
 
     public UserProfileResponse updateUserProfile(
@@ -87,7 +94,7 @@ public class UserProfileService {
         // 세션 정보 업데이트
         updateAuthentication(userProfile.getUser(), userProfile);
 
-        return UserProfileResponse.from(userProfile);
+        return buildUserProfileResponse(userProfile);
     }
 
     private void updateAuthentication(User user, UserProfile userProfile) {
@@ -159,4 +166,37 @@ public class UserProfileService {
         verificationCodeService.deleteVerificationCode(phoneNumber);
         log.info("핸드폰 인증 완료: userId={}, phoneNumber={}", userId, phoneNumber);
     }
+
+    private UserProfileResponse buildUserProfileResponse(UserProfile userProfile) {
+        User user = userProfile.getUser();
+        UUID realUserId = user.getUserId();
+
+        // 완료된 거래 수 (COMPLETED, buyer + seller)
+        int completedAsSeller =
+                dealRepository.countByStatusAndSeller_UserId(DealStatus.COMPLETED, realUserId);
+        int completedAsBuyer =
+                dealRepository.countByStatusAndBuyer_UserId(DealStatus.COMPLETED, realUserId);
+        int tradeCount = completedAsSeller + completedAsBuyer;
+
+        // 판매자로 받은 평균 별점 (ReviewRepositoryCustom)
+        Double avgRatingAsSeller = reviewRepository.findAverageRatingBySeller(realUserId);
+        BigDecimal ratingAvg = (avgRatingAsSeller != null)
+                ? BigDecimal.valueOf(avgRatingAsSeller)
+                : BigDecimal.ZERO;
+
+        return new UserProfileResponse(
+                userProfile.getProfileId(),
+                realUserId,
+                user.getRole(),
+                userProfile.getName(),
+                userProfile.getNickname(),
+                userProfile.getPhoneNumber(),
+                userProfile.isPhoneVerified(),
+                userProfile.getProfileImageUrl(),
+                ratingAvg,
+                tradeCount,
+                userProfile.getReportCount()
+        );
+    }
+
 }
