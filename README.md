@@ -29,7 +29,7 @@
 | <img src="https://github.com/so-myoung.png" width="100" height="100"/> | <img src="https://github.com/jk-Nam.png" width="100" height="100"/>           | <img src="https://github.com/jihun4452.png" width="100" height="100"/>               | <img src="https://github.com/yerincho94.png" width="100" height="100"/> | <img src="https://github.com/c-wonjun.png" width="100" height="100"/>         |
 |-----------------------------------------------------------------------|-------------------------------------------|-----------------------------------------------|---|-----------------------------------------|
 | 김소명                                                                   | 남준구| 박지훈 | 조예린 | 최원준  |
-| [so-myoung](https://github.com/so-myoung)                             | [jk-Nam](https://github.com/jk-Nam) | [jihun4452](https://github.com/jihun4452) | [yenccho94](https://github.com/yerincho94) | [c-wonjun](https://github.com/c-wonjun) |
+| [so-myoung](https://github.com/so-myoung)                             | [jk-Nam](https://github.com/jk-Nam) | [jihun4452](https://github.com/jihun4452) | [yerincho94](https://github.com/yerincho94) | [c-wonjun](https://github.com/c-wonjun) |
 
 
 ## 서비스 링크
@@ -90,7 +90,7 @@ https://aibe4-project2-team5-connect5.onrender.com
 
 - **3단계 검색 전략 (Fallback Chain)**
     1. **초성 검색**
-    2. **Full-Text Search (PostgreSQL + Elasticsearch)**
+    2. **Full-Text Search (PostgreSQL + Redis)**
     3. **Trigram Similarity 기반 오타 보정**  
        (예: `아이혼` → `아이폰` 자동 매칭)
 
