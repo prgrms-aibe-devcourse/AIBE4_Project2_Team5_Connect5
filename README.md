@@ -1,67 +1,55 @@
-# 얼마고? – 중고 전자기기 경매 & 거래 플랫폼
+# 얼마고? [ 중고 물품 경매 플랫폼 ]
+프로젝트 소개
+리드미 추후 작성 예정
 
-> 중고 전자기기를 **경매**로 올리고, 낙찰 이후에는 안전하게 **1:1 거래**까지 진행할 수 있는 플랫폼  
-> “얼마고?”는 판매자와 구매자의 **공정한 가격 형성**과 **투명한 거래 경험**을 돕습니다.
+<br>
 
----
+# 개발 기간
+**2025.12 ~ 2026.01**
 
-## 프로젝트 소개
+<br>
 
-중고 거래 플랫폼은 많지만,
+## 배포 링크
+<a href="https://aibe4-project2-team5-connect5.onrender.com/">
+  <img
+    src="https://lpjncdsaqnkfjnhadodz.supabase.co/storage/v1/object/public/eolmago/logo.png"
+    alt="얼마고"
+    width="220"
+  />
+</a>
 
-- 판매자는 **내 물건이 실제로 어느 정도 가격이 적정한지** 알기 어렵고
-- 구매자는 **사기/노쇼에 대한 불안감**이 크며
-- 거래 이후 **리뷰/평가가 체계적이지 않은 경우**가 많습니다.
+<br>
 
-**얼마고?**는 이러한 문제를 해결하기 위해 설계된 **경매 기반 중고 전자기기 거래 플랫폼**입니다.
-
-### 목표
-
-- 경매를 통해 **시장 가격에 가까운 합리적인 거래가** 이루어지도록 지원
-- 거래 상태를 명확히 관리하여 **분쟁 가능성을 줄이고 신뢰도 향상**
-- 거래 완료 후 리뷰를 통해 **사용자 평판과 거래 이력**을 쌓을 수 있도록 설계
-- 검색·필터링 기능으로 **원하는 물건을 빠르고 정확하게 탐색**할 수 있도록 제공
-
----
-
-### 팀원
-
-| <img src="https://github.com/so-myoung.png" width="100" height="100"/> | <img src="https://github.com/jk-Nam.png" width="100" height="100"/>           | <img src="https://github.com/jihun4452.png" width="100" height="100"/>               | <img src="https://github.com/yerincho94.png" width="100" height="100"/> | <img src="https://github.com/c-wonjun.png" width="100" height="100"/>         |
+## 팀원
+| <img src="https://github.com/so-myoung.png" width="100" height="100"/> | <img src="https://github.com/jk-Nam.png" width="100" height="100"/> | <img src="https://github.com/jihun4452.png" width="100" height="100"/> | <img src="https://github.com/yerincho94.png" width="100" height="100"/> | <img src="https://github.com/c-wonjun.png" width="100" height="100"/>         |
 |-----------------------------------------------------------------------|-------------------------------------------|-----------------------------------------------|---|-----------------------------------------|
-| 김소명                                                                   | 남준구| 박지훈 | 조예린 | 최원준  |
-| [so-myoung](https://github.com/so-myoung)                             | [jk-Nam](https://github.com/jk-Nam) | [jihun4452](https://github.com/jihun4452) | [yerincho94](https://github.com/yerincho94) | [c-wonjun](https://github.com/c-wonjun) |
+| 김소명 | 남준구 | 박지훈 | 조예린 | 최원준 |
+| [so-myoung](https://github.com/so-myoung)| [jk-Nam](https://github.com/jk-Nam) | [jihun4452](https://github.com/jihun4452) | [yerincho94](https://github.com/yerincho94) | [c-wonjun](https://github.com/c-wonjun) |
 
+<br>
 
-## 서비스 링크
-https://aibe4-project2-team5-connect5.onrender.com
+## 기술 스택
 
-## 주요 도메인 흐름
+### Backend
+- Spring Boot / Spring Data JPA / Spring Security
+- PostgreSQL
+- Redis
+- Swagger UI
 
-1. **경매 생성**
-    - 판매자가 중고 전자기기를 경매로 등록
-    - 시작가, 즉시 구매가, 마감 시간 등을 설정
+### Infra
+- Docker
+- GitHub Actions
+- Supabase
+- Render
 
-2. **입찰 & 낙찰**
-    - 다수의 구매자가 입찰에 참여
-    - 마감 시점 혹은 즉시 구매 조건에 따라 낙찰자 결정
+### Frontend
+- Thymeleaf
+- Tailwind CSS
 
-3. **거래 생성 & 상태 전이**
-    - 낙찰된 판매자–구매자 사이에 **1:1 거래 엔티티** 생성
-    - 거래 상태는 아래 5단계로 관리
-        - `PENDING_CONFIRMATION` – 거래 대기
-        - `CONFIRMED` – 거래 확정
-        - `COMPLETED` – 거래 완료
-        - `TERMINATED` – 거래 파기
-        - `EXPIRED` – 기한 만료
+<br>
 
-4. **거래 완료 & 리뷰**
-    - 거래가 `COMPLETED`가 되면 상호 리뷰 작성 가능
-    - 별점, 코멘트 기반 리뷰 시스템
-    - 거래 확정서는 **PDF로 다운** 가능하며 서버 DB에도 저장
-
----
-
-## 핵심 기능
+## 주요 기능
+추후 정리 예정
 
 ### 1. 경매 & 거래 관리
 
