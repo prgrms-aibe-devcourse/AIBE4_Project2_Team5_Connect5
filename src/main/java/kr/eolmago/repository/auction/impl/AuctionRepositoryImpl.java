@@ -7,7 +7,6 @@ import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.core.types.dsl.StringExpression;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
-import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
 import kr.eolmago.domain.entity.auction.Auction;
 import kr.eolmago.domain.entity.auction.QAuction;
@@ -39,7 +38,6 @@ import static kr.eolmago.domain.entity.user.QUserProfile.userProfile;
 public class AuctionRepositoryImpl implements AuctionRepositoryCustom {
 
     private final JPAQueryFactory queryFactory;
-    private final EntityManager entityManager;
 
     // 경매 목록 조회
     @Override
@@ -197,9 +195,6 @@ public class AuctionRepositoryImpl implements AuctionRepositoryCustom {
                 .set(auction.favoriteCount, auction.favoriteCount.add(1))
                 .where(auction.auctionId.eq(auctionId))
                 .execute();
-
-        entityManager.flush();
-        entityManager.clear();
     }
 
     @Override
@@ -213,9 +208,6 @@ public class AuctionRepositoryImpl implements AuctionRepositoryCustom {
                                 .otherwise(0))
                 .where(auction.auctionId.eq(auctionId))
                 .execute();
-
-        entityManager.flush();
-        entityManager.clear();
     }
 
     @Override
