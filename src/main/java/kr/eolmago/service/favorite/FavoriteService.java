@@ -14,6 +14,7 @@ import kr.eolmago.global.exception.ErrorCode;
 import kr.eolmago.repository.auction.AuctionRepository;
 import kr.eolmago.repository.favorite.FavoriteRepository;
 import kr.eolmago.repository.user.UserRepository;
+import kr.eolmago.service.auction.AuctionFavoriteCountService;
 import kr.eolmago.service.notification.publish.NotificationPublishCommand;
 import kr.eolmago.service.notification.publish.NotificationPublisher;
 import lombok.RequiredArgsConstructor;
@@ -34,24 +35,8 @@ public class FavoriteService {
     private final AuctionRepository auctionRepository;
     private final UserRepository userRepository;
     private final NotificationPublisher notificationPublisher;
+    private final AuctionFavoriteCountService auctionFavoriteCountService;
 
-
-    /**
-     * 찜 토글 (추가/삭제)
-     *
-     * [동작]
-     * - 이미 찜한 경매면: 찜 삭제 + favoriteCount 감소
-     * - 아직 찜하지 않았으면: 찜 생성 + favoriteCount 증가
-     *
-     * [제약]
-     * - 로그인 필수이다.
-     * - 본인 경매는 찜 불가이다.
-     * - 중복 찜 불가이다. (DB unique + 예외 처리로 최종 방어)
-     *
-     * [정합성]
-     * - favoriteCount는 DB에서 "원자 UPDATE"로 처리한다.
-     *   -> 조회 후 +1 저장 방식(lost update)을 피하기 위한 설계이다.
-     */
     @Transactional
     public FavoriteToggleResponse toggleFavorite(UUID userId, UUID auctionId) {
 
@@ -74,7 +59,7 @@ public class FavoriteService {
                 .map(existing -> {
                     // 찜 삭제
                     favoriteRepository.delete(existing);
-                    auctionRepository.decrementFavoriteCount(auctionId);
+                    auctionFavoriteCountService.decrementFavoriteCount(auctionId);
                     return false;
                 })
                 .orElseGet(() -> {
@@ -82,7 +67,7 @@ public class FavoriteService {
                         // 찜 추가
                         Favorite favorite = Favorite.create(user, auction);
                         favoriteRepository.save(favorite);
-                        auctionRepository.incrementFavoriteCount(auctionId);
+                        auctionFavoriteCountService.incrementFavoriteCount(auctionId);
                         notificationPublisher.publish(
                             NotificationPublishCommand.favoriteAdded(userId, auctionId)
                         );
@@ -99,13 +84,6 @@ public class FavoriteService {
         return new FavoriteToggleResponse(auctionId, favorited, favoriteCount);
     }
 
-    /**
-     * 경매 목록/검색/상세에서 "하트(찜 여부)" 표시를 위해 배치로 찜 여부를 조회하는 메서드
-     *
-     * - 입력: 화면에 노출된 auctionIds
-     * - 처리: DB에서 실제 찜된 auctionIds만 조회 후
-     * - 출력: { auctionId: true/false } Map 형태
-     */
     public FavoriteStatusResponse getFavoriteStatuses(UUID userId, FavoriteStatusRequest request) {
         List<UUID> auctionIds = Optional.ofNullable(request.auctionIds()).orElse(List.of());
         if (auctionIds.isEmpty()) {
@@ -126,9 +104,7 @@ public class FavoriteService {
         return new FavoriteStatusResponse(result);
     }
 
-    /**
-     * 내 찜 목록 조회
-     */
+    // 내 찜 목록 조회
     public PageResponse<FavoriteAuctionResponse> getMyFavorites(UUID userId, Pageable pageable, String filter, String sort) {
 
         Page<FavoriteAuctionDto> page = favoriteRepository.searchMyFavorites(pageable, userId, filter, sort);
