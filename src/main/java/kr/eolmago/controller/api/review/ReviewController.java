@@ -2,9 +2,9 @@ package kr.eolmago.controller.api.review;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import kr.eolmago.dto.api.review.request.ReviewCreateRequest;
-import kr.eolmago.dto.api.review.response.ReceivedReviewListResponse;
-import kr.eolmago.dto.view.review.ReviewResponse;
+import kr.eolmago.dto.api.review.response.ReviewResponse;
 import kr.eolmago.global.security.CustomUserDetails;
 import kr.eolmago.service.review.ReviewService;
 import lombok.RequiredArgsConstructor;
@@ -46,14 +46,14 @@ public class ReviewController {
     public ResponseEntity<Void> createBuyerDealReview(
             @PathVariable Long dealId,
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestBody ReviewCreateRequest request
+            @Valid @RequestBody ReviewCreateRequest request
     ) {
         UUID reviewerId = userDetails.getUserId();
         reviewService.createReview(dealId, reviewerId, request);
         return ResponseEntity.ok().build();
     }
 
-    @Operation(summary = "리뷰 삭제", description = "리뷰 작성자(구매자) 또는 판매자만 삭제할 수 있습니다.")
+    @Operation(summary = "리뷰 삭제")
     @DeleteMapping("/api/reviews/{reviewId}")
     public ResponseEntity<Void> deleteReview(
             @PathVariable Long reviewId,

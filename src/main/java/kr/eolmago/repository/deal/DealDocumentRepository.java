@@ -11,11 +11,6 @@ import java.util.Optional;
 public interface DealDocumentRepository extends JpaRepository<DealDocument, Long> {
 
     /**
-     * Deal로 문서 조회
-     */
-    Optional<DealDocument> findByDeal(Deal deal);
-
-    /**
      * Deal로 문서 존재 여부 확인
      */
     boolean existsByDeal(Deal deal);

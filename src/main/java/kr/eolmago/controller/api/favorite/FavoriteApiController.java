@@ -45,11 +45,6 @@ public class FavoriteApiController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * 경매 목록/상세 화면에서 하트 표시를 위해 "한 번에" 찜 상태를 조회한다.
-     * request: { auctionIds: [ ... ] }
-     * response: { favoritedByAuctionId: { auctionId: true/false, ... } }
-     */
     @Operation(summary = "찜 여부 배치 조회 (경매 목록/상세 하트 표시용)")
     @PostMapping("/status")
     public ResponseEntity<FavoriteStatusResponse> getStatuses(
@@ -64,11 +59,6 @@ public class FavoriteApiController {
         );
     }
 
-    /**
-     * 내 찜 목록 조회
-     * - filter: ALL | LIVE | ENDED
-     * - sort: recent | deadline | price_asc | price_desc
-     */
     @Operation(summary = "내 찜 목록 조회")
     @GetMapping("/me")
     public ResponseEntity<PageResponse<FavoriteAuctionResponse>> getMyFavorites(

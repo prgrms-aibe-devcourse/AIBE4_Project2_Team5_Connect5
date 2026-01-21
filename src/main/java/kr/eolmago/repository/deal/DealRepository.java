@@ -13,12 +13,7 @@ import java.util.UUID;
 
 @Repository
 public interface DealRepository extends JpaRepository<Deal, Long>, DealRepositoryCustom {
-    
-    /**
-     * 상태별 거래 목록
-     */
-    List<Deal> findByStatus(DealStatus status);
-    
+
     /**
      * 판매자 ID로 거래 목록
      */
@@ -38,11 +33,6 @@ public interface DealRepository extends JpaRepository<Deal, Long>, DealRepositor
      * 특정 경매로 생성된 거래 존재 여부 확인
      */
     boolean existsByAuction(Auction auction);
-
-    /**
-     * 경매로 거래 조회
-     */
-    Optional<Deal> findByAuction(Auction auction);
 
     // 완료된 거래 수 (판매자로 참여한 건)
     int countByStatusAndSeller_UserId(DealStatus status, UUID sellerId);

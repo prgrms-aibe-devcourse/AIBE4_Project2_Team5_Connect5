@@ -28,4 +28,13 @@ public interface AuctionRepositoryCustom {
     Optional<Auction> findByIdForUpdate(UUID auctionId);
 
     Optional<UUID> findSellerIdByAuctionId(UUID auctionId);
+
+    // 좋아요 수 증가
+    void incrementFavoriteCount(UUID auctionId);
+
+    // 좋아요 수 감소
+    void decrementFavoriteCount(UUID auctionId);
+
+    // 좋아요 수 조회
+    int findFavoriteCountByAuctionId(UUID auctionId);
 }
