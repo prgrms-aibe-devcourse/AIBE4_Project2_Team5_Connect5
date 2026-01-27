@@ -101,9 +101,10 @@
 
 ## ERD
 
-> ERD 이미지 추가 예정
+<img width="3720" height="2192" alt="얼마고_ERD" src="https://github.com/user-attachments/assets/86893a21-8c23-48ff-b079-c131bea26d5e" />
 
-<!-- ![ERD](./docs/images/erd.png) -->
+[ERDCloud 바로가기](https://www.erdcloud.com/d/SHAtwxTSaqmk47nFJ)
+
 
 <br>
 
